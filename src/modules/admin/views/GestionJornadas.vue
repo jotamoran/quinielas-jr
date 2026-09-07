@@ -15,6 +15,7 @@ const fechaCierre = ref('');
 const mensaje = ref('');
 
 async function buscar() {
+  mensaje.value = '';
   const { fixtures: encontrados } = await buscarFixtures({
     leagues: ligas.value.split(',').map((l) => l.trim()),
     season: temporada.value,
@@ -40,6 +41,11 @@ async function guardarJornada() {
   });
   mensaje.value = 'Jornada creada correctamente.';
   seleccionados.value = [];
+  fixtures.value = [];
+  nombreJornada.value = '';
+  costo.value = 50;
+  premio.value = 0;
+  fechaCierre.value = '';
 }
 </script>
 
@@ -75,7 +81,8 @@ async function guardarJornada() {
       <button @click="guardarJornada" class="bg-quiniela-dorado text-quiniela-grisTexto font-semibold px-4 py-2 rounded">
         Publicar jornada
       </button>
-      <p v-if="mensaje" class="text-quiniela-verdeAcento">{{ mensaje }}</p>
     </section>
+
+    <p v-if="mensaje" class="text-quiniela-verdeAcento font-semibold">{{ mensaje }}</p>
   </div>
 </template>
