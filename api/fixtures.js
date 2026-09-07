@@ -1,4 +1,5 @@
 import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { NOMBRES_LIGAS } from './_lib/ligas.js';
 
 // Trae los próximos partidos de una liga en TheSportsDB y los normaliza al
 // mismo formato { fixture, league, teams } que ya consume el resto de la app
@@ -13,7 +14,7 @@ async function obtenerProximosPartidos(idLiga, desde, hasta) {
     .filter((e) => (!desde || e.dateEvent >= desde) && (!hasta || e.dateEvent <= hasta))
     .map((e) => ({
       fixture: { id: e.idEvent, date: `${e.dateEvent}T${e.strTime}` },
-      league: { id: e.idLeague, name: e.strLeague },
+      league: { id: e.idLeague, name: NOMBRES_LIGAS[e.idLeague] ?? e.strLeague },
       teams: {
         home: { name: e.strHomeTeam, logo: e.strHomeTeamBadge },
         away: { name: e.strAwayTeam, logo: e.strAwayTeamBadge },
