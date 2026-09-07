@@ -1,35 +1,25 @@
-import mainApi from '@/api/mainApi';
-import * as openpg from "openpgp";
+import { supabase } from '@/lib/supabase';
 
-const encriptarPassword = async (password) => {
-  const key = import.meta.env.VITE_PUBLIC_KEY;
-  const publicKey = await openpg.readKey({ armoredKey: key });
-  const message = await openpg.createMessage({ text: password });
-  return await openpg.encrypt({
-    message,
-    encryptionKeys: publicKey,
+export async function registrar({ email, password, nombreCompleto }) {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { nombre_completo: nombreCompleto } },
   });
-};
+  if (error) throw error;
+}
 
+export async function verificarCodigo({ email, codigo }) {
+  const { error } = await supabase.auth.verifyOtp({ email, token: codigo, type: 'signup' });
+  if (error) throw error;
+}
 
-export const loginRequest = async (codigo, password) => {
-  const cPassEncriptada = await encriptarPassword(password);
-  
-  const payload = {
-    codigo: codigo,
-    pass_encrypted: cPassEncriptada 
-  };
+export async function iniciarSesion({ email, password }) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+}
 
-  const { data } = await mainApi.post('/api/auth/login', payload);
-  return data;
-};
-
-export const cambiarPasswordServicio = async (token, password) => {
-  const passEncriptada = await encriptarPassword(password);
-  const { data } = await mainApi.post(
-    '/api/auth/cambiar-password-servicio',
-    { pass_encrypted: passEncriptada },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return data;
-};
+export async function recuperarPassword({ email }) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) throw error;
+}
