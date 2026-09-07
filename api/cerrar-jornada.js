@@ -7,6 +7,21 @@ function generarCodigoCupon() {
   return 'QNL-' + Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+const CODIGO_UNIQUE_VIOLATION = '23505';
+
+async function insertarCuponConReintento(supabaseAdmin, { usuarioId, jornadaId }, intentosMax = 3) {
+  for (let intento = 1; intento <= intentosMax; intento++) {
+    const { error } = await supabaseAdmin.from('cupones').insert({
+      codigo: generarCodigoCupon(),
+      usuario_id: usuarioId,
+      jornada_origen_id: jornadaId,
+    });
+    if (!error) return;
+    const esColisionDeCodigo = error.code === CODIGO_UNIQUE_VIOLATION;
+    if (!esColisionDeCodigo || intento === intentosMax) throw error;
+  }
+}
+
 export default async function handler(req, res) {
   try {
     await requireAdmin(req);
@@ -29,14 +44,11 @@ export default async function handler(req, res) {
     const { ganadores, peor } = calcularGanadoresYPeor(entradas, jornada?.premio ?? null);
 
     if (peor) {
-      await supabaseAdmin.from('cupones').insert({
-        codigo: generarCodigoCupon(),
-        usuario_id: peor.usuarioId,
-        jornada_origen_id: jornada_id,
-      });
+      await insertarCuponConReintento(supabaseAdmin, { usuarioId: peor.usuarioId, jornadaId: jornada_id });
     }
 
-    await supabaseAdmin.from('jornadas').update({ estatus: 'finalizada' }).eq('id', jornada_id);
+    const { error: errorFinalizarJornada } = await supabaseAdmin.from('jornadas').update({ estatus: 'finalizada' }).eq('id', jornada_id);
+    if (errorFinalizarJornada) throw errorFinalizarJornada;
 
     for (const participante of ranking) {
       const { data: perfil } = await supabaseAdmin.from('perfiles').select('nombre_completo').eq('id', participante.usuario_id).single();
