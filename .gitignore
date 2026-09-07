@@ -141,6 +141,7 @@ juntar_codigo.py
 .env
 .env.production
 !.env.production
+!.env.example
 B:/
 
 # Subagent-driven-development scratch workspace
