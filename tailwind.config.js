@@ -1,5 +1,6 @@
 import aspectRatio from '@tailwindcss/aspect-ratio';
-import { corporateColors } from './src/theme/corporate.js';
+import forms from '@tailwindcss/forms';
+import { quinielaColors } from './src/theme/quiniela.js';
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -9,34 +10,20 @@ export default {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        regular: ['Regular', 'sans-serif'],
-        bold: ['Bold', 'sans-serif'],
-        semibold: ['SemiBold', 'sans-serif'],
-      },
       colors: {
-        tracsa: {
-          principal: {
-            DEFAULT: corporateColors.secondary,
-            light: corporateColors.secondaryLight
-          },
-          secundario: {
-            DEFAULT: corporateColors.primary,
-            light: corporateColors.primaryLight
-          },
-          cancelar: {
-            DEFAULT: corporateColors.error,
-            light: corporateColors.errorLight
-          },
-          neutro: {
-            DEFAULT: corporateColors.neutral,
-            light: corporateColors.neutralLight
-          }
+        quiniela: {
+          verdeOscuro: quinielaColors.verdeOscuro,
+          verde: quinielaColors.verde,
+          verdeAcento: quinielaColors.verdeAcento,
+          dorado: quinielaColors.dorado,
+          doradoOscuro: quinielaColors.doradoOscuro,
+          grisClaro: quinielaColors.grisClaro,
+          grisTexto: quinielaColors.grisTexto,
+          error: quinielaColors.error,
+          advertencia: quinielaColors.advertencia,
         }
       }
     },
   },
-  plugins: [
-    aspectRatio
-  ],
+  plugins: [aspectRatio, forms],
 }
