@@ -1,0 +1,147 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+.vscode/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Created by https://www.toptal.com/developers/gitignore/api/vue,webstorm,visualstudiocode
+# Edit at https://www.toptal.com/developers/gitignore?templates=vue,webstorm,visualstudiocode
+
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+### VisualStudioCode Patch ###
+# Ignore all local history of files
+.history
+.ionide
+
+### Vue ###
+# gitignore template for Vue.js projects
+#
+# Recommended template: Node.gitignore
+
+# TODO: where does this rule come from?
+docs/_book
+
+# TODO: where does this rule come from?
+test/
+
+### WebStorm ###
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
+# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+.idea/**/aws.xml
+
+.idea/**/contentModel.xml
+
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+
+.idea/**/gradle.xml
+.idea/**/libraries
+
+cmake-build-*/
+
+.idea/**/mongoSettings.xml
+
+*.iws
+
+out/
+
+.idea_modules/
+
+atlassian-ide-plugin.xml
+
+.idea/replstate.xml
+
+.idea/sonarlint/
+
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+.idea/httpRequests
+
+.idea/caches/build_file_checksums.ser
+
+### WebStorm Patch ###
+# Comment Reason: https://github.com/joeblau/gitignore.io/issues/186#issuecomment-215987721
+
+# *.iml
+# modules.xml
+# .idea/misc.xml
+# *.ipr
+
+.idea/**/sonarlint/
+
+.idea/**/sonarIssues.xml
+
+.idea/**/markdown-navigator.xml
+.idea/**/markdown-navigator-enh.xml
+.idea/**/markdown-navigator/
+
+.idea/$CACHE_FILE$
+
+.idea/codestream.xml
+
+.idea/**/azureSettings.xml
+
+# Archivos de estructura y respaldo de código
+estructura_proyecto.txt
+todo_el_codigo.txt
+
+# Scripts de automatización locales
+generar_estructura.py
+juntar_codigo.py
+.env.*
+.env
+.env.production
+!.env.production
+B:/
+
+# Subagent-driven-development scratch workspace
+.superpowers/
