@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { obtenerMisQuinielas, obtenerRanking } from '../services/quinielasService';
+import { obtenerMisQuinielas, obtenerRanking, obtenerJornadaActiva } from '../services/quinielasService';
 import { calcularResumenBalance } from '../utils/balance';
 import TablaPosiciones from '../components/TablaPosiciones.vue';
 
@@ -11,7 +11,8 @@ const jornadaActivaId = ref(null);
 async function cargar() {
   quinielas.value = await obtenerMisQuinielas();
   resumen.value = calcularResumenBalance(quinielas.value);
-  jornadaActivaId.value = quinielas.value[0]?.jornada_id ?? null;
+  const jornadaActiva = await obtenerJornadaActiva();
+  jornadaActivaId.value = jornadaActiva?.id ?? null;
 }
 
 onMounted(cargar);
