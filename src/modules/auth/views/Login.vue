@@ -31,7 +31,7 @@ async function onSubmit() {
     <form @submit.prevent="onSubmit" class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm space-y-4">
       <img src="@assets/logo.png" alt="Quinielas JR" class="h-16 w-16 mx-auto rounded-full mb-2" />
       <h1 class="text-2xl font-bold text-quiniela-verdeOscuro text-center">Quinielas JR</h1>
-      <input v-model="email" type="email" placeholder="Correo" required
+      <input v-model="email" type="text" inputmode="email" autocomplete="username" placeholder="Correo (o &quot;admin&quot;)" required
         class="w-full border rounded px-3 py-2" />
       <input v-model="password" type="password" placeholder="Contraseña" required
         class="w-full border rounded px-3 py-2" />
