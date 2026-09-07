@@ -1,5 +1,7 @@
 # Quinielas Liga MX — Diseño
 
+**Nombre de la app:** Quinielas JR — ya existe el logo (`src/assets/logo.png`) y favicon (`public/favicon.ico`) oficiales: escudo verde/dorado con balón, que confirma y refuerza la paleta bet365 definida en la sección 10.
+
 **Fecha:** 2026-09-07
 **Estado:** Aprobado para pasar a plan de implementación
 
@@ -40,8 +42,10 @@ Hosting: Vercel (frontend estático + funciones serverless Node.js en `/api`). D
 - Dependencia `vuetify`, `chart.js`, `xlsx`, `openpgp`, `jwt-decode`, `pinia-plugin-persistedstate` (Supabase persiste la sesión).
 - `docker-compose*.yml`, `Dockerfile`, `nginx.conf`, `.gitlab-ci.yml` (hosting es Vercel, no Docker/GitLab).
 - `src/theme/corporate.js` (colores TRACSA/OyL).
+- El `<script>` de OpenPGP por CDN en `index.html` (residuo de la dependencia `openpgp`, que también se elimina).
 
-**Se conserva (la convención del template funciona bien):**
+**Se conserva (la convención del template funciona bien, más el branding ya definido):**
+- `src/assets/logo.png` y `public/favicon.ico` — branding oficial ya definido (escudo verde/dorado "Quinielas JR"), se mantienen tal cual; `index.html` actualiza su `<title>` a "Quinielas JR".
 - Estructura `src/modules/<nombre>/{views,components,services,router.js}`.
 - Alias de Vite: `@`, `@assets`, `@components` (se agrega `@services`).
 - Pinia (sin plugin de persistencia — la sesión vive en Supabase/localStorage propio del SDK).
