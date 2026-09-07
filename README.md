@@ -1,42 +1,28 @@
-# Plantilla para proyectos de Vuejs para nuevas apps OyL
+# Quinielas JR
 
-Se instalaron los siguientes paquetes:
-- Vuetify
-- VueRouter
-- TailwindCSS
-- MDI Icons
-- Axios
-- Sweetalert 2
-- Pinia
+Plataforma de quinielas deportivas (Vue 3 + Tailwind + Vercel Functions + Supabase + API-Football).
 
-## Alias de rutas
-Para evitar el uso de rutas relativas complejas (../../), utiliza los siguientes alias:
-@/: Carpeta raíz src.
-@assets/: Recursos estáticos (imágenes, logos).
-@components/: Componentes globales/reutilizables (Navbar, Footer).
+## Desarrollo local
 
-## Estructura de Carpetas
-- src/modules/: Aquí reside la lógica de negocio. Cada módulo (ej. auth, dashboard) es independiente y contiene sus propias vistas, componentes locales y su router.js.
-- src/components/: Reservado para componentes globales que se pueden usar en diferentes modulos.
-- src/layouts/: Plantillas genericas (AuthLayout para login, AppLayout para el resto de apps/modulos).
-- src/services/: Aquí se crean los archivos que hablan con el backend.
-- src/utils/: Funciones que son logica pura (Ejemplo, formato fecha, formato moneda, etc).
+1. Copia `.env.example` a `.env.local` y llena las variables `VITE_*`.
+2. `npm install`
+3. `npm run dev`
 
-## Enrutamiento y Seguridad
-El proyecto utiliza Lazy Loading para cargar módulos bajo demanda.
-- Se verifica automaticamente el token en Pinia.
-Meta tags:
-- requiresAuth: true: Protege rutas que requieren login.
-- guestOnly: true: Evita que usuarios logueados regresen al login.
+## Base de datos (Supabase)
 
-### Capa de Configuración (@api)
-Ubicada en `src/api/`. Aquí se crean las instancias de Axios.
-- mainApi.js: Conexión principal al backend. Ya incluye interceptores que adjuntan automáticamente el Token de Pinia y manejan errores 401.
-- externalApi.js: Para consumir otras apis (url ejemplo flask, spring, laravel, etc).
+1. Instala el [Supabase CLI](https://supabase.com/docs/guides/cli).
+2. `npx supabase start` (requiere Docker) para el stack local.
+3. `npx supabase db reset` aplica todas las migraciones de `supabase/migrations/`.
+4. Para un proyecto real en supabase.com: `npx supabase link` y `npx supabase db push`.
 
-## Para agregar nuevos desarollos
-- Crea una carpeta nueva dentro de modules/. De preferencia no mesclar logica de un modulo con otro.
-- Las pantallas principales de tu módulo van en modules/tu-modulo/views/.
-- Si un componente solo se usa en tu módulo, guárdalo en modules/tu-modulo/components. Si es genérico, muévelo a src/components.
-- Registra las rutas de tu módulo en su propio router.js y luego impórtalo en el router maestro (src/router/index.js).
+## Pruebas
+
+`npm run test` corre las pruebas unitarias (countdown, balance, reparto de premios).
+Las pruebas SQL (`supabase/tests/*.test.sql`) se corren con `psql "$(npx supabase status -o json | jq -r .DB_URL)" -f supabase/tests/<archivo>.sql` tras cada `db reset`.
+
+## Despliegue en Vercel
+
+1. Importa el repo en Vercel.
+2. Configura las variables de entorno de `.env.example` (las `VITE_*` y las privadas del servidor) en el proyecto de Vercel.
+3. Deploy — `vercel.json` ya define el rewrite SPA y las funciones de `/api`.
 
