@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ====== FUENTES ====== */
+@font-face {
+    font-family: 'Regular';
+    font-style: normal;
+    font-weight: 400;
+    src: url('./assets/fonts/Inter_24pt-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'SemiBold';
+    font-style: normal;
+    font-weight: 600;
+    src: url('./assets/fonts/Inter_24pt-SemiBold.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Bold';
+    font-style: normal;
+    font-weight: 700;
+    src: url('./assets/fonts/Inter_24pt-Bold.ttf') format('truetype');
+}
+
+/* ====== BASE ====== */
+body {
+    font-family: 'Regular', sans-serif;
+}
+
+/* ====== PATRONES RESPONSIVE ====== */
+.responsive-data-table .v-table__wrapper {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.responsive-data-table .v-table__wrapper > table {
+    min-width: 720px;
+}
+
+@media (max-width: 600px) {
+    .v-dialog > .v-overlay__content {
+        width: calc(100% - 16px) !important;
+        max-width: calc(100% - 16px) !important;
+        max-height: calc(100dvh - 16px) !important;
+        margin: 8px !important;
+    }
+
+    .v-dialog > .v-overlay__content > .v-card,
+    .v-dialog > .v-overlay__content > [class*='bg-white'] {
+        max-height: calc(100dvh - 16px) !important;
+        border-radius: 12px !important;
+    }
+
+    .v-dialog > .v-overlay__content > [class*='bg-white'] {
+        overflow-y: auto !important;
+    }
+
+    .responsive-data-table .v-btn--icon {
+        min-width: 40px;
+        min-height: 40px;
+    }
+
+    .responsive-data-table--actions th:last-child,
+    .responsive-data-table--actions td:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 1;
+    }
+
+    .responsive-data-table--actions th:last-child {
+        background: rgb(var(--v-theme-secondary));
+        color: rgb(var(--v-theme-on-secondary));
+    }
+
+    .responsive-data-table--actions td:last-child {
+        background: rgb(var(--v-theme-surface));
+        box-shadow: -8px 0 12px -12px rgba(20, 20, 20, 0.45);
+    }
+}
+
+/* ====== COMPONENTES PERSONALIZADOS ====== */
+.containerBtnMenu {
+    @apply py-2 px-4 border-y border-white hover:shadow-2xl;
+}
+
+.btnMenu {
+    @apply px-1 py-2 text-white hover:font-semibold;
+    text-decoration: none;
+}
+
+.swal-sobre-modal {
+    z-index: 99999 !important;
+}

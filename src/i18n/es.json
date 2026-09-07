@@ -1,0 +1,21 @@
+{
+  "login": {
+    "titulo": "Operaciones y Logística",
+    "texto_ayuda": "Accede utilizando las credenciales con las que inicias sesión en tu equipo.",
+    "form": {
+      "codigo": "Usuario / Correo",
+      "contrasenia": "Contraseña",
+      "boton": "Iniciar sesion"
+    },
+    "errores": {
+      "mensaje_form": "Los campos ingresados no son validos",
+      "mensaje_login": "El código o NIP son incorrectos",
+      "mensaje_service": "Ocurrió un error al intentar iniciar sesión. Intente de nuevo mas tarde."
+    }
+  },
+  "sistemas": {
+    "titulo": "Aplicaciones - Operaciones y Logística",
+    "no-permisos": "No tienes permiso para ningun sistema",
+    "cerrar-sesion": "Cerrar Sesión"
+  }
+}
