@@ -1,25 +1,36 @@
 import { requireAdmin, ErrorHttp } from './_lib/auth.js';
 
+// Trae los próximos partidos de una liga en TheSportsDB y los normaliza al
+// mismo formato { fixture, league, teams } que ya consume el resto de la app
+// (adminService.js / GestionJornadas.vue), para no tener que tocar nada más.
+async function obtenerProximosPartidos(idLiga, desde, hasta) {
+  const url = `https://www.thesportsdb.com/api/v1/json/${process.env.SPORTSDB_API_KEY}/eventsnextleague.php?id=${idLiga}`;
+  const respuesta = await fetch(url);
+  const datos = await respuesta.json();
+  const eventos = datos.events ?? [];
+
+  return eventos
+    .filter((e) => (!desde || e.dateEvent >= desde) && (!hasta || e.dateEvent <= hasta))
+    .map((e) => ({
+      fixture: { id: e.idEvent, date: `${e.dateEvent}T${e.strTime}` },
+      league: { id: e.idLeague, name: e.strLeague },
+      teams: {
+        home: { name: e.strHomeTeam, logo: e.strHomeTeamBadge },
+        away: { name: e.strAwayTeam, logo: e.strAwayTeamBadge },
+      },
+    }));
+}
+
 export default async function handler(req, res) {
   try {
     await requireAdmin(req);
     if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido' });
 
-    const { leagues, season, from, to } = req.query;
+    const { leagues, from, to } = req.query;
     const ligas = String(leagues ?? '').split(',').filter(Boolean);
     if (ligas.length === 0) return res.status(400).json({ error: 'Debes indicar al menos una liga' });
 
-    const resultados = await Promise.all(ligas.map(async (liga) => {
-      const url = new URL('https://v3.football.api-sports.io/fixtures');
-      url.searchParams.set('league', liga);
-      url.searchParams.set('season', season);
-      url.searchParams.set('from', from);
-      url.searchParams.set('to', to);
-
-      const respuesta = await fetch(url, { headers: { 'x-apisports-key': process.env.API_FOOTBALL_KEY } });
-      const datos = await respuesta.json();
-      return datos.response ?? [];
-    }));
+    const resultados = await Promise.all(ligas.map((liga) => obtenerProximosPartidos(liga, from, to)));
 
     return res.status(200).json({ fixtures: resultados.flat() });
   } catch (e) {

@@ -15,8 +15,8 @@ async function llamarApi(ruta, opciones = {}) {
   return datos;
 }
 
-export async function buscarFixtures({ leagues, season, from, to }) {
-  const query = new URLSearchParams({ leagues: leagues.join(','), season, from, to });
+export async function buscarFixtures({ leagues, from, to }) {
+  const query = new URLSearchParams({ leagues: leagues.join(','), from, to });
   return llamarApi(`fixtures?${query}`);
 }
 

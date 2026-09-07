@@ -24,14 +24,13 @@ export default async function handler(req, res) {
     if (error) throw error;
 
     for (const partido of partidos) {
-      const url = new URL('https://v3.football.api-sports.io/fixtures');
-      url.searchParams.set('id', partido.api_fixture_id);
-      const respuesta = await fetch(url, { headers: { 'x-apisports-key': process.env.API_FOOTBALL_KEY } });
+      const url = `https://www.thesportsdb.com/api/v1/json/${process.env.SPORTSDB_API_KEY}/lookupevent.php?id=${partido.api_fixture_id}`;
+      const respuesta = await fetch(url);
       const datos = await respuesta.json();
-      const fixture = datos.response?.[0];
-      if (!fixture || fixture.fixture.status.short !== 'FT') continue;
+      const evento = datos.events?.[0];
+      if (!evento || evento.strStatus !== 'FT') continue;
 
-      const resultado = mapearResultado(fixture.goals.home, fixture.goals.away);
+      const resultado = mapearResultado(Number(evento.intHomeScore), Number(evento.intAwayScore));
       await supabaseAdmin.from('partidos').update({ resultado_oficial: resultado }).eq('id', partido.id);
     }
 
