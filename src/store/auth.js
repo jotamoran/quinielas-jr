@@ -1,62 +1,52 @@
 import { defineStore } from 'pinia';
-import { jwtDecode } from "jwt-decode";
+import { supabase } from '@/lib/supabase';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: null,
+    session: null,
     user: null,
-    sistemas: [],
-    menu: [],
-    sistemaActual: null,
+    perfil: null,
+    listo: false,
   }),
 
   getters: {
-    isLoggedIn: (state) => !!state.token,
-    getUserMenu: (state) => state.menu,
-    getSistemas: (state) => state.sistemas,
+    isLoggedIn: (state) => !!state.session,
+    isAdmin: (state) => state.perfil?.rol === 'admin',
   },
 
   actions: {
-    login(usuario, token) {
-      this.token = token;
-
-      const decoded = jwtDecode(token);
-
-      this.user = {
-        id: usuario.id,
-        nombre: usuario.nombre,
-        codigo: decoded.codigo,
-        roleId: decoded.role_id
-      };
-
-      this.menu = [];
-      this.sistemaActual = null;
+    async cargarPerfil() {
+      if (!this.user) {
+        this.perfil = null;
+        return;
+      }
+      const { data } = await supabase
+        .from('perfiles')
+        .select('id, nombre_completo, rol')
+        .eq('id', this.user.id)
+        .single();
+      this.perfil = data ?? null;
     },
 
-    setSistemas(sistemas) {
-      this.sistemas = sistemas || [];
+    async init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      this.session = session;
+      this.user = session?.user ?? null;
+      await this.cargarPerfil();
+      this.listo = true;
+
+      supabase.auth.onAuthStateChange(async (_event, session) => {
+        this.session = session;
+        this.user = session?.user ?? null;
+        await this.cargarPerfil();
+      });
     },
 
-    setMenu(menu) {
-      this.menu = menu || [];
-    },
-
-    setSistemaActual(sistema) {
-      this.sistemaActual = sistema || null;
-    },
-
-    logout() {
-      this.token = null;
+    async cerrarSesion() {
+      await supabase.auth.signOut();
+      this.session = null;
       this.user = null;
-      this.sistemas = [];
-      this.menu = [];
-      this.sistemaActual = null;
-    }
+      this.perfil = null;
+    },
   },
-
-  persist: {
-    key: 'auth',
-    storage: localStorage,
-    paths: ['token', 'user', 'sistemas', 'menu', 'sistemaActual']
-  }
 });
