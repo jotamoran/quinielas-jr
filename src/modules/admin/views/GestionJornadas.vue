@@ -1,9 +1,9 @@
 <script setup>
 import { ref } from 'vue';
 import { buscarFixtures, crearJornada } from '../services/adminService';
+import { LIGAS_DISPONIBLES } from '../utils/ligas';
 
-const ligas = ref('262');
-const temporada = ref(new Date().getFullYear());
+const ligasSeleccionadas = ref(['4350']); // Liga MX por default
 const desde = ref('');
 const hasta = ref('');
 const fixtures = ref([]);
@@ -17,8 +17,7 @@ const mensaje = ref('');
 async function buscar() {
   mensaje.value = '';
   const { fixtures: encontrados } = await buscarFixtures({
-    leagues: ligas.value.split(',').map((l) => l.trim()),
-    season: temporada.value,
+    leagues: ligasSeleccionadas.value,
     from: desde.value,
     to: hasta.value,
   });
@@ -54,13 +53,20 @@ async function guardarJornada() {
     <h1 class="text-2xl font-bold text-quiniela-verdeOscuro">Gestión de jornadas</h1>
 
     <section class="bg-white rounded-lg shadow p-4 space-y-3">
+      <p class="text-sm font-semibold text-quiniela-verde">Ligas / competiciones</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <label v-for="liga in LIGAS_DISPONIBLES" :key="liga.id" class="flex items-center gap-2">
+          <input type="checkbox" :value="liga.id" v-model="ligasSeleccionadas" />
+          <span>{{ liga.nombre }}</span>
+        </label>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <input v-model="ligas" placeholder="IDs de liga separados por coma (ej. 262,2)" class="border rounded px-3 py-2" />
-        <input v-model="temporada" type="number" placeholder="Temporada" class="border rounded px-3 py-2" />
         <input v-model="desde" type="date" class="border rounded px-3 py-2" />
         <input v-model="hasta" type="date" class="border rounded px-3 py-2" />
       </div>
-      <button @click="buscar" class="bg-quiniela-verde text-white px-4 py-2 rounded">Buscar partidos</button>
+      <button @click="buscar" :disabled="!ligasSeleccionadas.length" class="bg-quiniela-verde text-white px-4 py-2 rounded disabled:opacity-50">
+        Buscar partidos
+      </button>
     </section>
 
     <section v-if="fixtures.length" class="bg-white rounded-lg shadow p-4 space-y-2">
@@ -68,6 +74,7 @@ async function guardarJornada() {
         <input type="checkbox" :checked="seleccionados.some(s => s.fixture.id === f.fixture.id)" @change="alternarSeleccion(f)" />
         <span>{{ f.league.name }} — {{ f.teams.home.name }} vs {{ f.teams.away.name }}</span>
       </label>
+      <p v-if="!fixtures.length" class="text-gray-500 text-sm">No se encontraron partidos en ese rango de fechas.</p>
     </section>
 
     <section v-if="seleccionados.length" class="bg-white rounded-lg shadow p-4 space-y-3">
