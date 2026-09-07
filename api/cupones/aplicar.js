@@ -26,17 +26,19 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'La quiniela no te pertenece' });
     }
 
-    await supabaseAdmin.from('quinielas').update({
+    const { error: errorAprobarQuiniela } = await supabaseAdmin.from('quinielas').update({
       estatus_pago: 'aprobado',
       metodo_pago: 'cupon',
       monto_pagado: 0,
     }).eq('id', quiniela_id);
+    if (errorAprobarQuiniela) throw errorAprobarQuiniela;
 
-    await supabaseAdmin.from('cupones').update({
+    const { error: errorMarcarCuponUsado } = await supabaseAdmin.from('cupones').update({
       estatus: 'usado',
       usado_en_quiniela_id: quiniela_id,
       usado_el: new Date().toISOString(),
     }).eq('id', cupon.id);
+    if (errorMarcarCuponUsado) throw errorMarcarCuponUsado;
 
     return res.status(200).json({ status: 'ok' });
   } catch (e) {
