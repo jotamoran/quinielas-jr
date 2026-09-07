@@ -48,7 +48,7 @@ async function guardarJornada() {
     <h1 class="text-2xl font-bold text-quiniela-verdeOscuro">Gestión de jornadas</h1>
 
     <section class="bg-white rounded-lg shadow p-4 space-y-3">
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <input v-model="ligas" placeholder="IDs de liga separados por coma (ej. 262,2)" class="border rounded px-3 py-2" />
         <input v-model="temporada" type="number" placeholder="Temporada" class="border rounded px-3 py-2" />
         <input v-model="desde" type="date" class="border rounded px-3 py-2" />
@@ -67,7 +67,7 @@ async function guardarJornada() {
     <section v-if="seleccionados.length" class="bg-white rounded-lg shadow p-4 space-y-3">
       <h2 class="font-semibold text-quiniela-verde">Datos de la jornada ({{ seleccionados.length }} partidos)</h2>
       <input v-model="nombreJornada" placeholder="Nombre de la jornada" class="w-full border rounded px-3 py-2" />
-      <div class="grid grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <input v-model="costo" type="number" placeholder="Costo" class="border rounded px-3 py-2" />
         <input v-model="premio" type="number" placeholder="Premio (opcional)" class="border rounded px-3 py-2" />
         <input v-model="fechaCierre" type="datetime-local" class="border rounded px-3 py-2" />

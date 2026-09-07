@@ -13,7 +13,10 @@ async function onSubmit() {
   error.value = '';
   cargando.value = true;
   try {
-    await iniciarSesion({ email: email.value, password: password.value });
+    const correoFinal = email.value.trim().toLowerCase() === 'admin'
+      ? import.meta.env.VITE_ADMIN_ALIAS_EMAIL
+      : email.value;
+    await iniciarSesion({ email: correoFinal, password: password.value });
     router.push({ name: 'mis-quinielas' });
   } catch (e) {
     error.value = e.message;
@@ -26,6 +29,7 @@ async function onSubmit() {
 <template>
   <div class="min-h-screen flex items-center justify-center bg-quiniela-grisClaro">
     <form @submit.prevent="onSubmit" class="bg-white p-8 rounded-lg shadow-md w-full max-w-sm space-y-4">
+      <img src="@assets/logo.png" alt="Quinielas JR" class="h-16 w-16 mx-auto rounded-full mb-2" />
       <h1 class="text-2xl font-bold text-quiniela-verdeOscuro text-center">Quinielas JR</h1>
       <input v-model="email" type="email" placeholder="Correo" required
         class="w-full border rounded px-3 py-2" />

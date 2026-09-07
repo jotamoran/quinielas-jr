@@ -71,7 +71,7 @@ onUnmounted(() => clearInterval(intervalo));
     <div v-if="!jornada" class="text-gray-500">No hay una jornada activa en este momento.</div>
 
     <template v-else>
-      <div class="bg-quiniela-verdeOscuro text-white rounded-lg p-4 flex justify-between items-center">
+      <div class="bg-quiniela-verdeOscuro text-white rounded-lg p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <span class="font-semibold">{{ jornada.nombre }}</span>
         <span v-if="tiempoRestante && !tiempoRestante.vencido">
           Cierra en {{ tiempoRestante.dias }}d {{ tiempoRestante.horas }}h {{ tiempoRestante.minutos }}m {{ tiempoRestante.segundos }}s
