@@ -41,24 +41,26 @@ onMounted(cargar);
       </div>
     </div>
 
-    <table class="w-full bg-white rounded-lg shadow overflow-hidden">
-      <thead class="bg-quiniela-verdeOscuro text-white">
-        <tr>
-          <th class="px-4 py-2 text-left">Jornada</th>
-          <th class="px-4 py-2 text-left">Entrada</th>
-          <th class="px-4 py-2 text-left">Pago</th>
-          <th class="px-4 py-2 text-right">Aciertos</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="q in quinielas" :key="q.id" class="border-b">
-          <td class="px-4 py-2">{{ q.jornadas?.nombre }}</td>
-          <td class="px-4 py-2">{{ q.alias }}</td>
-          <td class="px-4 py-2">{{ q.estatus_pago }} ({{ q.metodo_pago }})</td>
-          <td class="px-4 py-2 text-right">{{ q.aciertos }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="overflow-x-auto">
+      <table class="w-full bg-white rounded-lg shadow overflow-hidden">
+        <thead class="bg-quiniela-verdeOscuro text-white">
+          <tr>
+            <th class="px-4 py-2 text-left">Jornada</th>
+            <th class="px-4 py-2 text-left">Entrada</th>
+            <th class="px-4 py-2 text-left">Pago</th>
+            <th class="px-4 py-2 text-right">Aciertos</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="q in quinielas" :key="q.id" class="border-b">
+            <td class="px-4 py-2">{{ q.jornadas?.nombre }}</td>
+            <td class="px-4 py-2">{{ q.alias }}</td>
+            <td class="px-4 py-2">{{ q.estatus_pago }} ({{ q.metodo_pago }})</td>
+            <td class="px-4 py-2 text-right">{{ q.aciertos }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <div v-if="jornadaActivaId">
       <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones</h2>
