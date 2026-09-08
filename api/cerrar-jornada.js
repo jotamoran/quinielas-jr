@@ -32,6 +32,16 @@ export default async function handler(req, res) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
+    const { count: resultadosPendientes, error: errorResultados } = await supabaseAdmin
+      .from('partidos')
+      .select('id', { count: 'exact', head: true })
+      .eq('jornada_id', jornada_id)
+      .is('resultado_oficial', null);
+    if (errorResultados) throw errorResultados;
+    if (resultadosPendientes > 0) {
+      return res.status(409).json({ error: `Faltan ${resultadosPendientes} resultado(s) oficiales` });
+    }
+
     const { data: jornada } = await supabaseAdmin.from('jornadas').select('nombre, premio').eq('id', jornada_id).single();
     const { data: ranking, error } = await supabaseAdmin
       .from('vista_ranking_jornada')

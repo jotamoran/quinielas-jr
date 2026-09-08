@@ -1,44 +1,39 @@
 import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { findFinalResults, FOOTBALL_PROVIDER } from './_lib/football/provider.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
-
-function mapearResultado(golesLocal, golesVisitante) {
-  if (golesLocal > golesVisitante) return 'L';
-  if (golesLocal < golesVisitante) return 'V';
-  return 'E';
-}
 
 export default async function handler(req, res) {
   try {
     await requireAdmin(req);
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
+    const { jornada_id: jornadaId } = req.body ?? {};
+    if (!jornadaId) return res.status(400).json({ error: 'Falta jornada_id' });
 
-    const { jornada_id } = req.body;
-    if (!jornada_id) return res.status(400).json({ error: 'Falta jornada_id' });
-
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data: partidos, error } = await supabaseAdmin
+    const supabase = getSupabaseAdmin();
+    const { data: partidos, error } = await supabase
       .from('partidos')
-      .select('id, api_fixture_id')
-      .eq('jornada_id', jornada_id)
-      .not('api_fixture_id', 'is', null);
+      .select('id, external_fixture_id')
+      .eq('jornada_id', jornadaId)
+      .eq('provider', FOOTBALL_PROVIDER)
+      .is('resultado_oficial', null)
+      .not('external_fixture_id', 'is', null);
     if (error) throw error;
 
+    const results = await findFinalResults(partidos.map((partido) => partido.external_fixture_id));
+    let actualizados = 0;
     for (const partido of partidos) {
-      const url = `https://www.thesportsdb.com/api/v1/json/${process.env.SPORTSDB_API_KEY}/lookupevent.php?id=${partido.api_fixture_id}`;
-      const respuesta = await fetch(url);
-      const datos = await respuesta.json();
-      const evento = datos.events?.[0];
-      if (!evento || evento.strStatus !== 'FT') continue;
-
-      const resultado = mapearResultado(Number(evento.intHomeScore), Number(evento.intAwayScore));
-      await supabaseAdmin.from('partidos').update({ resultado_oficial: resultado }).eq('id', partido.id);
+      const resultado = results.get(String(partido.external_fixture_id));
+      if (!resultado) continue;
+      const { error: updateError } = await supabase.from('partidos').update({ resultado_oficial: resultado }).eq('id', partido.id);
+      if (updateError) throw updateError;
+      actualizados += 1;
     }
 
-    await supabaseAdmin.rpc('calcular_puntos', { p_jornada_id: jornada_id });
-
-    return res.status(200).json({ status: 'ok' });
-  } catch (e) {
-    const status = e instanceof ErrorHttp ? e.status : 500;
-    return res.status(status).json({ error: e.message });
+    const { error: rpcError } = await supabase.rpc('calcular_puntos', { p_jornada_id: jornadaId });
+    if (rpcError) throw rpcError;
+    return res.status(200).json({ status: 'ok', revisados: partidos.length, actualizados });
+  } catch (error) {
+    const status = error instanceof ErrorHttp ? error.status : 500;
+    return res.status(status).json({ error: error.message });
   }
 }
