@@ -35,13 +35,13 @@ onUnmounted(() => clearInterval(intervalo));
 </script>
 
 <template>
-  <div class="p-6 max-w-2xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold text-quiniela-verdeOscuro text-center">{{ jornada?.nombre }}</h1>
+  <main class="page-shell max-w-3xl">
+    <h1 class="page-title text-center">{{ jornada?.nombre }}</h1>
 
     <div class="grid gap-2">
-      <div v-for="p in partidos" :key="p.id" class="bg-white rounded-lg shadow p-3 flex justify-between items-center">
-        <span>{{ p.liga_nombre }}: {{ p.equipo_local }} vs {{ p.equipo_visitante }}</span>
-        <span class="font-bold text-quiniela-verde">{{ p.resultado_oficial ?? '—' }}</span>
+      <div v-for="p in partidos" :key="p.id" class="flex flex-col gap-2 rounded-xl bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <span><small class="block text-gray-500">{{ p.liga_nombre }}</small>{{ p.equipo_local }} vs {{ p.equipo_visitante }}</span>
+        <span class="w-fit rounded-full bg-green-50 px-3 py-1 font-bold text-quiniela-verde">{{ p.resultado_oficial === 'L' ? 'Local' : p.resultado_oficial === 'E' ? 'Empate' : p.resultado_oficial === 'V' ? 'Visita' : 'Pendiente' }}</span>
       </div>
     </div>
 
@@ -49,5 +49,5 @@ onUnmounted(() => clearInterval(intervalo));
       <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones</h2>
       <TablaPosiciones :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" />
     </div>
-  </div>
+  </main>
 </template>

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { listarPagosPendientes, aprobarPago, rechazarPago, registrarPagoEfectivo, obtenerComprobanteUrl } from '../services/adminService';
+import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
 const pendientes = ref([]);
 
@@ -14,38 +15,37 @@ async function verComprobante(path) {
 }
 
 async function aprobar(id) {
-  await aprobarPago(id);
-  await cargar();
+  if (!await confirmarAccion({ title: 'Marcar como pagada', confirmText: 'Confirmar pago' })) return;
+  try { await aprobarPago(id); await cargar(); await alertaExito('Pago confirmado'); } catch (error) { await alertaError(error); }
 }
 
 async function rechazar(id) {
-  await rechazarPago(id);
-  await cargar();
+  if (!await confirmarAccion({ title: 'Cancelar quiniela', text: 'La entrada dejará de participar.', confirmText: 'Cancelar quiniela', danger: true })) return;
+  try { await rechazarPago(id); await cargar(); await alertaExito('Quiniela cancelada'); } catch (error) { await alertaError(error); }
 }
 
 async function marcarEfectivo(id, monto) {
-  await registrarPagoEfectivo(id, monto);
-  await cargar();
+  try { await registrarPagoEfectivo(id, monto); await cargar(); await alertaExito('Pago en efectivo confirmado'); } catch (error) { await alertaError(error); }
 }
 
 onMounted(cargar);
 </script>
 
 <template>
-  <div class="p-6 max-w-3xl mx-auto space-y-4">
-    <h1 class="text-2xl font-bold text-quiniela-verdeOscuro">Autorización de pagos</h1>
-    <div v-for="q in pendientes" :key="q.id" class="bg-white rounded-lg shadow p-4 flex justify-between items-center">
+  <main class="page-shell max-w-4xl">
+    <header><p class="eyebrow">Administración</p><h1 class="page-title">Pagos pendientes</h1><p class="page-description">Revisa comprobantes y confirma el estatus de cada entrada.</p></header>
+    <div v-for="q in pendientes" :key="q.id" class="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p class="font-semibold">{{ q.perfiles?.nombre_completo }} — {{ q.jornadas?.nombre }}</p>
         <p class="text-sm text-gray-600">{{ q.alias }} · {{ q.metodo_pago }} · ${{ q.monto_pagado ?? '—' }}</p>
       </div>
-      <div class="flex gap-2">
-        <button v-if="q.comprobante_url" @click="verComprobante(q.comprobante_url)" class="text-quiniela-verde underline text-sm">Ver comprobante</button>
-        <button v-if="q.metodo_pago === 'efectivo'" @click="marcarEfectivo(q.id, q.monto_pagado)" class="bg-quiniela-dorado text-quiniela-grisTexto px-3 py-1 rounded text-sm">Marcar pagado</button>
-        <button @click="aprobar(q.id)" class="bg-quiniela-verdeAcento text-white px-3 py-1 rounded text-sm">Aprobar</button>
-        <button @click="rechazar(q.id)" class="bg-quiniela-error text-white px-3 py-1 rounded text-sm">Rechazar</button>
+      <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+        <button v-if="q.comprobante_url" @click="verComprobante(q.comprobante_url)" class="rounded-lg border px-3 py-2 text-sm font-semibold text-quiniela-verde">Comprobante</button>
+        <button v-if="q.metodo_pago === 'efectivo'" @click="marcarEfectivo(q.id, q.monto_pagado)" class="rounded-lg bg-quiniela-dorado px-3 py-2 text-sm font-semibold text-quiniela-grisTexto">Pago efectivo</button>
+        <button @click="aprobar(q.id)" class="rounded-lg bg-quiniela-verdeAcento px-3 py-2 text-sm font-semibold text-white">Marcar pagada</button>
+        <button @click="rechazar(q.id)" class="rounded-lg bg-quiniela-error px-3 py-2 text-sm font-semibold text-white">Cancelar</button>
       </div>
     </div>
-    <p v-if="!pendientes.length" class="text-gray-500">No hay pagos pendientes.</p>
-  </div>
+    <div v-if="!pendientes.length" class="empty-state">No hay pagos pendientes.</div>
+  </main>
 </template>

@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     const entradas = ranking.map((r) => ({ quinielaId: r.quiniela_id, usuarioId: r.usuario_id, aciertos: r.aciertos }));
     const { ganadores, peor } = calcularGanadoresYPeor(entradas, jornada?.premio ?? null);
 
-    if (peor) {
+    if (peor?.usuarioId) {
       await insertarCuponConReintento(supabaseAdmin, { usuarioId: peor.usuarioId, jornadaId: jornada_id });
     }
 
@@ -61,6 +61,7 @@ export default async function handler(req, res) {
     if (errorFinalizarJornada) throw errorFinalizarJornada;
 
     for (const participante of ranking) {
+      if (!participante.usuario_id) continue;
       const { data: perfil } = await supabaseAdmin.from('perfiles').select('nombre_completo').eq('id', participante.usuario_id).single();
       const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(participante.usuario_id);
       const correo = authUser?.user?.email;
