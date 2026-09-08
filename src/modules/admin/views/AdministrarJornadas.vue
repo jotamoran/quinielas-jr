@@ -23,6 +23,10 @@ function formatoMoneda(valor) {
 }
 
 function formatoFecha(fecha) {
+  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(new Date(fecha));
+}
+
+function formatoFechaPartido(fecha) {
   return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(fecha));
 }
 
@@ -35,7 +39,7 @@ function abrir(jornada) {
 function fechaParaInput(fecha) {
   const valor = new Date(fecha);
   valor.setMinutes(valor.getMinutes() - valor.getTimezoneOffset());
-  return valor.toISOString().slice(0, 16);
+  return valor.toISOString().slice(0, 10);
 }
 
 function enlacePublico(jornada) {
@@ -100,7 +104,7 @@ async function guardarCierre() {
   if (!abierta.value || !cierreEditado.value) return;
   guardando.value = true;
   try {
-    const fecha = new Date(cierreEditado.value).toISOString();
+    const fecha = new Date(`${cierreEditado.value}T23:59:59`).toISOString();
     await actualizarCierreJornada(abierta.value.id, fecha);
     abierta.value.fecha_cierre = fecha;
     await alertaExito('Fecha límite actualizada');
@@ -183,7 +187,7 @@ onMounted(async () => {
 
         <form @submit.prevent="guardarCierre" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label class="form-label flex-1">Fecha límite de registro<input v-model="cierreEditado" type="datetime-local" class="form-control mt-1" /></label>
+            <label class="form-label flex-1">Fecha límite de registro<input v-model="cierreEditado" type="date" class="form-control mt-1" /></label>
             <button :disabled="guardando || !cierreEditado" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">Guardar fecha</button>
             <button v-if="new Date(abierta.fecha_cierre) > new Date()" type="button" @click="cerrarRegistro" :disabled="guardando" class="rounded-xl border border-red-300 px-5 py-3 font-semibold text-red-700 disabled:opacity-50">Cerrar registro ahora</button>
             <span v-else class="rounded-xl bg-gray-100 px-4 py-3 text-center text-sm font-bold text-gray-600">Registro cerrado</span>
@@ -193,7 +197,7 @@ onMounted(async () => {
 
         <div class="grid gap-3 sm:grid-cols-2">
           <article v-for="(partido, index) in abierta.partidos" :key="partido.id" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="mb-3 flex justify-between text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ partido.liga_nombre }}</span><span>{{ formatoFecha(partido.fecha_partido) }}</span></div>
+            <div class="mb-3 flex justify-between text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ partido.liga_nombre }}</span><span>{{ formatoFechaPartido(partido.fecha_partido) }}</span></div>
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
               <div><img v-if="partido.logo_local" :src="partido.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="text-sm font-bold">{{ partido.equipo_local }}</p></div>
               <span class="text-xs font-bold text-gray-400">VS</span>
