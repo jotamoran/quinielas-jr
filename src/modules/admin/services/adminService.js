@@ -36,6 +36,20 @@ export async function actualizarQuinielaAdmin(payload) {
   return llamarApi('admin-quinielas', { method: 'PATCH', body: JSON.stringify(payload) });
 }
 
+export async function listarJornadasAdmin() {
+  const { data, error } = await supabase
+    .from('jornadas')
+    .select('id, nombre, costo, premio, fecha_cierre, estatus, creado_el, partidos(id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial)')
+    .order('creado_el', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function actualizarPremioJornada(jornadaId, premio) {
+  const { error } = await supabase.from('jornadas').update({ premio }).eq('id', jornadaId);
+  if (error) throw error;
+}
+
 export async function crearJornada({ nombre, costo, premio, fechaCierre, partidosSeleccionados }) {
   if (partidosSeleccionados.length !== 9) throw new Error('La jornada debe tener exactamente 9 partidos');
   const { data: jornada, error } = await supabase
