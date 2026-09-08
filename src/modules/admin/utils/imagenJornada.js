@@ -57,7 +57,7 @@ export async function generarImagenJornada(jornada) {
   ctx.fillText(jornada.nombre, 70, 330);
   ctx.textAlign = 'right';
   ctx.fillStyle = '#9a7600';
-  ctx.fillText(`Premio: $${Number(jornada.premio ?? 0).toLocaleString('es-MX')}`, 1010, 330);
+  ctx.fillText(`Costo: $${Number(jornada.costo ?? 0).toLocaleString('es-MX')}`, 1010, 330);
 
   const x = 70;
   const y = 380;
@@ -94,7 +94,7 @@ export async function generarImagenJornada(jornada) {
     textoAjustado(ctx, partido.equipo_visitante.toUpperCase(), x + 535 + 157.5, filaY + 32, 275, 25);
   });
 
-  const cierre = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(jornada.fecha_cierre));
+  const cierre = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' }).format(new Date(jornada.fecha_cierre));
   ctx.fillStyle = '#68746e';
   ctx.font = '600 23px Inter, Arial';
   ctx.textAlign = 'left';
