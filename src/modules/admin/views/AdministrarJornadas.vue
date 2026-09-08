@@ -1,14 +1,15 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { actualizarPremioJornada, listarJornadasAdmin } from '../services/adminService';
+import { actualizarCierreJornada, actualizarPremioJornada, listarJornadasAdmin } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
-import { alertaError, alertaExito } from '@/lib/alertas';
+import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
 const router = useRouter();
 const jornadas = ref([]);
 const abierta = ref(null);
 const premioEditado = ref(0);
+const cierreEditado = ref('');
 const cargando = ref(true);
 const guardando = ref(false);
 
@@ -28,6 +29,13 @@ function formatoFecha(fecha) {
 function abrir(jornada) {
   abierta.value = jornada;
   premioEditado.value = Number(jornada.premio ?? 0);
+  cierreEditado.value = fechaParaInput(jornada.fecha_cierre);
+}
+
+function fechaParaInput(fecha) {
+  const valor = new Date(fecha);
+  valor.setMinutes(valor.getMinutes() - valor.getTimezoneOffset());
+  return valor.toISOString().slice(0, 16);
 }
 
 function enlacePublico(jornada) {
@@ -88,6 +96,39 @@ async function guardarPremio() {
   }
 }
 
+async function guardarCierre() {
+  if (!abierta.value || !cierreEditado.value) return;
+  guardando.value = true;
+  try {
+    const fecha = new Date(cierreEditado.value).toISOString();
+    await actualizarCierreJornada(abierta.value.id, fecha);
+    abierta.value.fecha_cierre = fecha;
+    await alertaExito('Fecha límite actualizada');
+  } catch (error) {
+    await alertaError(error, 'No se pudo actualizar el cierre');
+  } finally {
+    guardando.value = false;
+  }
+}
+
+async function cerrarRegistro() {
+  if (!abierta.value) return;
+  const confirmado = await confirmarAccion({ title: 'Cerrar registro ahora', text: 'Desde este momento ya no se podrán registrar nuevas quinielas.', confirmText: 'Cerrar registro', danger: true });
+  if (!confirmado) return;
+  guardando.value = true;
+  try {
+    const fecha = new Date().toISOString();
+    await actualizarCierreJornada(abierta.value.id, fecha);
+    abierta.value.fecha_cierre = fecha;
+    cierreEditado.value = fechaParaInput(fecha);
+    await alertaExito('Registro cerrado');
+  } catch (error) {
+    await alertaError(error, 'No se pudo cerrar el registro');
+  } finally {
+    guardando.value = false;
+  }
+}
+
 onMounted(async () => {
   try {
     jornadas.value = await listarJornadasAdmin();
@@ -138,6 +179,16 @@ onMounted(async () => {
         <form @submit.prevent="guardarPremio" class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
           <label class="form-label flex-1">Premio de la jornada<input v-model.number="premioEditado" type="number" min="0" step="0.01" class="form-control mt-1" /></label>
           <button :disabled="guardando || premioEditado === abierta.premio" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">{{ guardando ? 'Guardando…' : 'Actualizar premio' }}</button>
+        </form>
+
+        <form @submit.prevent="guardarCierre" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label class="form-label flex-1">Fecha límite de registro<input v-model="cierreEditado" type="datetime-local" class="form-control mt-1" /></label>
+            <button :disabled="guardando || !cierreEditado" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">Guardar fecha</button>
+            <button v-if="new Date(abierta.fecha_cierre) > new Date()" type="button" @click="cerrarRegistro" :disabled="guardando" class="rounded-xl border border-red-300 px-5 py-3 font-semibold text-red-700 disabled:opacity-50">Cerrar registro ahora</button>
+            <span v-else class="rounded-xl bg-gray-100 px-4 py-3 text-center text-sm font-bold text-gray-600">Registro cerrado</span>
+          </div>
+          <p class="mt-2 text-xs text-gray-500">Al llegar esta fecha, el sistema bloquea automáticamente nuevas entradas y habilita los pronósticos públicos.</p>
         </form>
 
         <div class="grid gap-3 sm:grid-cols-2">
