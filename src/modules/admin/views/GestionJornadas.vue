@@ -103,7 +103,8 @@ async function guardarJornada() {
   error.value = '';
   if (!completo.value) return;
   try {
-    await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: fechaCierre.value, partidosSeleccionados: seleccionados.value });
+    const cierreIso = new Date(`${fechaCierre.value}T23:59:59`).toISOString();
+    await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: cierreIso, partidosSeleccionados: seleccionados.value });
     mensaje.value = 'Jornada publicada correctamente.';
     await alertaExito('Jornada publicada', 'Los 9 partidos ya están disponibles para los participantes.');
     seleccionados.value = [];
@@ -198,7 +199,7 @@ function irADatos() {
 
     <section v-if="completo" id="datos-jornada" class="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
       <h2 class="mb-4 text-xl font-bold text-quiniela-verdeOscuro">Datos de la jornada</h2>
-      <div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-semibold">Nombre<input v-model="nombreJornada" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Cierre<input v-model="fechaCierre" type="datetime-local" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Costo<input v-model.number="costo" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Premio<input v-model.number="premio" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label></div>
+      <div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-semibold">Nombre<input v-model="nombreJornada" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Cierre<input v-model="fechaCierre" type="date" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Costo<input v-model.number="costo" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Premio<input v-model.number="premio" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label></div>
       <button @click="guardarJornada" :disabled="!nombreJornada || !fechaCierre" class="mt-5 w-full rounded-xl bg-quiniela-dorado py-3 font-bold text-quiniela-grisTexto disabled:opacity-50">Publicar jornada</button>
     </section>
 

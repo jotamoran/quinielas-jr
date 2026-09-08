@@ -3,6 +3,14 @@ import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 
 const ESTATUS = new Set(['pendiente', 'aprobado', 'rechazado']);
 const PRONOSTICOS = new Set(['L', 'E', 'V']);
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normalizarCorreo(correo) {
+  const valor = correo?.trim();
+  if (!valor) return null;
+  if (!EMAIL_REGEX.test(valor)) throw new ErrorHttp(400, 'El correo de contacto no es válido');
+  return valor;
+}
 
 export default async function handler(req, res) {
   try {
@@ -12,17 +20,18 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { data, error } = await supabase
         .from('quinielas')
-        .select('id, usuario_id, jornada_id, alias, estatus_pago, metodo_pago, monto_pagado, aciertos, creado_el, origen, jornadas(nombre, costo), perfiles!quinielas_usuario_id_fkey(nombre_completo)')
+        .select('id, usuario_id, jornada_id, alias, correo_contacto, estatus_pago, metodo_pago, monto_pagado, aciertos, creado_el, origen, jornadas(nombre, costo), perfiles!quinielas_usuario_id_fkey(nombre_completo)')
         .order('creado_el', { ascending: false });
       if (error) throw error;
       return res.status(200).json({ quinielas: data ?? [] });
     }
 
     if (req.method === 'POST') {
-      const { jornada_id: jornadaId, alias, estatus_pago: estatus, predicciones } = req.body ?? {};
+      const { jornada_id: jornadaId, alias, correo_contacto: correoContactoRaw, estatus_pago: estatus, predicciones } = req.body ?? {};
       if (!jornadaId || !alias?.trim() || !ESTATUS.has(estatus) || !Array.isArray(predicciones) || predicciones.length !== 9) {
         return res.status(400).json({ error: 'Completa la entrada, el estatus y los 9 pronósticos' });
       }
+      const correoContacto = normalizarCorreo(correoContactoRaw);
       if (new Set(predicciones.map((item) => item.partido_id)).size !== 9 || predicciones.some((item) => !PRONOSTICOS.has(item.pronostico))) {
         return res.status(400).json({ error: 'Los pronósticos no son válidos' });
       }
@@ -39,6 +48,7 @@ export default async function handler(req, res) {
         usuario_id: null,
         jornada_id: jornadaId,
         alias: alias.trim(),
+        correo_contacto: correoContacto,
         estatus_pago: estatus,
         metodo_pago: 'efectivo',
         monto_pagado: pagada ? jornada.costo : 0,
@@ -58,12 +68,14 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PATCH') {
-      const { quiniela_id: quinielaId, alias, estatus_pago: estatus } = req.body ?? {};
+      const { quiniela_id: quinielaId, alias, correo_contacto: correoContactoRaw, estatus_pago: estatus } = req.body ?? {};
       if (!quinielaId || !alias?.trim() || !ESTATUS.has(estatus)) return res.status(400).json({ error: 'Los datos de la quiniela no son válidos' });
+      const correoContacto = normalizarCorreo(correoContactoRaw);
       const { data: actual, error: actualError } = await supabase.from('quinielas').select('monto_pagado, jornadas(costo)').eq('id', quinielaId).single();
       if (actualError) throw actualError;
       const update = {
         alias: alias.trim(),
+        correo_contacto: correoContacto,
         estatus_pago: estatus,
         monto_pagado: estatus === 'aprobado' ? (actual.monto_pagado || actual.jornadas?.costo || 0) : actual.monto_pagado,
         revisado_por: user.id,

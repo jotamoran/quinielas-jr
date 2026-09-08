@@ -9,14 +9,16 @@ function generarCodigoCupon() {
 
 const CODIGO_UNIQUE_VIOLATION = '23505';
 
-async function insertarCuponConReintento(supabaseAdmin, { usuarioId, jornadaId }, intentosMax = 3) {
+async function insertarCuponConReintento(supabaseAdmin, { usuarioId, correoContacto, jornadaId }, intentosMax = 3) {
   for (let intento = 1; intento <= intentosMax; intento++) {
+    const codigo = generarCodigoCupon();
     const { error } = await supabaseAdmin.from('cupones').insert({
-      codigo: generarCodigoCupon(),
-      usuario_id: usuarioId,
+      codigo,
+      usuario_id: usuarioId ?? null,
+      correo_contacto: correoContacto ?? null,
       jornada_origen_id: jornadaId,
     });
-    if (!error) return;
+    if (!error) return codigo;
     const esColisionDeCodigo = error.code === CODIGO_UNIQUE_VIOLATION;
     if (!esColisionDeCodigo || intento === intentosMax) throw error;
   }
@@ -53,8 +55,20 @@ export default async function handler(req, res) {
     const entradas = ranking.map((r) => ({ quinielaId: r.quiniela_id, usuarioId: r.usuario_id, aciertos: r.aciertos }));
     const { ganadores, peor } = calcularGanadoresYPeor(entradas, jornada?.premio ?? null);
 
+    let codigoCuponPeor = null;
     if (peor?.usuarioId) {
-      await insertarCuponConReintento(supabaseAdmin, { usuarioId: peor.usuarioId, jornadaId: jornada_id });
+      codigoCuponPeor = await insertarCuponConReintento(supabaseAdmin, { usuarioId: peor.usuarioId, jornadaId: jornada_id });
+    } else if (peor) {
+      const { data: quinielaPeor } = await supabaseAdmin.from('quinielas').select('alias, correo_contacto').eq('id', peor.quinielaId).single();
+      if (quinielaPeor?.correo_contacto) {
+        codigoCuponPeor = await insertarCuponConReintento(supabaseAdmin, { correoContacto: quinielaPeor.correo_contacto, jornadaId: jornada_id });
+        await enviarCorreo({
+          to: quinielaPeor.correo_contacto,
+          subject: `Tu cupón "Por tarugo" de ${jornada?.nombre ?? 'la jornada'}`,
+          heading: '🎟️ Ganaste un cupón "Por tarugo"',
+          bodyHtml: `<p>Hola, tu quiniela "${quinielaPeor.alias ?? 'Entrada'}" fue la que menos aciertos tuvo en <b>${jornada?.nombre ?? 'la jornada'}</b>, así que te ganaste un cupón de consolación para tu próximo registro.</p><p>Código: <b>${codigoCuponPeor}</b></p><p>Preséntalo con quien te registró para usarlo en tu siguiente quiniela.</p>`,
+        });
+      }
     }
 
     const { error: errorFinalizarJornada } = await supabaseAdmin.from('jornadas').update({ estatus: 'finalizada' }).eq('id', jornada_id);
@@ -62,17 +76,20 @@ export default async function handler(req, res) {
 
     for (const participante of ranking) {
       if (!participante.usuario_id) continue;
+
+      const gano = ganadores.find((g) => g.quinielaId === participante.quiniela_id);
+      const esPeor = peor?.quinielaId === participante.quiniela_id;
+      const ganoCupon = esPeor && codigoCuponPeor;
+      if (!gano && !ganoCupon) continue; // no ganó premio ni cupón: no le mandamos correo
+
       const { data: perfil } = await supabaseAdmin.from('perfiles').select('nombre_completo').eq('id', participante.usuario_id).single();
       const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(participante.usuario_id);
       const correo = authUser?.user?.email;
       if (!correo) continue;
 
-      const gano = ganadores.find((g) => g.quinielaId === participante.quiniela_id);
-      const esPeor = peor?.quinielaId === participante.quiniela_id;
-
       let extra = '';
       if (gano) extra += `<p>🏆 ¡Felicidades! Ganaste $${gano.montoPremio.toFixed(2)} de premio.</p>`;
-      if (esPeor) extra += `<p>🎟️ Te regalamos un cupón de quiniela gratis para tu próximo registro.</p>`;
+      if (ganoCupon) extra += `<p>🎟️ Te ganaste un cupón "Por tarugo" gratis para tu próximo registro. Código: <b>${codigoCuponPeor}</b></p>`;
 
       await enviarCorreo({
         to: correo,

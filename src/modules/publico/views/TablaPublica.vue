@@ -55,7 +55,7 @@ function formatoMoneda(valor) {
 }
 
 function formatoFecha(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(fecha));
+  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' }).format(new Date(fecha));
 }
 
 async function actualizar() {
@@ -97,7 +97,7 @@ onUnmounted(() => clearInterval(intervalo));
     <section class="space-y-3">
       <div><p class="eyebrow">Clasificación</p><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">Tabla de posiciones</h2></div>
       <p v-if="!bloqueada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Los pronósticos de cada participante estarán disponibles cuando cierre el registro.</p>
-      <TablaPosiciones ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" />
+      <TablaPosiciones ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" resaltarExtremos />
     </section>
 
     <section class="space-y-3">
