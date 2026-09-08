@@ -94,20 +94,26 @@ export async function generarImagenJornada(jornada) {
     textoAjustado(ctx, partido.equipo_visitante.toUpperCase(), x + 535 + 157.5, filaY + 32, 275, 25);
   });
 
+  const cierre = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(jornada.fecha_cierre));
+  ctx.fillStyle = '#68746e';
+  ctx.font = '600 23px Inter, Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Cierre de registro: ${cierre}`, 70, 1170);
+
   ctx.fillStyle = '#073b28';
   ctx.font = '700 28px Inter, Arial';
   ctx.textAlign = 'left';
-  ctx.fillText('NOMBRE:', 70, 1205);
+  ctx.fillText('NOMBRE:', 70, 1240);
   ctx.strokeStyle = '#56635d';
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(235, 1210);
-  ctx.lineTo(1010, 1210);
+  ctx.moveTo(235, 1245);
+  ctx.lineTo(1010, 1245);
   ctx.stroke();
   ctx.fillStyle = '#68746e';
   ctx.font = '400 21px Inter, Arial';
   ctx.textAlign = 'center';
-  ctx.fillText('Marca L, E o V en cada partido', 540, 1285);
+  ctx.fillText('Marca L, E o V en cada partido', 540, 1310);
 
   return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('No se pudo generar la imagen')), 'image/png'));
 }

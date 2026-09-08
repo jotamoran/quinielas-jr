@@ -50,6 +50,11 @@ export async function actualizarPremioJornada(jornadaId, premio) {
   if (error) throw error;
 }
 
+export async function actualizarCierreJornada(jornadaId, fechaCierre) {
+  const { error } = await supabase.from('jornadas').update({ fecha_cierre: fechaCierre }).eq('id', jornadaId);
+  if (error) throw error;
+}
+
 export async function crearJornada({ nombre, costo, premio, fechaCierre, partidosSeleccionados }) {
   if (partidosSeleccionados.length !== 9) throw new Error('La jornada debe tener exactamente 9 partidos');
   const { data: jornada, error } = await supabase
