@@ -72,7 +72,7 @@ export async function crearJornada({ nombre, costo, premio, fechaCierre, partido
 export async function listarPagosPendientes() {
   const { data, error } = await supabase
     .from('quinielas')
-    .select('id, alias, monto_pagado, metodo_pago, comprobante_url, creado_el, jornadas(nombre), perfiles(nombre_completo)')
+    .select('id, alias, monto_pagado, metodo_pago, comprobante_url, creado_el, jornadas(nombre), perfiles!quinielas_usuario_id_fkey(nombre_completo)')
     .eq('estatus_pago', 'pendiente')
     .order('creado_el', { ascending: true });
   if (error) throw error;
