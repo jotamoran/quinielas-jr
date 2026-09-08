@@ -20,6 +20,22 @@ export async function buscarFixtures({ leagues, from, to }) {
   return llamarApi(`fixtures?${query}`);
 }
 
+export async function buscarEquipos(search) {
+  return llamarApi(`teams?${new URLSearchParams({ search })}`);
+}
+
+export async function listarQuinielasAdmin() {
+  return llamarApi('admin-quinielas');
+}
+
+export async function crearQuinielaAdmin(payload) {
+  return llamarApi('admin-quinielas', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function actualizarQuinielaAdmin(payload) {
+  return llamarApi('admin-quinielas', { method: 'PATCH', body: JSON.stringify(payload) });
+}
+
 export async function crearJornada({ nombre, costo, premio, fechaCierre, partidosSeleccionados }) {
   if (partidosSeleccionados.length !== 9) throw new Error('La jornada debe tener exactamente 9 partidos');
   const { data: jornada, error } = await supabase

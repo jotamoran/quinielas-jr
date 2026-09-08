@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue';
 import { buscarFixtures, crearJornada } from '../services/adminService';
 import { LIGAS_DISPONIBLES } from '../utils/ligas';
+import EquipoAutocomplete from '../components/EquipoAutocomplete.vue';
+import { alertaError, alertaExito } from '@/lib/alertas';
 
 const MAX_PARTIDOS = 9;
 const ligaPrincipal = LIGAS_DISPONIBLES.find((liga) => liga.principal);
@@ -19,7 +21,7 @@ const mensaje = ref('');
 const error = ref('');
 const cargando = ref(false);
 const mostrarManual = ref(false);
-const partidoManual = ref({ liga: 'Liga MX', local: '', visitante: '', fecha: '' });
+const partidoManual = ref({ liga: 'Liga MX', local: null, visitante: null, fecha: '' });
 
 const faltantes = computed(() => MAX_PARTIDOS - seleccionados.value.length);
 const completo = computed(() => seleccionados.value.length === MAX_PARTIDOS);
@@ -76,7 +78,7 @@ function alternarSeleccion(fixture) {
 
 function agregarPartidoManual() {
   const { liga, local, visitante, fecha } = partidoManual.value;
-  if (!liga.trim() || !local.trim() || !visitante.trim() || !fecha) {
+  if (!liga.trim() || !local?.name?.trim() || !visitante?.name?.trim() || !fecha) {
     error.value = 'Completa todos los datos del partido manual.';
     return;
   }
@@ -87,12 +89,12 @@ function agregarPartidoManual() {
   const fixture = {
     fixture: { id: `manual-${crypto.randomUUID()}`, date: new Date(fecha).toISOString() },
     league: { id: 'manual', name: liga.trim() },
-    teams: { home: { name: local.trim(), logo: null }, away: { name: visitante.trim(), logo: null } },
+    teams: { home: { name: local.name.trim(), logo: local.logo ?? null }, away: { name: visitante.name.trim(), logo: visitante.logo ?? null } },
     provider: 'manual',
   };
   fixtures.value.push(fixture);
   seleccionados.value.push(fixture);
-  partidoManual.value = { liga: liga.trim(), local: '', visitante: '', fecha: '' };
+  partidoManual.value = { liga: liga.trim(), local: null, visitante: null, fecha: '' };
   mostrarManual.value = false;
   error.value = '';
 }
@@ -103,12 +105,14 @@ async function guardarJornada() {
   try {
     await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: fechaCierre.value, partidosSeleccionados: seleccionados.value });
     mensaje.value = 'Jornada publicada correctamente.';
+    await alertaExito('Jornada publicada', 'Los 9 partidos ya están disponibles para los participantes.');
     seleccionados.value = [];
     fixtures.value = [];
     nombreJornada.value = '';
     fechaCierre.value = '';
   } catch (e) {
     error.value = e.message;
+    await alertaError(e, 'No se pudo publicar la jornada');
   }
 }
 
@@ -161,8 +165,8 @@ function irADatos() {
       <form v-if="mostrarManual" class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="agregarPartidoManual">
         <label class="text-sm font-semibold">Liga<input v-model="partidoManual.liga" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Liga o competición" /></label>
         <label class="text-sm font-semibold">Fecha y hora<input v-model="partidoManual.fecha" type="datetime-local" class="mt-1 w-full rounded-xl border-gray-300" /></label>
-        <label class="text-sm font-semibold">Equipo local<input v-model="partidoManual.local" class="mt-1 w-full rounded-xl border-gray-300" /></label>
-        <label class="text-sm font-semibold">Equipo visitante<input v-model="partidoManual.visitante" class="mt-1 w-full rounded-xl border-gray-300" /></label>
+        <EquipoAutocomplete v-model="partidoManual.local" label="Equipo local" />
+        <EquipoAutocomplete v-model="partidoManual.visitante" label="Equipo visitante" />
         <button type="submit" class="rounded-xl bg-quiniela-verde px-4 py-3 font-semibold text-white sm:col-span-2">Agregar y seleccionar</button>
       </form>
     </section>
@@ -174,9 +178,9 @@ function irADatos() {
           <button v-for="fixture in grupo.fixtures" :key="fixture.fixture.id" type="button" @click="alternarSeleccion(fixture)" class="rounded-2xl border bg-white p-4 text-left shadow-sm transition" :class="estaSeleccionado(fixture) ? 'border-quiniela-verde ring-2 ring-green-100' : 'border-gray-200 hover:border-green-300'">
             <div class="mb-4 flex justify-between text-xs text-gray-500"><span>{{ fixture.league.name }}<span v-if="fixture.provider === 'manual'"> · Manual</span></span><span>{{ fechaPartido(fixture.fixture.date) }}</span></div>
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-              <div><img :src="fixture.teams.home.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="text-sm font-semibold">{{ fixture.teams.home.name }}</p></div>
+              <div><img v-if="fixture.teams.home.logo" :src="fixture.teams.home.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-semibold">{{ fixture.teams.home.name }}</p></div>
               <span class="text-xs font-bold text-gray-400">VS</span>
-              <div><img :src="fixture.teams.away.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="text-sm font-semibold">{{ fixture.teams.away.name }}</p></div>
+              <div><img v-if="fixture.teams.away.logo" :src="fixture.teams.away.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-semibold">{{ fixture.teams.away.name }}</p></div>
             </div>
             <p class="mt-3 text-center text-sm font-semibold" :class="estaSeleccionado(fixture) ? 'text-quiniela-verde' : 'text-gray-500'">{{ estaSeleccionado(fixture) ? '✓ Seleccionado' : 'Seleccionar' }}</p>
           </button>

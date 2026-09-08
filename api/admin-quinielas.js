@@ -1,0 +1,82 @@
+import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
+
+const ESTATUS = new Set(['pendiente', 'aprobado', 'rechazado']);
+const PRONOSTICOS = new Set(['L', 'E', 'V']);
+
+export default async function handler(req, res) {
+  try {
+    const { user } = await requireAdmin(req);
+    const supabase = getSupabaseAdmin();
+
+    if (req.method === 'GET') {
+      const { data, error } = await supabase
+        .from('quinielas')
+        .select('id, usuario_id, jornada_id, alias, estatus_pago, metodo_pago, monto_pagado, aciertos, creado_el, origen, jornadas(nombre, costo), perfiles(nombre_completo)')
+        .order('creado_el', { ascending: false });
+      if (error) throw error;
+      return res.status(200).json({ quinielas: data ?? [] });
+    }
+
+    if (req.method === 'POST') {
+      const { jornada_id: jornadaId, alias, estatus_pago: estatus, predicciones } = req.body ?? {};
+      if (!jornadaId || !alias?.trim() || !ESTATUS.has(estatus) || !Array.isArray(predicciones) || predicciones.length !== 9) {
+        return res.status(400).json({ error: 'Completa la entrada, el estatus y los 9 pronósticos' });
+      }
+      if (new Set(predicciones.map((item) => item.partido_id)).size !== 9 || predicciones.some((item) => !PRONOSTICOS.has(item.pronostico))) {
+        return res.status(400).json({ error: 'Los pronósticos no son válidos' });
+      }
+
+      const { data: jornada, error: jornadaError } = await supabase.from('jornadas').select('id, costo, fecha_cierre, estatus').eq('id', jornadaId).single();
+      if (jornadaError) throw jornadaError;
+      if (jornada.estatus !== 'activa' || new Date(jornada.fecha_cierre) <= new Date()) return res.status(409).json({ error: 'La jornada ya no admite quinielas' });
+      const { data: partidos, error: partidosError } = await supabase.from('partidos').select('id').eq('jornada_id', jornadaId).in('id', predicciones.map((item) => item.partido_id));
+      if (partidosError) throw partidosError;
+      if (partidos.length !== 9) return res.status(400).json({ error: 'Los partidos no corresponden a la jornada' });
+
+      const pagada = estatus === 'aprobado';
+      const { data: quiniela, error: quinielaError } = await supabase.from('quinielas').insert({
+        usuario_id: null,
+        jornada_id: jornadaId,
+        alias: alias.trim(),
+        estatus_pago: estatus,
+        metodo_pago: 'efectivo',
+        monto_pagado: pagada ? jornada.costo : 0,
+        revisado_por: pagada ? user.id : null,
+        revisado_el: pagada ? new Date().toISOString() : null,
+        origen: 'manual_admin',
+      }).select().single();
+      if (quinielaError) throw quinielaError;
+
+      const rows = predicciones.map((item) => ({ quiniela_id: quiniela.id, partido_id: item.partido_id, pronostico: item.pronostico }));
+      const { error: predictionError } = await supabase.from('predicciones').insert(rows);
+      if (predictionError) {
+        await supabase.from('quinielas').delete().eq('id', quiniela.id);
+        throw predictionError;
+      }
+      return res.status(201).json({ quiniela });
+    }
+
+    if (req.method === 'PATCH') {
+      const { quiniela_id: quinielaId, alias, estatus_pago: estatus } = req.body ?? {};
+      if (!quinielaId || !alias?.trim() || !ESTATUS.has(estatus)) return res.status(400).json({ error: 'Los datos de la quiniela no son válidos' });
+      const { data: actual, error: actualError } = await supabase.from('quinielas').select('monto_pagado, jornadas(costo)').eq('id', quinielaId).single();
+      if (actualError) throw actualError;
+      const update = {
+        alias: alias.trim(),
+        estatus_pago: estatus,
+        monto_pagado: estatus === 'aprobado' ? (actual.monto_pagado || actual.jornadas?.costo || 0) : actual.monto_pagado,
+        revisado_por: user.id,
+        revisado_el: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('quinielas').update(update).eq('id', quinielaId);
+      if (error) throw error;
+      return res.status(200).json({ status: 'ok' });
+    }
+
+    return res.status(405).json({ error: 'Método no permitido' });
+  } catch (error) {
+    const status = error instanceof ErrorHttp ? error.status : 500;
+    return res.status(status).json({ error: error.message });
+  }
+}

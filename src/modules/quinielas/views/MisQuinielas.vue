@@ -19,8 +19,8 @@ onMounted(cargar);
 </script>
 
 <template>
-  <div class="p-6 max-w-3xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold text-quiniela-verdeOscuro">Mis quinielas</h1>
+  <main class="page-shell max-w-4xl">
+    <header><p class="eyebrow">Mi cuenta</p><h1 class="page-title">Mis quinielas</h1><p class="page-description">Consulta tus entradas, pagos y resultados.</p></header>
 
     <div v-if="resumen" class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div class="bg-white rounded-lg shadow p-4 text-center">
@@ -41,7 +41,10 @@ onMounted(cargar);
       </div>
     </div>
 
-    <div class="overflow-x-auto">
+    <div v-if="quinielas.length" class="grid gap-3 sm:hidden">
+      <article v-for="q in quinielas" :key="q.id" class="rounded-2xl bg-white p-4 shadow-sm"><div class="flex items-start justify-between gap-3"><div><p class="font-bold text-quiniela-verdeOscuro">{{ q.alias }}</p><p class="text-sm text-gray-500">{{ q.jornadas?.nombre }}</p></div><span class="rounded-full px-2 py-1 text-xs font-bold" :class="q.estatus_pago === 'aprobado' ? 'bg-green-100 text-green-800' : q.estatus_pago === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}</span></div><p class="mt-4 border-t pt-3 text-sm"><span class="text-gray-500">Aciertos:</span> <strong class="text-quiniela-verde">{{ q.aciertos }}</strong></p></article>
+    </div>
+    <div v-if="quinielas.length" class="hidden overflow-x-auto sm:block">
       <table class="w-full bg-white rounded-lg shadow overflow-hidden">
         <thead class="bg-quiniela-verdeOscuro text-white">
           <tr>
@@ -55,16 +58,17 @@ onMounted(cargar);
           <tr v-for="q in quinielas" :key="q.id" class="border-b">
             <td class="px-4 py-2">{{ q.jornadas?.nombre }}</td>
             <td class="px-4 py-2">{{ q.alias }}</td>
-            <td class="px-4 py-2">{{ q.estatus_pago }} ({{ q.metodo_pago }})</td>
+            <td class="px-4 py-2">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}</td>
             <td class="px-4 py-2 text-right">{{ q.aciertos }}</td>
           </tr>
         </tbody>
       </table>
     </div>
+    <div v-if="!quinielas.length" class="empty-state">Aún no has registrado una quiniela.</div>
 
     <div v-if="jornadaActivaId">
       <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones</h2>
       <TablaPosiciones :jornadaId="jornadaActivaId" :obtenerRankingFn="obtenerRanking" />
     </div>
-  </div>
+  </main>
 </template>

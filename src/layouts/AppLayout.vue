@@ -1,10 +1,12 @@
 <script setup>
 import NavbarComponent from '@/components/NavbarComponent.vue';
+import FooterComponent from '@/components/FooterComponent.vue';
 </script>
 
 <template>
-  <div class="min-h-screen bg-quiniela-grisClaro">
+  <div class="flex min-h-screen flex-col bg-quiniela-grisClaro">
     <NavbarComponent />
-    <router-view />
+    <div class="flex-1"><router-view /></div>
+    <FooterComponent />
   </div>
 </template>

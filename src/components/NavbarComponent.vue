@@ -2,12 +2,16 @@
 import { ref } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { useRouter } from 'vue-router';
+import { confirmarAccion } from '@/lib/alertas';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const menuAbierto = ref(false);
+const adminAbierto = ref(false);
 
 async function salir() {
+  const confirmed = await confirmarAccion({ title: 'Cerrar sesión', text: 'Tendrás que iniciar sesión nuevamente.', confirmText: 'Salir' });
+  if (!confirmed) return;
   await authStore.cerrarSesion();
   router.push({ name: 'login' });
 }
@@ -18,25 +22,18 @@ function cerrarMenu() {
 </script>
 
 <template>
-  <nav class="bg-quiniela-verdeOscuro text-white px-6 py-3">
-    <div class="flex justify-between items-center">
+  <nav class="sticky top-0 z-40 bg-quiniela-verdeOscuro px-4 py-3 text-white shadow-lg sm:px-6">
+    <div class="mx-auto flex max-w-7xl items-center justify-between">
       <div class="flex items-center gap-2">
         <img src="@assets/logo.png" alt="Quinielas JR" class="h-8 w-8 rounded-full" />
         <span class="font-bold">Quinielas JR</span>
       </div>
 
-      <!-- Links en desktop -->
-      <div class="hidden md:flex md:flex-wrap gap-4 text-sm items-center">
-        <router-link :to="{ name: 'mis-quinielas' }">Mis quinielas</router-link>
-        <router-link :to="{ name: 'llenar-quiniela' }">Llenar quiniela</router-link>
-        <template v-if="authStore.isAdmin">
-          <router-link :to="{ name: 'admin-jornadas' }">Jornadas</router-link>
-          <router-link :to="{ name: 'admin-pagos' }">Pagos</router-link>
-          <router-link :to="{ name: 'admin-sincronizar' }">Sincronizar</router-link>
-          <router-link :to="{ name: 'admin-cerrar-jornada' }">Cerrar jornada</router-link>
-          <router-link :to="{ name: 'admin-edicion-manual' }">Edición manual</router-link>
-        </template>
-        <button @click="salir" class="bg-quiniela-dorado text-quiniela-grisTexto px-3 py-1 rounded font-semibold">Salir</button>
+      <div class="hidden items-center gap-2 text-sm md:flex">
+        <router-link :to="{ name: 'mis-quinielas' }" class="nav-link">Mis quinielas</router-link>
+        <router-link :to="{ name: 'llenar-quiniela' }" class="nav-link">Jugar</router-link>
+        <div v-if="authStore.isAdmin" class="relative"><button @click="adminAbierto = !adminAbierto" class="nav-link flex items-center gap-1">Administración <span class="text-xs">▾</span></button><div v-if="adminAbierto" class="absolute right-0 mt-2 w-60 rounded-xl bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" @click="adminAbierto = false" class="block rounded-lg px-3 py-2 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
+        <button @click="salir" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Salir</button>
       </div>
 
       <!-- Botón hamburguesa en móvil -->
@@ -52,18 +49,19 @@ function cerrarMenu() {
       </button>
     </div>
 
-    <!-- Panel desplegable en móvil -->
-    <div v-if="menuAbierto" class="md:hidden flex flex-col gap-3 text-sm mt-3 pb-2">
-      <router-link :to="{ name: 'mis-quinielas' }" @click="cerrarMenu">Mis quinielas</router-link>
-      <router-link :to="{ name: 'llenar-quiniela' }" @click="cerrarMenu">Llenar quiniela</router-link>
+    <div v-if="menuAbierto" class="mx-auto mt-3 flex max-w-7xl flex-col gap-1 border-t border-white/20 pt-3 text-sm md:hidden">
+      <p class="px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Mi cuenta</p>
+      <router-link :to="{ name: 'mis-quinielas' }" @click="cerrarMenu" class="mobile-nav-link">Mis quinielas</router-link>
+      <router-link :to="{ name: 'llenar-quiniela' }" @click="cerrarMenu" class="mobile-nav-link">Llenar quiniela</router-link>
       <template v-if="authStore.isAdmin">
-        <router-link :to="{ name: 'admin-jornadas' }" @click="cerrarMenu">Jornadas</router-link>
-        <router-link :to="{ name: 'admin-pagos' }" @click="cerrarMenu">Pagos</router-link>
-        <router-link :to="{ name: 'admin-sincronizar' }" @click="cerrarMenu">Sincronizar</router-link>
-        <router-link :to="{ name: 'admin-cerrar-jornada' }" @click="cerrarMenu">Cerrar jornada</router-link>
-        <router-link :to="{ name: 'admin-edicion-manual' }" @click="cerrarMenu">Edición manual</router-link>
+        <p class="mt-2 px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Administración</p>
+        <router-link :to="{ name: 'admin-jornadas' }" @click="cerrarMenu" class="mobile-nav-link">Crear jornada</router-link>
+        <router-link :to="{ name: 'admin-edicion-manual' }" @click="cerrarMenu" class="mobile-nav-link">Administrar quinielas</router-link>
+        <router-link :to="{ name: 'admin-pagos' }" @click="cerrarMenu" class="mobile-nav-link">Pagos pendientes</router-link>
+        <router-link :to="{ name: 'admin-sincronizar' }" @click="cerrarMenu" class="mobile-nav-link">Resultados</router-link>
+        <router-link :to="{ name: 'admin-cerrar-jornada' }" @click="cerrarMenu" class="mobile-nav-link">Cerrar jornada</router-link>
       </template>
-      <button @click="salir(); cerrarMenu()" class="bg-quiniela-dorado text-quiniela-grisTexto px-3 py-1 rounded font-semibold w-fit">Salir</button>
+      <button @click="salir(); cerrarMenu()" class="mt-2 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Cerrar sesión</button>
     </div>
   </nav>
 </template>
