@@ -34,6 +34,11 @@ export default async function handler(req, res) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
+    const { data: jornadaActual, error: errorJornadaActual } = await supabaseAdmin.from('jornadas').select('estatus').eq('id', jornada_id).single();
+    if (errorJornadaActual) throw errorJornadaActual;
+    if (!jornadaActual) return res.status(404).json({ error: 'La jornada no existe' });
+    if (jornadaActual.estatus === 'finalizada') return res.status(409).json({ error: 'Esta jornada ya fue finalizada' });
+
     const { count: resultadosPendientes, error: errorResultados } = await supabaseAdmin
       .from('partidos')
       .select('id', { count: 'exact', head: true })
