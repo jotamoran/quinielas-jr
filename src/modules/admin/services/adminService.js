@@ -79,6 +79,7 @@ export async function crearJornada({ nombre, costo, premio, fechaCierre, partido
   const { error: errorPartidos } = await supabase.from('partidos').insert(partidos);
   if (errorPartidos) {
     await supabase.from('jornadas').delete().eq('id', jornada.id);
+    if (errorPartidos.code === '23505') throw new Error('Uno de los partidos está repetido dentro de esta jornada');
     throw errorPartidos;
   }
 
