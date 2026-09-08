@@ -21,17 +21,19 @@ export async function buscarFixtures({ leagues, from, to }) {
 }
 
 export async function crearJornada({ nombre, costo, premio, fechaCierre, partidosSeleccionados }) {
+  if (partidosSeleccionados.length !== 9) throw new Error('La jornada debe tener exactamente 9 partidos');
   const { data: jornada, error } = await supabase
     .from('jornadas')
-    .insert({ nombre, costo, premio, fecha_cierre: fechaCierre })
+    .insert({ nombre, costo, premio, fecha_cierre: fechaCierre, estatus: 'borrador' })
     .select()
     .single();
   if (error) throw error;
 
   const partidos = partidosSeleccionados.map((p) => ({
     jornada_id: jornada.id,
-    api_fixture_id: p.fixture.id,
-    api_league_id: p.league.id,
+    provider: p.provider ?? 'thesportsdb',
+    external_fixture_id: p.provider === 'manual' ? null : String(p.fixture.id),
+    external_league_id: p.provider === 'manual' ? null : String(p.league.id),
     liga_nombre: p.league.name,
     equipo_local: p.teams.home.name,
     logo_local: p.teams.home.logo,
@@ -40,7 +42,13 @@ export async function crearJornada({ nombre, costo, premio, fechaCierre, partido
     fecha_partido: p.fixture.date,
   }));
   const { error: errorPartidos } = await supabase.from('partidos').insert(partidos);
-  if (errorPartidos) throw errorPartidos;
+  if (errorPartidos) {
+    await supabase.from('jornadas').delete().eq('id', jornada.id);
+    throw errorPartidos;
+  }
+
+  const { error: errorPublicacion } = await supabase.from('jornadas').update({ estatus: 'activa' }).eq('id', jornada.id);
+  if (errorPublicacion) throw errorPublicacion;
 
   return jornada;
 }
@@ -82,6 +90,13 @@ export async function obtenerComprobanteUrl(path) {
 
 export async function sincronizarResultados(jornadaId) {
   return llamarApi('sync-results', { method: 'POST', body: JSON.stringify({ jornada_id: jornadaId }) });
+}
+
+export async function guardarResultadosManuales(jornadaId, resultados) {
+  return llamarApi('manual-results', {
+    method: 'POST',
+    body: JSON.stringify({ jornada_id: jornadaId, resultados }),
+  });
 }
 
 export async function cerrarJornada(jornadaId) {
