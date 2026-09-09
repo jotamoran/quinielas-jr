@@ -1,6 +1,7 @@
 import { requireAdmin, ErrorHttp } from './_lib/auth.js';
 import { findFixtures, seasonForDate } from './_lib/football/provider.js';
 import { LIGAS } from './_lib/ligas.js';
+import { guardarEnCache } from './_lib/football/equiposCache.js';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -32,6 +33,7 @@ export default async function handler(req, res) {
       })));
     }
     results.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
+    await guardarEnCache(results.flatMap((f) => [f.teams.home, f.teams.away]));
     return res.status(200).json({ fixtures: results });
   } catch (error) {
     const status = error instanceof ErrorHttp ? error.status : 500;
