@@ -15,7 +15,7 @@ export default async function handler(req, res) {
       console.error('api/teams: falló buscarEnCache', e.message);
     }
     if (desdeCache.length) {
-      return res.status(200).json({ teams: desdeCache.map((e) => ({ id: e.id_externo, name: e.nombre, logo: e.logo })) });
+      return res.status(200).json({ teams: desdeCache.map((e) => ({ id: e.id_externo ?? e.nombre, name: e.nombre, logo: e.logo })) });
     }
 
     const key = process.env.SPORTSDB_API_KEY || '123';
