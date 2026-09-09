@@ -21,6 +21,10 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'No autorizado' });
     }
 
+    const avisoEfectivo = quiniela.metodo_pago === 'efectivo'
+      ? '<p><b>Importante:</b> tu quiniela queda pendiente hasta confirmar tu pago en efectivo. Si no se paga, no estarás participando en el sorteo.</p>'
+      : '';
+
     await enviarCorreo({
       to: user.email,
       subject: `Quiniela registrada: ${quiniela.jornadas?.nombre ?? ''}`,
@@ -29,7 +33,8 @@ export default async function handler(req, res) {
         <p>Entrada: ${quiniela.alias ?? 'Entrada'}</p>
         <p>Método de pago: ${quiniela.metodo_pago}</p>
         <p>Monto: $${Number(quiniela.monto_pagado ?? 0).toFixed(2)}</p>
-        <p>Estatus: ${quiniela.estatus_pago}</p>`,
+        <p>Estatus: ${quiniela.estatus_pago}</p>
+        ${avisoEfectivo}`,
     });
 
     return res.status(200).json({ status: 'ok' });

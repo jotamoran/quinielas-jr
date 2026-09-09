@@ -95,6 +95,23 @@ export default async function handler(req, res) {
       }
     }
 
+    // Ganadores de premio sin cuenta (registro presencial) pero con correo de
+    // contacto capturado — hasta ahora solo el cupón "Por tarugo" avisaba por
+    // esta vía; el premio principal es al menos igual de importante avisar.
+    for (const ganador of ganadores) {
+      if (ganador.usuarioId) continue; // ya se maneja abajo, junto con su correo de cuenta
+      await intentar(`correo de premio (sin cuenta) a quiniela ${ganador.quinielaId}`, async () => {
+        const { data: quinielaGanadora } = await supabaseAdmin.from('quinielas').select('alias, correo_contacto').eq('id', ganador.quinielaId).single();
+        if (!quinielaGanadora?.correo_contacto) return;
+        await enviarCorreo({
+          to: quinielaGanadora.correo_contacto,
+          subject: `¡Ganaste! ${jornada?.nombre ?? 'Resultado final'}`,
+          heading: '🏆 ¡Felicidades, ganaste el premio!',
+          bodyHtml: `<p>Hola, tu quiniela "${quinielaGanadora.alias ?? 'Entrada'}" ganó <b>$${ganador.montoPremio.toFixed(2)}</b> de premio en <b>${jornada?.nombre ?? 'la jornada'}</b>.</p><p>Contacta a quien te registró para que te haga llegar tu premio.</p>`,
+        });
+      });
+    }
+
     for (const participante of ranking) {
       if (!participante.usuario_id) continue;
 
