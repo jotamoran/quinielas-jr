@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/auth';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import PublicoLayout from '@/layouts/PublicoLayout.vue';
+import LoginModal from '@/components/LoginModal.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -21,4 +22,5 @@ const layout = computed(() => {
 
 <template>
   <component :is="layout" />
+  <LoginModal />
 </template>
