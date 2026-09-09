@@ -1,10 +1,12 @@
 <script setup>
 import { ref } from 'vue';
 import { useAuthStore } from '@/store/auth';
+import { useLoginModalStore } from '@/store/loginModal';
 import { useRouter } from 'vue-router';
 import { confirmarAccion } from '@/lib/alertas';
 
 const authStore = useAuthStore();
+const loginModalStore = useLoginModalStore();
 const router = useRouter();
 const menuAbierto = ref(false);
 const adminAbierto = ref(false);
@@ -30,10 +32,13 @@ function cerrarMenu() {
       </div>
 
       <div class="hidden items-center gap-2 text-sm md:flex">
-        <router-link :to="{ name: 'mis-quinielas' }" class="nav-link">Mis quinielas</router-link>
-        <router-link :to="{ name: 'llenar-quiniela' }" class="nav-link">Jugar</router-link>
-        <div v-if="authStore.isAdmin" class="relative"><button @click="adminAbierto = !adminAbierto" class="nav-link flex items-center gap-1">Administración <span class="text-xs">▾</span></button><div v-if="adminAbierto" class="absolute right-0 mt-2 w-60 rounded-xl bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-administrar-jornadas', label: 'Ver jornadas' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" @click="adminAbierto = false" class="block rounded-lg px-3 py-2 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
-        <button @click="salir" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Salir</button>
+        <template v-if="authStore.isLoggedIn">
+          <router-link :to="{ name: 'mis-quinielas' }" class="nav-link">Mis quinielas</router-link>
+          <router-link :to="{ name: 'llenar-quiniela' }" class="nav-link">Jugar</router-link>
+          <div v-if="authStore.isAdmin" class="relative"><button @click="adminAbierto = !adminAbierto" class="nav-link flex items-center gap-1">Administración <span class="text-xs">▾</span></button><div v-if="adminAbierto" class="absolute right-0 mt-2 w-60 rounded-xl bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-administrar-jornadas', label: 'Ver jornadas' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" @click="adminAbierto = false" class="block rounded-lg px-3 py-2 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
+          <button @click="salir" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Salir</button>
+        </template>
+        <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
       </div>
 
       <!-- Botón hamburguesa en móvil -->
@@ -50,19 +55,22 @@ function cerrarMenu() {
     </div>
 
     <div v-if="menuAbierto" class="mx-auto mt-3 flex max-w-7xl flex-col gap-1 border-t border-white/20 pt-3 text-sm md:hidden">
-      <p class="px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Mi cuenta</p>
-      <router-link :to="{ name: 'mis-quinielas' }" @click="cerrarMenu" class="mobile-nav-link">Mis quinielas</router-link>
-      <router-link :to="{ name: 'llenar-quiniela' }" @click="cerrarMenu" class="mobile-nav-link">Llenar quiniela</router-link>
-      <template v-if="authStore.isAdmin">
-        <p class="mt-2 px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Administración</p>
-        <router-link :to="{ name: 'admin-jornadas' }" @click="cerrarMenu" class="mobile-nav-link">Crear jornada</router-link>
-        <router-link :to="{ name: 'admin-administrar-jornadas' }" @click="cerrarMenu" class="mobile-nav-link">Ver jornadas</router-link>
-        <router-link :to="{ name: 'admin-edicion-manual' }" @click="cerrarMenu" class="mobile-nav-link">Administrar quinielas</router-link>
-        <router-link :to="{ name: 'admin-pagos' }" @click="cerrarMenu" class="mobile-nav-link">Pagos pendientes</router-link>
-        <router-link :to="{ name: 'admin-sincronizar' }" @click="cerrarMenu" class="mobile-nav-link">Resultados</router-link>
-        <router-link :to="{ name: 'admin-cerrar-jornada' }" @click="cerrarMenu" class="mobile-nav-link">Cerrar jornada</router-link>
+      <template v-if="authStore.isLoggedIn">
+        <p class="px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Mi cuenta</p>
+        <router-link :to="{ name: 'mis-quinielas' }" @click="cerrarMenu" class="mobile-nav-link">Mis quinielas</router-link>
+        <router-link :to="{ name: 'llenar-quiniela' }" @click="cerrarMenu" class="mobile-nav-link">Llenar quiniela</router-link>
+        <template v-if="authStore.isAdmin">
+          <p class="mt-2 px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Administración</p>
+          <router-link :to="{ name: 'admin-jornadas' }" @click="cerrarMenu" class="mobile-nav-link">Crear jornada</router-link>
+          <router-link :to="{ name: 'admin-administrar-jornadas' }" @click="cerrarMenu" class="mobile-nav-link">Ver jornadas</router-link>
+          <router-link :to="{ name: 'admin-edicion-manual' }" @click="cerrarMenu" class="mobile-nav-link">Administrar quinielas</router-link>
+          <router-link :to="{ name: 'admin-pagos' }" @click="cerrarMenu" class="mobile-nav-link">Pagos pendientes</router-link>
+          <router-link :to="{ name: 'admin-sincronizar' }" @click="cerrarMenu" class="mobile-nav-link">Resultados</router-link>
+          <router-link :to="{ name: 'admin-cerrar-jornada' }" @click="cerrarMenu" class="mobile-nav-link">Cerrar jornada</router-link>
+        </template>
+        <button @click="salir(); cerrarMenu()" class="mt-2 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Cerrar sesión</button>
       </template>
-      <button @click="salir(); cerrarMenu()" class="mt-2 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Cerrar sesión</button>
+      <button v-else type="button" @click="loginModalStore.abrir(); cerrarMenu()" class="mobile-nav-link text-left">Iniciar sesión</button>
     </div>
   </nav>
 </template>
