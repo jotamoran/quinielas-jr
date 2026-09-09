@@ -29,6 +29,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async init() {
+      if (this.listo) return; // evita registrar dos veces el listener de auth (p. ej. router guard + App.vue)
       const { data: { session } } = await supabase.auth.getSession();
       this.session = session;
       this.user = session?.user ?? null;

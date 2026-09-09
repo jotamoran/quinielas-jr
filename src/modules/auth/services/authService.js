@@ -24,6 +24,16 @@ export function resolverCorreo(entrada) {
   return limpio.toLowerCase() === 'admin' ? import.meta.env.VITE_ADMIN_ALIAS_EMAIL : limpio;
 }
 
+const MENSAJES_ERROR_AUTH = {
+  'Invalid login credentials': 'Correo o contraseña incorrectos.',
+  'Email not confirmed': 'Debes confirmar tu correo antes de iniciar sesión.',
+  'User already registered': 'Ya existe una cuenta con ese correo.',
+};
+
+export function traducirErrorAuth(mensaje) {
+  return MENSAJES_ERROR_AUTH[mensaje] ?? mensaje;
+}
+
 export async function recuperarPassword({ email }) {
   const { error } = await supabase.auth.resetPasswordForEmail(email);
   if (error) throw error;

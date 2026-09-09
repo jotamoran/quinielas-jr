@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { iniciarSesion, resolverCorreo } from '../services/authService';
+import { iniciarSesion, resolverCorreo, traducirErrorAuth } from '../services/authService';
 
 const email = ref('');
 const password = ref('');
@@ -17,7 +17,7 @@ async function onSubmit() {
     await iniciarSesion({ email: correoFinal, password: password.value });
     router.push({ name: 'mis-quinielas' });
   } catch (e) {
-    error.value = e.message;
+    error.value = traducirErrorAuth(e.message);
   } finally {
     cargando.value = false;
   }
