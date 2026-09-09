@@ -21,7 +21,7 @@ export async function guardarEnCache(equipos) {
     for (const e of equipos ?? []) {
       if (!e || typeof e.name !== 'string' || !e.name.trim()) continue;
       const nombre_normalizado = normalizarNombreEquipo(e.name);
-      const fila = { nombre: e.name, nombre_normalizado };
+      const fila = { nombre: e.name, nombre_normalizado, actualizado_el: new Date().toISOString() };
       if (e.logo) fila.logo = e.logo;
       if (e.id) fila.id_externo = String(e.id);
       porNombre.set(nombre_normalizado, fila); // último gana si el batch trae el mismo equipo dos veces
