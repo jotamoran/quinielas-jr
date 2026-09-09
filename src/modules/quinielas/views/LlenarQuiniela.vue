@@ -1,12 +1,16 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/store/auth';
+import { useLoginModalStore } from '@/store/loginModal';
 import TarjetaPartido from '../components/TarjetaPartido.vue';
 import PasoPago from '../components/PasoPago.vue';
 import { calcularTiempoRestante, estaBloqueado } from '../utils/countdown';
 import { obtenerJornadaActiva, obtenerPartidos, crearQuiniela, guardarPredicciones, subirComprobante, notificarRegistro, aplicarCupon } from '../services/quinielasService';
 
 const router = useRouter();
+const authStore = useAuthStore();
+const loginModalStore = useLoginModalStore();
 const jornada = ref(null);
 const partidos = ref([]);
 const pronosticos = ref({});
@@ -19,6 +23,7 @@ const tiempoRestante = ref(null);
 let intervalo;
 
 const bloqueado = computed(() => jornada.value && estaBloqueado(jornada.value.fecha_cierre));
+const necesitaLogin = computed(() => !authStore.isLoggedIn);
 const completo = computed(() => partidos.value.length === 9 && partidos.value.every((partido) => pronosticos.value[partido.id]));
 const urgencia = computed(() => {
   if (!tiempoRestante.value || tiempoRestante.value.vencido) return 'cerrada';
@@ -86,9 +91,13 @@ onUnmounted(() => clearInterval(intervalo));
       </section>
 
       <section v-if="paso === 'pronosticos'" class="space-y-4">
-        <label class="block text-sm font-semibold text-gray-700">Nombre de tu entrada<input v-model="alias" placeholder="Ej. José #2" class="mt-1 w-full rounded-xl border-gray-300" :disabled="bloqueado" /></label>
-        <div class="grid gap-4"><TarjetaPartido v-for="partido in partidos" :key="partido.id" :partido="partido" v-model="pronosticos[partido.id]" :deshabilitado="bloqueado" /></div>
-        <button :disabled="bloqueado || !completo || !alias.trim()" @click="paso = 'pago'" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white disabled:opacity-50">Continuar al pago</button>
+        <div v-if="necesitaLogin" class="rounded-2xl border border-quiniela-verde bg-green-50 p-4 text-center">
+          <p class="mb-3 font-semibold text-quiniela-verdeOscuro">Regístrate o inicia sesión para llenar tu quiniela</p>
+          <button type="button" @click="loginModalStore.abrir()" class="rounded-xl bg-quiniela-verde px-5 py-2.5 font-bold text-white">Iniciar sesión</button>
+        </div>
+        <label class="block text-sm font-semibold text-gray-700">Nombre de tu entrada<input v-model="alias" placeholder="Ej. José #2" class="mt-1 w-full rounded-xl border-gray-300" :disabled="bloqueado || necesitaLogin" /></label>
+        <div class="grid gap-4"><TarjetaPartido v-for="partido in partidos" :key="partido.id" :partido="partido" v-model="pronosticos[partido.id]" :deshabilitado="bloqueado || necesitaLogin" /></div>
+        <button :disabled="bloqueado || necesitaLogin || !completo || !alias.trim()" @click="paso = 'pago'" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white disabled:opacity-50">Continuar al pago</button>
         <p v-if="partidos.length !== 9" class="text-center text-sm text-amber-700">Esta jornada no contiene los 9 partidos requeridos.</p>
       </section>
 
