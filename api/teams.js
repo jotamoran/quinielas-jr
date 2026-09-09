@@ -8,7 +8,12 @@ export default async function handler(req, res) {
     const search = String(req.query.search ?? '').trim();
     if (search.length < 2 || search.length > 80) return res.status(400).json({ error: 'Escribe al menos 2 caracteres' });
 
-    const desdeCache = await buscarEnCache(search);
+    let desdeCache = [];
+    try {
+      desdeCache = await buscarEnCache(search);
+    } catch (e) {
+      console.error('api/teams: falló buscarEnCache', e.message);
+    }
     if (desdeCache.length) {
       return res.status(200).json({ teams: desdeCache.map((e) => ({ id: e.id_externo, name: e.nombre, logo: e.logo })) });
     }
