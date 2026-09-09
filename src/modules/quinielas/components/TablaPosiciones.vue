@@ -101,7 +101,12 @@ defineExpose({ recargar: cargar });
         <p v-else-if="errorDetalle[fila.quiniela_id]" class="text-center text-sm text-red-600">{{ errorDetalle[fila.quiniela_id] }}</p>
         <div v-else class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <div v-for="(detalle, index) in detalles[fila.quiniela_id]" :key="detalle.partido_id" class="flex items-center justify-between gap-2 rounded-xl bg-white p-3 text-sm">
-            <div class="min-w-0"><span class="text-xs text-gray-400">{{ index + 1 }}</span><p class="truncate font-semibold">{{ detalle.equipo_local }} vs {{ detalle.equipo_visitante }}</p></div>
+            <div class="flex min-w-0 items-center gap-1.5">
+              <span class="text-xs text-gray-400">{{ index + 1 }}</span>
+              <img v-if="detalle.logo_local" :src="detalle.logo_local" alt="" class="h-5 w-5 shrink-0 object-contain" />
+              <p class="truncate font-semibold">{{ detalle.equipo_local }} vs {{ detalle.equipo_visitante }}</p>
+              <img v-if="detalle.logo_visitante" :src="detalle.logo_visitante" alt="" class="h-5 w-5 shrink-0 object-contain" />
+            </div>
             <span class="shrink-0 rounded-full bg-green-50 px-2 py-1 text-xs font-bold text-quiniela-verde">{{ etiquetaPronostico(detalle.pronostico) }}</span>
           </div>
         </div>
