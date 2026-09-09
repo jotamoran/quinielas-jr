@@ -50,6 +50,8 @@ async function obtenerPronosticosPublicos(quinielaId) {
     partido_id: partido.id,
     equipo_local: partido.equipo_local,
     equipo_visitante: partido.equipo_visitante,
+    logo_local: partido.logo_local,
+    logo_visitante: partido.logo_visitante,
     pronostico: porPartido.get(partido.id),
   }));
 }
@@ -115,7 +117,11 @@ onUnmounted(() => clearInterval(intervalo));
       <div class="grid gap-3 sm:grid-cols-2">
         <article v-for="(p, index) in partidos" :key="p.id" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="mb-3 flex items-center justify-between gap-2 text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ p.liga_nombre }}</span><span class="rounded-full px-2 py-1 font-bold" :class="p.resultado_oficial ? 'bg-green-50 text-quiniela-verde' : 'bg-gray-100'">{{ p.resultado_oficial ? 'Finalizado' : 'Pendiente' }}</span></div>
-          <p class="text-center font-bold text-quiniela-verdeOscuro">{{ p.equipo_local }} <span class="mx-2 text-gray-400">vs</span> {{ p.equipo_visitante }}</p>
+          <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
+            <div><img v-if="p.logo_local" :src="p.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-bold text-quiniela-verdeOscuro">{{ p.equipo_local }}</p></div>
+            <span class="text-xs font-bold text-gray-400">VS</span>
+            <div><img v-if="p.logo_visitante" :src="p.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-bold text-quiniela-verdeOscuro">{{ p.equipo_visitante }}</p></div>
+          </div>
           <p v-if="p.resultado_oficial" class="mt-3 text-center text-sm font-semibold text-quiniela-verde">Ganador: {{ p.resultado_oficial === 'L' ? p.equipo_local : p.resultado_oficial === 'V' ? p.equipo_visitante : 'Empate' }}</p>
         </article>
       </div>
