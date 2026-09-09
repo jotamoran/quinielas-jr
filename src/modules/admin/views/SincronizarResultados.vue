@@ -22,7 +22,7 @@ async function abrirJornada(jornada) {
   jornadaSeleccionada.value = jornada;
   mensaje.value = '';
   error.value = '';
-  const { data, error: queryError } = await supabase.from('partidos').select('id, liga_nombre, equipo_local, equipo_visitante, fecha_partido, resultado_oficial, provider').eq('jornada_id', jornada.id).order('fecha_partido');
+  const { data, error: queryError } = await supabase.from('partidos').select('id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial, provider').eq('jornada_id', jornada.id).order('fecha_partido');
   if (queryError) {
     error.value = queryError.message;
     return;
@@ -96,7 +96,11 @@ onMounted(async () => {
       <section class="space-y-3">
         <article v-for="partido in partidos" :key="partido.id" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="mb-3 flex flex-wrap justify-between gap-2 text-xs text-gray-500"><span>{{ partido.liga_nombre }} · {{ partido.provider === 'manual' ? 'Manual' : 'TheSportsDB' }}</span><span>{{ fechaPartido(partido.fecha_partido) }}</span></div>
-          <p class="mb-4 text-center font-bold text-quiniela-verdeOscuro">{{ partido.equipo_local }} <span class="mx-2 text-gray-400">vs</span> {{ partido.equipo_visitante }}</p>
+          <div class="mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
+            <div><img v-if="partido.logo_local" :src="partido.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-bold text-quiniela-verdeOscuro">{{ partido.equipo_local }}</p></div>
+            <span class="text-xs font-bold text-gray-400">VS</span>
+            <div><img v-if="partido.logo_visitante" :src="partido.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-bold text-quiniela-verdeOscuro">{{ partido.equipo_visitante }}</p></div>
+          </div>
           <div class="grid grid-cols-3 gap-2"><button v-for="opcion in opciones" :key="opcion.value" @click="resultados[partido.id] = opcion.value" class="min-h-11 rounded-xl border px-2 py-2 text-sm font-semibold" :class="resultados[partido.id] === opcion.value ? 'border-quiniela-doradoOscuro bg-quiniela-dorado text-quiniela-grisTexto' : 'border-gray-300 text-gray-600'">{{ opcion.label }}</button></div>
         </article>
       </section>
