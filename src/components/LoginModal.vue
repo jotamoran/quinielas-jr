@@ -3,7 +3,7 @@
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLoginModalStore } from '@/store/loginModal';
-import { iniciarSesion, resolverCorreo } from '@/modules/auth/services/authService';
+import { iniciarSesion, resolverCorreo, traducirErrorAuth } from '@/modules/auth/services/authService';
 
 const loginModalStore = useLoginModalStore();
 const route = useRoute();
@@ -37,7 +37,7 @@ async function onSubmit() {
     password.value = '';
     loginModalStore.cerrar();
   } catch (e) {
-    error.value = e.message;
+    error.value = traducirErrorAuth(e.message);
   } finally {
     cargando.value = false;
   }

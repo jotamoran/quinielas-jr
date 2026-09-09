@@ -2,11 +2,12 @@
 import { ref } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { useLoginModalStore } from '@/store/loginModal';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { confirmarAccion } from '@/lib/alertas';
 
 const authStore = useAuthStore();
 const loginModalStore = useLoginModalStore();
+const route = useRoute();
 const router = useRouter();
 const menuAbierto = ref(false);
 const adminAbierto = ref(false);
@@ -15,7 +16,10 @@ async function salir() {
   const confirmed = await confirmarAccion({ title: 'Cerrar sesión', text: 'Tendrás que iniciar sesión nuevamente.', confirmText: 'Salir' });
   if (!confirmed) return;
   await authStore.cerrarSesion();
-  router.push({ name: 'login' });
+  // Solo forzamos ir a /login si la página actual de verdad lo requiere.
+  // llenar-quiniela ya es pública: al cerrar sesión ahí, se queda en la
+  // misma pantalla y el propio "necesitaLogin" la vuelve a bloquear sola.
+  if (route.meta.requiresAuth) router.push({ name: 'login' });
 }
 
 function cerrarMenu() {
@@ -70,7 +74,7 @@ function cerrarMenu() {
         </template>
         <button @click="salir(); cerrarMenu()" class="mt-2 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Cerrar sesión</button>
       </template>
-      <button v-else type="button" @click="loginModalStore.abrir(); cerrarMenu()" class="mobile-nav-link text-left">Iniciar sesión</button>
+      <button v-else type="button" @click="loginModalStore.abrir(); cerrarMenu()" class="mt-2 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
     </div>
   </nav>
 </template>
