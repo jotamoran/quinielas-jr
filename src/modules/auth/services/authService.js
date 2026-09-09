@@ -19,6 +19,11 @@ export async function iniciarSesion({ email, password }) {
   if (error) throw error;
 }
 
+export function resolverCorreo(entrada) {
+  const limpio = entrada.trim();
+  return limpio.toLowerCase() === 'admin' ? import.meta.env.VITE_ADMIN_ALIAS_EMAIL : limpio;
+}
+
 export async function recuperarPassword({ email }) {
   const { error } = await supabase.auth.resetPasswordForEmail(email);
   if (error) throw error;
