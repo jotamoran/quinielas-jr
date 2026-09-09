@@ -1,7 +1,9 @@
 <script setup>
 import { useAuthStore } from '@/store/auth';
+import { useLoginModalStore } from '@/store/loginModal';
 
 const authStore = useAuthStore();
+const loginModalStore = useLoginModalStore();
 </script>
 
 <template>
@@ -12,9 +14,8 @@ const authStore = useAuthStore();
           <img src="@assets/logo.png" alt="Quinielas JR" class="h-10 w-10 rounded-full" />
           <div><p class="font-bold leading-tight">Quinielas JR</p><p class="text-xs text-green-100">Resultados en vivo</p></div>
         </div>
-        <router-link :to="{ name: authStore.isLoggedIn ? 'mis-quinielas' : 'login' }" class="rounded-xl bg-quiniela-dorado px-4 py-2 text-sm font-bold text-quiniela-grisTexto">
-          {{ authStore.isLoggedIn ? 'Mis quinielas' : 'Iniciar sesión' }}
-        </router-link>
+        <router-link v-if="authStore.isLoggedIn" :to="{ name: 'mis-quinielas' }" class="rounded-xl bg-quiniela-dorado px-4 py-2 text-sm font-bold text-quiniela-grisTexto">Mis quinielas</router-link>
+        <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-xl bg-quiniela-dorado px-4 py-2 text-sm font-bold text-quiniela-grisTexto">Iniciar sesión</button>
       </div>
     </header>
     <main><router-view /></main>
