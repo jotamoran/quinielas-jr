@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { iniciarSesion } from '../services/authService';
+import { iniciarSesion, resolverCorreo } from '../services/authService';
 
 const email = ref('');
 const password = ref('');
@@ -13,9 +13,7 @@ async function onSubmit() {
   error.value = '';
   cargando.value = true;
   try {
-    const correoFinal = email.value.trim().toLowerCase() === 'admin'
-      ? import.meta.env.VITE_ADMIN_ALIAS_EMAIL
-      : email.value;
+    const correoFinal = resolverCorreo(email.value);
     await iniciarSesion({ email: correoFinal, password: password.value });
     router.push({ name: 'mis-quinielas' });
   } catch (e) {

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
 import { useLoginModalStore } from '@/store/loginModal';
@@ -24,6 +24,9 @@ let intervalo;
 
 const bloqueado = computed(() => jornada.value && estaBloqueado(jornada.value.fecha_cierre));
 const necesitaLogin = computed(() => !authStore.isLoggedIn);
+watch(necesitaLogin, (v) => {
+  if (v && paso.value === 'pago') paso.value = 'pronosticos';
+});
 const completo = computed(() => partidos.value.length === 9 && partidos.value.every((partido) => pronosticos.value[partido.id]));
 const urgencia = computed(() => {
   if (!tiempoRestante.value || tiempoRestante.value.vencido) return 'cerrada';
