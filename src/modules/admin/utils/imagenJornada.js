@@ -94,7 +94,7 @@ export async function generarImagenJornada(jornada) {
     textoAjustado(ctx, partido.equipo_visitante.toUpperCase(), x + 535 + 157.5, filaY + 32, 275, 25);
   });
 
-  const cierre = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' }).format(new Date(jornada.fecha_cierre));
+  const cierre = new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeZone: 'America/Mexico_City' }).format(new Date(jornada.fecha_cierre));
   ctx.fillStyle = '#68746e';
   ctx.font = '600 23px Inter, Arial';
   ctx.textAlign = 'left';

@@ -24,11 +24,11 @@ function formatoMoneda(valor) {
 }
 
 function formatoFecha(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(new Date(fecha));
+  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeZone: 'America/Mexico_City' }).format(new Date(fecha));
 }
 
 function formatoFechaPartido(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(fecha));
+  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Mexico_City' }).format(new Date(fecha));
 }
 
 function abrir(jornada) {
