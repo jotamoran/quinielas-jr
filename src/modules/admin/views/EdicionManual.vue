@@ -19,7 +19,8 @@ const filtroEstatus = ref('todos');
 const loading = ref(false);
 
 const estados = [{ value: 'pendiente', label: 'Pendiente' }, { value: 'aprobado', label: 'Pagada' }, { value: 'rechazado', label: 'Cancelada' }];
-const completas = computed(() => partidos.value.length === 9 && partidos.value.every((partido) => pronosticos.value[partido.id]));
+const partidosActivos = computed(() => partidos.value.filter((p) => !p.cancelado));
+const completas = computed(() => partidosActivos.value.length > 0 && partidosActivos.value.every((partido) => pronosticos.value[partido.id]));
 const filtradas = computed(() => quinielas.value.filter((item) => {
   const text = `${item.alias} ${item.perfiles?.nombre_completo ?? ''} ${item.jornadas?.nombre ?? ''}`.toLowerCase();
   return (filtroEstatus.value === 'todos' || item.estatus_pago === filtroEstatus.value) && text.includes(search.value.toLowerCase());
@@ -108,7 +109,7 @@ onMounted(async () => { try { await cargar(); } catch (error) { await alertaErro
       <div class="rounded-2xl bg-white p-4 shadow-sm sm:p-6"><div class="grid gap-4 sm:grid-cols-2"><label class="form-label">Jornada<select v-model="jornadaId" class="form-control"><option value="">Selecciona una jornada</option><option v-for="jornada in jornadas" :key="jornada.id" :value="jornada.id">{{ jornada.nombre }}</option></select></label><label class="form-label">Nombre de la entrada<input v-model="alias" class="form-control" placeholder="Ej. Carlos oficina #1" /></label><label class="form-label">Correo de contacto (opcional)<input v-model="correo" type="email" class="form-control" placeholder="Para avisarle si gana el cupón" /></label><label class="form-label">Estatus del pago<select v-model="estatus" class="form-control"><option v-for="item in estados" :key="item.value" :value="item.value">{{ item.label }}</option></select></label></div><p class="mt-3 text-xs text-gray-500">Si esta entrada resulta ser la que menos aciertos tuvo, le enviaremos el código del cupón "Por tarugo" a este correo para que se lo hagas llegar.</p></div>
       <div v-if="partidos.length" class="grid gap-4 md:grid-cols-2"><TarjetaPartido v-for="partido in partidos" :key="partido.id" v-model="pronosticos[partido.id]" :partido="partido" /></div>
       <div v-else-if="jornadaId" class="empty-state">La jornada no tiene partidos disponibles.</div>
-      <button v-if="partidos.length" @click="registrar" :disabled="!completas || !alias.trim() || loading" class="sticky bottom-3 w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white shadow-xl disabled:opacity-50">{{ loading ? 'Registrando…' : `${Object.keys(pronosticos).length} de 9 · Registrar quiniela` }}</button>
+      <button v-if="partidos.length" @click="registrar" :disabled="!completas || !alias.trim() || loading" class="sticky bottom-3 w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white shadow-xl disabled:opacity-50">{{ loading ? 'Registrando…' : `${Object.keys(pronosticos).length} de ${partidosActivos.length} · Registrar quiniela` }}</button>
     </section>
   </main>
 </template>
