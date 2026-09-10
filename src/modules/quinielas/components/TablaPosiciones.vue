@@ -30,6 +30,7 @@ async function alternar(fila) {
   abiertaId.value = fila.quiniela_id;
   if (detalles.value[fila.quiniela_id]) return;
   cargandoDetalle.value = fila.quiniela_id;
+  delete errorDetalle.value[fila.quiniela_id];
   try {
     detalles.value[fila.quiniela_id] = await props.obtenerPronosticosFn(fila.quiniela_id);
   } catch (error) {

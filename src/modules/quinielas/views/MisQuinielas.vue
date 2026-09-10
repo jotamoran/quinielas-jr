@@ -23,6 +23,7 @@ async function alternarDetalleEntrada(quiniela) {
   abiertaEntrada.value = quiniela.id;
   if (detallesEntrada.value[quiniela.id]) return;
   cargandoEntrada.value = quiniela.id;
+  delete errorEntrada.value[quiniela.id];
   try {
     detallesEntrada.value[quiniela.id] = await obtenerPronosticosDeQuiniela(quiniela.id);
   } catch (error) {
