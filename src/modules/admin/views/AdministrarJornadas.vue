@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { actualizarCierreJornada, actualizarPremioJornada, listarJornadasAdmin } from '../services/adminService';
+import { actualizarCierreJornada, actualizarPremioJornada, cancelarPartido, listarJornadasAdmin } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
 import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
@@ -133,6 +133,26 @@ async function cerrarRegistro() {
   }
 }
 
+async function alternarCancelacion(partido) {
+  const accion = partido.cancelado ? 'reactivar' : 'cancelar';
+  const confirmado = await confirmarAccion({
+    title: partido.cancelado ? 'Reactivar partido' : 'Cancelar partido',
+    text: partido.cancelado
+      ? 'Volverá a contar para los pronósticos y para el cierre de la jornada.'
+      : 'Ya no contará para ninguna quiniela ni bloqueará el cierre de la jornada.',
+    confirmText: partido.cancelado ? 'Reactivar' : 'Cancelar partido',
+    danger: !partido.cancelado,
+  });
+  if (!confirmado) return;
+  try {
+    await cancelarPartido(partido.id, !partido.cancelado);
+    partido.cancelado = !partido.cancelado;
+    await alertaExito(partido.cancelado ? 'Partido cancelado' : 'Partido reactivado');
+  } catch (error) {
+    await alertaError(error, `No se pudo ${accion} el partido`);
+  }
+}
+
 onMounted(async () => {
   try {
     jornadas.value = await listarJornadasAdmin();
@@ -196,14 +216,16 @@ onMounted(async () => {
         </form>
 
         <div class="grid gap-3 sm:grid-cols-2">
-          <article v-for="(partido, index) in abierta.partidos" :key="partido.id" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <article v-for="(partido, index) in abierta.partidos" :key="partido.id" class="rounded-2xl border p-4 shadow-sm" :class="partido.cancelado ? 'border-red-200 bg-red-50/50' : 'border-gray-200 bg-white'">
             <div class="mb-3 flex justify-between text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ partido.liga_nombre }}</span><span>{{ formatoFechaPartido(partido.fecha_partido) }}</span></div>
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
               <div><img v-if="partido.logo_local" :src="partido.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="text-sm font-bold">{{ partido.equipo_local }}</p></div>
               <span class="text-xs font-bold text-gray-400">VS</span>
               <div><img v-if="partido.logo_visitante" :src="partido.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="text-sm font-bold">{{ partido.equipo_visitante }}</p></div>
             </div>
-            <p v-if="partido.resultado_oficial" class="mt-3 text-center text-sm font-bold text-quiniela-verde">Resultado: {{ partido.resultado_oficial }}</p>
+            <p v-if="partido.cancelado" class="mt-3 text-center text-sm font-bold text-red-700">Cancelado — no cuenta para las quinielas</p>
+            <p v-else-if="partido.resultado_oficial" class="mt-3 text-center text-sm font-bold text-quiniela-verde">Resultado: {{ partido.resultado_oficial }}</p>
+            <button v-if="abierta.estatus !== 'finalizada'" type="button" @click="alternarCancelacion(partido)" class="mt-3 w-full rounded-lg border py-2 text-sm font-semibold" :class="partido.cancelado ? 'border-quiniela-verde text-quiniela-verde' : 'border-red-300 text-red-700'">{{ partido.cancelado ? 'Reactivar partido' : 'Cancelar partido' }}</button>
           </article>
         </div>
       </section>
