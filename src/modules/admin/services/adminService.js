@@ -39,7 +39,7 @@ export async function actualizarQuinielaAdmin(payload) {
 export async function listarJornadasAdmin() {
   const { data, error } = await supabase
     .from('jornadas')
-    .select('id, nombre, costo, premio, fecha_cierre, estatus, creado_el, partidos(id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial)')
+    .select('id, nombre, costo, premio, fecha_cierre, estatus, creado_el, partidos(id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial, cancelado)')
     .order('creado_el', { ascending: false });
   if (error) throw error;
   return data ?? [];
@@ -52,6 +52,11 @@ export async function actualizarPremioJornada(jornadaId, premio) {
 
 export async function actualizarCierreJornada(jornadaId, fechaCierre) {
   const { error } = await supabase.from('jornadas').update({ fecha_cierre: fechaCierre }).eq('id', jornadaId);
+  if (error) throw error;
+}
+
+export async function cancelarPartido(partidoId, cancelado) {
+  const { error } = await supabase.from('partidos').update({ cancelado }).eq('id', partidoId);
   if (error) throw error;
 }
 
