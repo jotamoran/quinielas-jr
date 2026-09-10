@@ -71,7 +71,15 @@ async function compartirRegistro(jornada) {
 
 async function compartirEnlace(jornada) {
   const url = enlacePublico(jornada);
-  if (!navigator.share) return copiarEnlace(jornada);
+  if (!navigator.share) {
+    try {
+      await navigator.clipboard.writeText(url);
+      await alertaExito('Enlace copiado', 'Ya puedes compartir la tabla pública de resultados.');
+    } catch (error) {
+      await alertaError(error, 'No se pudo copiar el enlace');
+    }
+    return;
+  }
   try {
     await navigator.share({ title: jornada.nombre, text: `Consulta los resultados de ${jornada.nombre}`, url });
   } catch (error) {
