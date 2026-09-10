@@ -16,4 +16,4 @@ BEGIN
   )
   WHERE q.jornada_id = p_jornada_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;

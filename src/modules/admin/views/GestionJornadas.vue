@@ -6,7 +6,7 @@ import EquipoAutocomplete from '../components/EquipoAutocomplete.vue';
 import { alertaError, alertaExito } from '@/lib/alertas';
 
 const MAX_PARTIDOS = 9;
-const hoy = new Date().toISOString().slice(0, 10);
+const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const hoyDatetime = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 const ligaPrincipal = LIGAS_DISPONIBLES.find((liga) => liga.principal);
 const ligasComplementarias = LIGAS_DISPONIBLES.filter((liga) => !liga.principal);

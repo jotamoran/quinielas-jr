@@ -52,7 +52,7 @@ async function registrar() {
   loading.value = true;
   try {
     await crearQuinielaAdmin({ jornada_id: jornadaId.value, alias: alias.value, correo_contacto: correo.value, estatus_pago: estatus.value, predicciones: Object.entries(pronosticos.value).map(([partido_id, pronostico]) => ({ partido_id, pronostico })) });
-    await alertaExito('Quiniela registrada', 'La entrada presencial quedó guardada con sus 9 pronósticos.');
+    await alertaExito('Quiniela registrada', `La entrada presencial quedó guardada con sus ${partidosActivos.value.length} pronósticos.`);
     alias.value = '';
     correo.value = '';
     jornadaId.value = '';
