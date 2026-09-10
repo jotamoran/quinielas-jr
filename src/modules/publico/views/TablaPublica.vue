@@ -94,7 +94,8 @@ onUnmounted(() => clearInterval(intervalo));
       <h1 class="mt-1 text-3xl font-bold">{{ jornada?.nombre }}</h1>
       <div class="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2">
         <span class="text-sm text-green-100">Premio</span>
-        <strong class="text-xl text-quiniela-dorado">{{ formatoMoneda(jornada?.premio) }}</strong>
+        <strong v-if="bloqueada" class="text-xl text-quiniela-dorado">{{ formatoMoneda(jornada?.premio) }}</strong>
+        <span v-else class="text-sm italic text-green-100">Se revela al cierre del registro</span>
       </div>
       <p class="mt-4 text-sm text-green-100">Cierre de registro: {{ formatoFecha(jornada?.fecha_cierre) }}</p>
       <span class="mt-2 inline-block rounded-full px-3 py-1 text-xs font-bold" :class="bloqueada ? 'bg-white/15 text-white' : 'bg-green-200 text-quiniela-verdeOscuro'">{{ bloqueada ? 'Registro cerrado' : 'Registro abierto' }}</span>
