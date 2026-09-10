@@ -71,22 +71,25 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="loginModalStore.abierto" ref="modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-titulo" :aria-describedby="error ? 'login-modal-error' : undefined" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-6" @click.self="loginModalStore.cerrar()">
-    <form @submit.prevent="onSubmit" class="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-xl sm:p-8">
-      <div class="flex items-start justify-between">
-        <img src="@assets/logo.png" alt="Quinielas JR" class="h-14 w-14 rounded-full" />
-        <button type="button" @click="loginModalStore.cerrar()" class="grid h-11 w-11 place-items-center rounded-full text-2xl leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label="Cerrar">×</button>
+  <div v-if="loginModalStore.abierto" ref="modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-titulo" :aria-describedby="error ? 'login-modal-error' : 'login-modal-descripcion'" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/55 px-3 py-4 backdrop-blur-[2px] sm:px-4 sm:py-6" @click.self="loginModalStore.cerrar()">
+    <form @submit.prevent="onSubmit" class="relative max-h-[calc(100dvh-2rem)] w-full max-w-sm space-y-4 overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-8">
+      <button type="button" @click="loginModalStore.cerrar()" class="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full text-2xl leading-none text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiniela-verde focus-visible:ring-offset-2 sm:right-4 sm:top-4" aria-label="Cerrar">×</button>
+      <div class="flex justify-center px-12">
+        <img src="@assets/logo.png" alt="" class="h-16 w-16 rounded-full object-contain sm:h-[4.5rem] sm:w-[4.5rem]" />
       </div>
-      <h2 id="login-modal-titulo" class="text-xl font-bold text-quiniela-verdeOscuro">Inicia sesión</h2>
+      <div class="space-y-1 text-center">
+        <h2 id="login-modal-titulo" class="text-2xl font-bold text-quiniela-verdeOscuro">Inicia sesión</h2>
+        <p id="login-modal-descripcion" class="text-sm text-gray-500">Entra para registrar y consultar tus quinielas.</p>
+      </div>
       <label class="form-label">Correo<input ref="emailInput" v-model="email" type="text" inputmode="email" autocomplete="username" placeholder="correo@ejemplo.com o admin" required class="form-control min-h-11" /></label>
       <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required class="form-control min-h-11" /></label>
       <p v-if="error" id="login-modal-error" role="alert" class="rounded-lg bg-red-50 p-2 text-sm text-quiniela-error">{{ error }}</p>
-      <button type="submit" :disabled="cargando" class="w-full rounded bg-quiniela-dorado py-2 font-semibold text-quiniela-grisTexto hover:bg-quiniela-doradoOscuro">
+      <button type="submit" :disabled="cargando" class="min-h-11 w-full rounded-xl bg-quiniela-dorado px-4 py-2.5 font-semibold text-quiniela-grisTexto transition hover:bg-quiniela-doradoOscuro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiniela-verde focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70">
         {{ cargando ? 'Entrando...' : 'Iniciar sesión' }}
       </button>
-      <div class="space-x-2 text-center text-sm">
-        <router-link :to="{ name: 'registro' }" @click="loginModalStore.cerrar()" class="text-quiniela-verde">Crear cuenta</router-link>
-        <router-link :to="{ name: 'recuperar-password' }" @click="loginModalStore.cerrar()" class="text-quiniela-verde">Olvidé mi contraseña</router-link>
+      <div class="flex flex-col items-center gap-1 text-center text-sm sm:flex-row sm:justify-center sm:gap-4">
+        <router-link :to="{ name: 'registro' }" @click="loginModalStore.cerrar()" class="rounded-md px-2 py-1.5 font-semibold text-quiniela-verde hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiniela-verde">Crear cuenta</router-link>
+        <router-link :to="{ name: 'recuperar-password' }" @click="loginModalStore.cerrar()" class="rounded-md px-2 py-1.5 text-quiniela-verde hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiniela-verde">Olvidé mi contraseña</router-link>
       </div>
     </form>
   </div>
