@@ -1,14 +1,36 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
 import { supabase } from '@/lib/supabase';
-import { obtenerMisQuinielas, obtenerRanking, obtenerJornadaActiva, obtenerPartidos } from '../services/quinielasService';
+import { obtenerMisQuinielas, obtenerRanking, obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela } from '../services/quinielasService';
 import { calcularResumenBalance } from '../utils/balance';
 import TablaPosiciones from '../components/TablaPosiciones.vue';
+import DetallePronosticos from '../components/DetallePronosticos.vue';
 
 const quinielas = ref([]);
 const resumen = ref(null);
 const jornadaActiva = ref(null);
 const partidosJornadaActiva = ref([]);
+const abiertaEntrada = ref(null);
+const detallesEntrada = ref({});
+const cargandoEntrada = ref(null);
+const errorEntrada = ref({});
+
+async function alternarDetalleEntrada(quiniela) {
+  if (abiertaEntrada.value === quiniela.id) {
+    abiertaEntrada.value = null;
+    return;
+  }
+  abiertaEntrada.value = quiniela.id;
+  if (detallesEntrada.value[quiniela.id]) return;
+  cargandoEntrada.value = quiniela.id;
+  try {
+    detallesEntrada.value[quiniela.id] = await obtenerPronosticosDeQuiniela(quiniela.id);
+  } catch (error) {
+    errorEntrada.value[quiniela.id] = error.message;
+  } finally {
+    cargandoEntrada.value = null;
+  }
+}
 
 async function cargar() {
   quinielas.value = await obtenerMisQuinielas();
@@ -72,7 +94,17 @@ onMounted(cargar);
     </p>
 
     <div v-if="quinielas.length" class="grid gap-3 sm:hidden">
-      <article v-for="q in quinielas" :key="q.id" class="rounded-2xl bg-white p-4 shadow-sm"><div class="flex items-start justify-between gap-3"><div><p class="font-bold text-quiniela-verdeOscuro">{{ q.alias }}</p><p class="text-sm text-gray-500">{{ q.jornadas?.nombre }}</p></div><span class="rounded-full px-2 py-1 text-xs font-bold" :class="q.estatus_pago === 'aprobado' ? 'bg-green-100 text-green-800' : q.estatus_pago === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}</span></div><p v-if="q.estatus_pago !== 'aprobado'" class="mt-2 text-xs text-amber-700">No estás participando todavía — falta confirmar tu pago.</p><p class="mt-4 border-t pt-3 text-sm"><span class="text-gray-500">Aciertos:</span> <strong class="text-quiniela-verde">{{ q.aciertos }}</strong></p></article>
+      <article v-for="q in quinielas" :key="q.id" class="rounded-2xl bg-white p-4 shadow-sm">
+        <div class="flex items-start justify-between gap-3"><div><p class="font-bold text-quiniela-verdeOscuro">{{ q.alias }}</p><p class="text-sm text-gray-500">{{ q.jornadas?.nombre }}</p></div><span class="rounded-full px-2 py-1 text-xs font-bold" :class="q.estatus_pago === 'aprobado' ? 'bg-green-100 text-green-800' : q.estatus_pago === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}</span></div>
+        <p v-if="q.estatus_pago !== 'aprobado'" class="mt-2 text-xs text-amber-700">No estás participando todavía — falta confirmar tu pago.</p>
+        <p class="mt-4 border-t pt-3 text-sm"><span class="text-gray-500">Aciertos:</span> <strong class="text-quiniela-verde">{{ q.aciertos }}</strong></p>
+        <button type="button" @click="alternarDetalleEntrada(q)" class="mt-3 w-full rounded-lg border border-gray-200 py-2 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button>
+        <div v-if="abiertaEntrada === q.id" class="mt-3 border-t pt-3">
+          <p v-if="cargandoEntrada === q.id" class="text-center text-sm text-gray-500">Cargando pronósticos…</p>
+          <p v-else-if="errorEntrada[q.id]" class="text-center text-sm text-red-600">{{ errorEntrada[q.id] }}</p>
+          <DetallePronosticos v-else :items="detallesEntrada[q.id]" />
+        </div>
+      </article>
     </div>
     <div v-if="quinielas.length" class="hidden overflow-x-auto sm:block">
       <table class="w-full bg-white rounded-lg shadow overflow-hidden">
@@ -82,15 +114,26 @@ onMounted(cargar);
             <th class="px-4 py-2 text-left">Entrada</th>
             <th class="px-4 py-2 text-left">Pago</th>
             <th class="px-4 py-2 text-right">Aciertos</th>
+            <th class="px-4 py-2"></th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="q in quinielas" :key="q.id" class="border-b">
-            <td class="px-4 py-2">{{ q.jornadas?.nombre }}</td>
-            <td class="px-4 py-2">{{ q.alias }}</td>
-            <td class="px-4 py-2">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}<span v-if="q.estatus_pago !== 'aprobado'" class="ml-2 text-xs text-amber-700">(no participa todavía)</span></td>
-            <td class="px-4 py-2 text-right">{{ q.aciertos }}</td>
-          </tr>
+          <template v-for="q in quinielas" :key="q.id">
+            <tr class="border-b">
+              <td class="px-4 py-2">{{ q.jornadas?.nombre }}</td>
+              <td class="px-4 py-2">{{ q.alias }}</td>
+              <td class="px-4 py-2">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}<span v-if="q.estatus_pago !== 'aprobado'" class="ml-2 text-xs text-amber-700">(no participa todavía)</span></td>
+              <td class="px-4 py-2 text-right">{{ q.aciertos }}</td>
+              <td class="px-4 py-2 text-right"><button type="button" @click="alternarDetalleEntrada(q)" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button></td>
+            </tr>
+            <tr v-if="abiertaEntrada === q.id" class="border-b bg-gray-50">
+              <td colspan="5" class="p-4">
+                <p v-if="cargandoEntrada === q.id" class="text-center text-sm text-gray-500">Cargando pronósticos…</p>
+                <p v-else-if="errorEntrada[q.id]" class="text-center text-sm text-red-600">{{ errorEntrada[q.id] }}</p>
+                <DetallePronosticos v-else :items="detallesEntrada[q.id]" />
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
