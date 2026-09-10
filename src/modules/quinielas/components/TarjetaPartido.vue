@@ -21,7 +21,8 @@ function fechaPartido(fecha) {
       <span class="text-xs font-bold text-gray-400">VS</span>
       <div><img v-if="partido.logo_visitante" :src="partido.logo_visitante" alt="" class="mx-auto mb-2 h-12 w-12 object-contain" /><div v-else class="mx-auto mb-2 h-12 w-12 rounded-full bg-gray-100"></div><p class="text-sm font-bold">{{ partido.equipo_visitante }}</p></div>
     </div>
-    <div class="grid grid-cols-3 gap-2">
+    <div v-if="partido.cancelado" class="rounded-xl bg-red-50 py-3 text-center text-sm font-bold text-red-700">Partido cancelado — no cuenta para tu quiniela</div>
+    <div v-else class="grid grid-cols-3 gap-2">
       <button v-for="opcion in opciones" :key="opcion.value" type="button" :disabled="deshabilitado" @click="$emit('update:modelValue', opcion.value)" :aria-pressed="modelValue === opcion.value" class="min-h-12 rounded-xl border px-2 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50" :class="modelValue === opcion.value ? 'border-quiniela-doradoOscuro bg-quiniela-dorado text-quiniela-grisTexto shadow-sm' : 'border-gray-300 text-gray-600 hover:border-quiniela-verde'">{{ opcion.label }}</button>
     </div>
   </article>
