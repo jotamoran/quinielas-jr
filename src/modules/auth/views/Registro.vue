@@ -29,17 +29,15 @@ async function onSubmit() {
     <form @submit.prevent="onSubmit" class="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-md sm:p-8">
       <img src="@assets/logo.png" alt="Quinielas JR" class="h-16 w-16 mx-auto rounded-full mb-2" />
       <h1 class="text-2xl font-bold text-quiniela-verdeOscuro text-center">Crear cuenta</h1>
-      <input v-model="nombreCompleto" type="text" placeholder="Nombre completo" required
-        class="w-full border rounded px-3 py-2" />
-      <input v-model="email" type="email" placeholder="Correo" required
-        class="w-full border rounded px-3 py-2" />
-      <input v-model="password" type="password" placeholder="Contraseña" required minlength="6"
-        class="w-full border rounded px-3 py-2" />
-      <p v-if="error" class="text-quiniela-error text-sm">{{ error }}</p>
+      <label class="form-label">Nombre completo<input v-model="nombreCompleto" type="text" autocomplete="name" placeholder="Tu nombre" required class="form-control min-h-11" /></label>
+      <label class="form-label">Correo<input v-model="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required class="form-control min-h-11" /></label>
+      <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required minlength="6" class="form-control min-h-11" /></label>
+      <p v-if="error" role="alert" class="rounded-lg bg-red-50 p-2 text-quiniela-error text-sm">{{ error }}</p>
       <button type="submit" :disabled="cargando"
-        class="w-full bg-quiniela-dorado hover:bg-quiniela-doradoOscuro text-quiniela-grisTexto font-semibold py-2 rounded">
+        class="min-h-11 w-full rounded-xl bg-quiniela-dorado py-2 font-semibold text-quiniela-grisTexto hover:bg-quiniela-doradoOscuro">
         {{ cargando ? 'Creando...' : 'Registrarme' }}
       </button>
+      <p class="text-center text-sm text-gray-600">¿Ya tienes cuenta? <router-link :to="{ name: 'login' }" class="font-semibold text-quiniela-verde">Inicia sesión</router-link></p>
     </form>
   </div>
 </template>

@@ -47,12 +47,12 @@ function enlacePublico(jornada) {
   return new URL(router.resolve({ name: 'tabla-publica', params: { jornadaId: jornada.id } }).href, window.location.origin).href;
 }
 
-function enlaceRegistro() {
-  return new URL(router.resolve({ name: 'llenar-quiniela' }).href, window.location.origin).href;
+function enlaceRegistro(jornada) {
+  return new URL(router.resolve({ name: 'llenar-quiniela', params: { jornadaId: jornada.id } }).href, window.location.origin).href;
 }
 
 async function compartirRegistro(jornada) {
-  const url = enlaceRegistro();
+  const url = enlaceRegistro(jornada);
   if (!navigator.share) {
     try {
       await navigator.clipboard.writeText(url);

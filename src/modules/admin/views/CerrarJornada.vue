@@ -19,7 +19,7 @@ async function cerrar(id) {
   try {
     resultado.value = await cerrarJornada(id);
     await cargar();
-    await alertaExito('Jornada finalizada');
+    await alertaExito('Jornada finalizada', resultado.value.avisos?.length ? 'Finalizó, pero hay avisos que requieren revisión.' : 'Ganadores y cupón quedaron registrados.');
   } catch (error) {
     await alertaError(error);
   } finally {
@@ -39,6 +39,16 @@ onMounted(cargar);
         Cerrar jornada y enviar resultados
       </button>
     </div>
-    <pre v-if="resultado" class="bg-white rounded p-4 text-sm overflow-auto">{{ resultado }}</pre>
+    <section v-if="resultado" class="rounded-2xl border border-green-200 bg-white p-5 shadow-sm">
+      <h2 class="text-lg font-bold text-quiniela-verdeOscuro">Resumen del cierre</h2>
+      <div class="mt-4 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-xl bg-green-50 p-4"><p class="text-sm text-gray-600">Ganadores</p><p class="text-2xl font-bold text-quiniela-verde">{{ resultado.ganadores?.length ?? 0 }}</p></div>
+        <div class="rounded-xl bg-amber-50 p-4"><p class="text-sm text-gray-600">Cupón de consolación</p><p class="font-bold text-amber-800">{{ resultado.cuponGenerado ? 'Asignado' : resultado.peor ? 'Sin medio de contacto' : 'No aplica' }}</p></div>
+      </div>
+      <div v-if="resultado.avisos?.length" role="alert" class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <p class="font-bold">Revisa estos avisos</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5"><li v-for="aviso in resultado.avisos" :key="aviso">{{ aviso }}</li></ul>
+      </div>
+    </section>
   </main>
 </template>

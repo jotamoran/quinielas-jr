@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
 import { useLoginModalStore } from '@/store/loginModal';
 import TarjetaPartido from '../components/TarjetaPartido.vue';
@@ -9,6 +9,7 @@ import { calcularTiempoRestante, estaBloqueado } from '../utils/countdown';
 import { obtenerJornadaActiva, obtenerPartidos, crearQuiniela, guardarPredicciones, subirComprobante, notificarRegistro, aplicarCupon } from '../services/quinielasService';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const loginModalStore = useLoginModalStore();
 const jornada = ref(null);
@@ -41,8 +42,12 @@ const colorContador = computed(() => ({ normal: 'bg-green-700', media: 'bg-amber
 const horasTotales = computed(() => (tiempoRestante.value?.dias ?? 0) * 24 + (tiempoRestante.value?.horas ?? 0));
 
 async function cargar() {
+  jornada.value = null;
+  partidos.value = [];
+  pronosticos.value = {};
+  paso.value = 'pronosticos';
   try {
-    jornada.value = await obtenerJornadaActiva();
+    jornada.value = await obtenerJornadaActiva(route.params.jornadaId ?? null, { soloAbierta: !route.params.jornadaId });
     if (jornada.value) partidos.value = await obtenerPartidos(jornada.value.id);
   } catch (e) {
     error.value = e.message;
@@ -74,6 +79,7 @@ async function confirmarPago({ metodo, archivo, codigoCupon }) {
 
 onMounted(async () => { await cargar(); actualizarTiempo(); intervalo = setInterval(actualizarTiempo, 1000); });
 onUnmounted(() => clearInterval(intervalo));
+watch(() => route.params.jornadaId, async () => { await cargar(); actualizarTiempo(); });
 </script>
 
 <template>

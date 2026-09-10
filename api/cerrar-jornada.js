@@ -10,6 +10,10 @@ function generarCodigoCupon() {
 const CODIGO_UNIQUE_VIOLATION = '23505';
 
 async function insertarCuponConReintento(supabaseAdmin, { usuarioId, correoContacto, jornadaId }, intentosMax = 3) {
+  const { data: existente, error: errorConsulta } = await supabaseAdmin.from('cupones').select('codigo').eq('jornada_origen_id', jornadaId).maybeSingle();
+  if (errorConsulta) throw errorConsulta;
+  if (existente) return existente.codigo;
+
   for (let intento = 1; intento <= intentosMax; intento++) {
     const codigo = generarCodigoCupon();
     const { error } = await supabaseAdmin.from('cupones').insert({
@@ -19,7 +23,11 @@ async function insertarCuponConReintento(supabaseAdmin, { usuarioId, correoConta
       jornada_origen_id: jornadaId,
     });
     if (!error) return codigo;
-    const esColisionDeCodigo = error.code === CODIGO_UNIQUE_VIOLATION;
+    const esColisionDeCodigo = error.code === CODIGO_UNIQUE_VIOLATION && error.message?.includes('cupones_codigo_key');
+    if (error.code === CODIGO_UNIQUE_VIOLATION && !esColisionDeCodigo) {
+      const { data: creadoPorOtroProceso } = await supabaseAdmin.from('cupones').select('codigo').eq('jornada_origen_id', jornadaId).maybeSingle();
+      if (creadoPorOtroProceso) return creadoPorOtroProceso.codigo;
+    }
     if (!esColisionDeCodigo || intento === intentosMax) throw error;
   }
 }
@@ -61,11 +69,6 @@ export default async function handler(req, res) {
     const entradas = ranking.map((r) => ({ quinielaId: r.quiniela_id, usuarioId: r.usuario_id, aciertos: r.aciertos }));
     const { ganadores, peor } = calcularGanadoresYPeor(entradas, jornada?.premio ?? null);
 
-    // Cerrar la jornada es lo importante y no puede depender de que los correos
-    // salgan: si el SMTP falla, el aviso queda pendiente pero la jornada sí cierra.
-    const { error: errorFinalizarJornada } = await supabaseAdmin.from('jornadas').update({ estatus: 'finalizada' }).eq('id', jornada_id);
-    if (errorFinalizarJornada) throw errorFinalizarJornada;
-
     const avisos = [];
     async function intentar(etiqueta, fn) {
       try {
@@ -77,23 +80,37 @@ export default async function handler(req, res) {
     }
 
     let codigoCuponPeor = null;
+    let quinielaPeor = null;
     if (peor?.usuarioId) {
-      await intentar('generar cupón "Por tarugo"', async () => {
-        codigoCuponPeor = await insertarCuponConReintento(supabaseAdmin, { usuarioId: peor.usuarioId, jornadaId: jornada_id });
-      });
+      codigoCuponPeor = await insertarCuponConReintento(supabaseAdmin, { usuarioId: peor.usuarioId, jornadaId: jornada_id });
     } else if (peor) {
-      const { data: quinielaPeor } = await supabaseAdmin.from('quinielas').select('alias, correo_contacto').eq('id', peor.quinielaId).single();
+      const { data } = await supabaseAdmin.from('quinielas').select('alias, correo_contacto').eq('id', peor.quinielaId).single();
+      quinielaPeor = data;
       if (quinielaPeor?.correo_contacto) {
-        await intentar('cupón "Por tarugo" por correo de contacto', async () => {
-          codigoCuponPeor = await insertarCuponConReintento(supabaseAdmin, { correoContacto: quinielaPeor.correo_contacto, jornadaId: jornada_id });
+        codigoCuponPeor = await insertarCuponConReintento(supabaseAdmin, { correoContacto: quinielaPeor.correo_contacto, jornadaId: jornada_id });
+      }
+    }
+
+    const { data: finalizada, error: errorFinalizarJornada } = await supabaseAdmin
+      .from('jornadas')
+      .update({ estatus: 'finalizada' })
+      .eq('id', jornada_id)
+      .neq('estatus', 'finalizada')
+      .select('id')
+      .maybeSingle();
+    if (errorFinalizarJornada) throw errorFinalizarJornada;
+    if (!finalizada) return res.status(409).json({ error: 'Esta jornada ya fue finalizada' });
+
+    // Los correos son best-effort: un problema de SMTP no revierte el cierre.
+    if (codigoCuponPeor && quinielaPeor?.correo_contacto) {
+      await intentar('correo del cupón "Por tarugo"', async () => {
           await enviarCorreo({
             to: quinielaPeor.correo_contacto,
             subject: `Tu cupón "Por tarugo" de ${jornada?.nombre ?? 'la jornada'}`,
             heading: '🎟️ Ganaste un cupón "Por tarugo"',
             bodyHtml: `<p>Hola, tu quiniela "${quinielaPeor.alias ?? 'Entrada'}" fue la que menos aciertos tuvo en <b>${jornada?.nombre ?? 'la jornada'}</b>, así que te ganaste un cupón de consolación para tu próximo registro.</p><p>Código: <b>${codigoCuponPeor}</b></p><p>Preséntalo con quien te registró para usarlo en tu siguiente quiniela.</p>`,
           });
-        });
-      }
+      });
     }
 
     // Ganadores de premio sin cuenta (registro presencial) pero con correo de
@@ -138,7 +155,7 @@ export default async function handler(req, res) {
       }));
     }
 
-    return res.status(200).json({ status: 'ok', ganadores, peor, avisos: avisos.length ? avisos : undefined });
+    return res.status(200).json({ status: 'ok', ganadores, peor, cuponGenerado: Boolean(codigoCuponPeor), avisos: avisos.length ? avisos : undefined });
   } catch (e) {
     const status = e instanceof ErrorHttp ? e.status : 500;
     return res.status(status).json({ error: e.message });
