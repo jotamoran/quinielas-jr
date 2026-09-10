@@ -31,7 +31,7 @@ async function obtenerRankingPublico(jId) {
 }
 
 async function cargar() {
-  const { data: j, error: jornadaError } = await supabase.from('jornadas').select('nombre, premio, fecha_cierre, estatus').eq('id', jornadaId).maybeSingle();
+  const { data: j, error: jornadaError } = await supabase.from('vista_jornada_publica').select('nombre, premio, fecha_cierre, estatus').eq('id', jornadaId).maybeSingle();
   if (jornadaError) throw jornadaError;
   if (!j) throw new Error('La jornada no existe o ya no está disponible.');
   jornada.value = j;
