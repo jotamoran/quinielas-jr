@@ -6,6 +6,8 @@ import EquipoAutocomplete from '../components/EquipoAutocomplete.vue';
 import { alertaError, alertaExito } from '@/lib/alertas';
 
 const MAX_PARTIDOS = 9;
+const hoy = new Date().toISOString().slice(0, 10);
+const hoyDatetime = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 const ligaPrincipal = LIGAS_DISPONIBLES.find((liga) => liga.principal);
 const ligasComplementarias = LIGAS_DISPONIBLES.filter((liga) => !liga.principal);
 const ligasSeleccionadas = ref([ligaPrincipal.id]);
@@ -82,6 +84,10 @@ function agregarPartidoManual() {
     error.value = 'Completa todos los datos del partido manual.';
     return;
   }
+  if (fecha < hoyDatetime) {
+    error.value = 'La fecha del partido no puede ser en el pasado.';
+    return;
+  }
   if (completo.value) {
     error.value = 'Ya seleccionaste 9 partidos. Deselecciona uno para cambiarlo.';
     return;
@@ -102,6 +108,10 @@ function agregarPartidoManual() {
 async function guardarJornada() {
   error.value = '';
   if (!completo.value) return;
+  if (fechaCierre.value < hoy) {
+    error.value = 'La fecha de cierre no puede ser en el pasado.';
+    return;
+  }
   try {
     const cierreIso = new Date(`${fechaCierre.value}T23:59:59`).toISOString();
     await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: cierreIso, partidosSeleccionados: seleccionados.value });
@@ -147,8 +157,8 @@ function irADatos() {
         <div><p class="font-bold text-quiniela-verdeOscuro">Liga MX</p><p class="text-sm text-gray-600">Competición principal</p></div>
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
-        <label class="text-sm font-semibold text-gray-700">Del<input v-model="desde" type="date" class="mt-1 w-full rounded-xl border-gray-300" /></label>
-        <label class="text-sm font-semibold text-gray-700">Al<input v-model="hasta" type="date" class="mt-1 w-full rounded-xl border-gray-300" /></label>
+        <label class="text-sm font-semibold text-gray-700">Del<input v-model="desde" type="date" :min="hoy" class="mt-1 w-full rounded-xl border-gray-300" /></label>
+        <label class="text-sm font-semibold text-gray-700">Al<input v-model="hasta" type="date" :min="hoy" class="mt-1 w-full rounded-xl border-gray-300" /></label>
       </div>
       <button @click="buscar" :disabled="!desde || !hasta || cargando" class="mt-4 w-full rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50 sm:w-auto">
         {{ cargando ? 'Buscando…' : 'Buscar partidos' }}
@@ -165,7 +175,7 @@ function irADatos() {
       </div>
       <form v-if="mostrarManual" class="mt-5 grid gap-4 sm:grid-cols-2" @submit.prevent="agregarPartidoManual">
         <label class="text-sm font-semibold">Liga<input v-model="partidoManual.liga" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Liga o competición" /></label>
-        <label class="text-sm font-semibold">Fecha y hora<input v-model="partidoManual.fecha" type="datetime-local" class="mt-1 w-full rounded-xl border-gray-300" /></label>
+        <label class="text-sm font-semibold">Fecha y hora<input v-model="partidoManual.fecha" type="datetime-local" :min="hoyDatetime" class="mt-1 w-full rounded-xl border-gray-300" /></label>
         <EquipoAutocomplete v-model="partidoManual.local" label="Equipo local" />
         <EquipoAutocomplete v-model="partidoManual.visitante" label="Equipo visitante" />
         <button type="submit" class="rounded-xl bg-quiniela-verde px-4 py-3 font-semibold text-white sm:col-span-2">Agregar y seleccionar</button>
@@ -199,7 +209,7 @@ function irADatos() {
 
     <section v-if="completo" id="datos-jornada" class="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
       <h2 class="mb-4 text-xl font-bold text-quiniela-verdeOscuro">Datos de la jornada</h2>
-      <div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-semibold">Nombre<input v-model="nombreJornada" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Cierre<input v-model="fechaCierre" type="date" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Costo<input v-model.number="costo" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Premio<input v-model.number="premio" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label></div>
+      <div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-semibold">Nombre<input v-model="nombreJornada" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Cierre<input v-model="fechaCierre" type="date" :min="hoy" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Costo<input v-model.number="costo" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Premio<input v-model.number="premio" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label></div>
       <button @click="guardarJornada" :disabled="!nombreJornada || !fechaCierre" class="mt-5 w-full rounded-xl bg-quiniela-dorado py-3 font-bold text-quiniela-grisTexto disabled:opacity-50">Publicar jornada</button>
     </section>
 
