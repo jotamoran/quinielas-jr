@@ -17,6 +17,8 @@ const error = ref('');
 const tablaPosiciones = ref(null);
 let intervalo;
 const bloqueada = computed(() => jornada.value && new Date(jornada.value.fecha_cierre) <= new Date());
+const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
+const mostrarDestacados = computed(() => bloqueada.value || empezaronPartidos.value);
 
 async function obtenerRankingPublico(jId) {
   const { data, error } = await supabase
@@ -110,7 +112,7 @@ onUnmounted(() => clearInterval(intervalo));
         <router-link v-if="authStore.isLoggedIn" :to="{ name: 'llenar-quiniela' }" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Registrar</router-link>
         <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Iniciar sesión</button>
       </div>
-      <TablaPosiciones ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" resaltarExtremos />
+      <TablaPosiciones ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
     </section>
 
     <section class="space-y-3">
