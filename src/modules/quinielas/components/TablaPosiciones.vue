@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, onMounted, watch } from 'vue';
+import DetallePronosticos from './DetallePronosticos.vue';
 
 const props = defineProps({
   jornadaId: { type: String, required: true },
@@ -40,10 +41,6 @@ async function alternar(fila) {
 
 function nombreParticipante(fila) {
   return fila.alias ?? fila.mostrar_como ?? fila.nombre_completo;
-}
-
-function etiquetaPronostico(valor) {
-  return { L: 'Local', E: 'Empate', V: 'Visita' }[valor] ?? valor;
 }
 
 function clavePara(fila) {
@@ -99,17 +96,7 @@ defineExpose({ recargar: cargar });
       <div v-if="abiertaId === fila.quiniela_id" class="border-t border-gray-100 bg-gray-50 p-3 sm:p-4">
         <p v-if="cargandoDetalle === fila.quiniela_id" class="text-center text-sm text-gray-500">Cargando pronósticos…</p>
         <p v-else-if="errorDetalle[fila.quiniela_id]" class="text-center text-sm text-red-600">{{ errorDetalle[fila.quiniela_id] }}</p>
-        <div v-else class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <div v-for="(detalle, index) in detalles[fila.quiniela_id]" :key="detalle.partido_id" class="flex items-center justify-between gap-2 rounded-xl bg-white p-3 text-sm">
-            <div class="flex min-w-0 items-center gap-1.5">
-              <span class="text-xs text-gray-400">{{ index + 1 }}</span>
-              <img v-if="detalle.logo_local" :src="detalle.logo_local" alt="" class="h-5 w-5 shrink-0 object-contain" /><span v-else class="h-5 w-5 shrink-0 rounded-full bg-gray-100"></span>
-              <p class="truncate font-semibold">{{ detalle.equipo_local }} vs {{ detalle.equipo_visitante }}</p>
-              <img v-if="detalle.logo_visitante" :src="detalle.logo_visitante" alt="" class="h-5 w-5 shrink-0 object-contain" /><span v-else class="h-5 w-5 shrink-0 rounded-full bg-gray-100"></span>
-            </div>
-            <span class="shrink-0 rounded-full bg-green-50 px-2 py-1 text-xs font-bold text-quiniela-verde">{{ etiquetaPronostico(detalle.pronostico) }}</span>
-          </div>
-        </div>
+        <DetallePronosticos v-else :items="detalles[fila.quiniela_id]" />
       </div>
     </article>
   </div>
