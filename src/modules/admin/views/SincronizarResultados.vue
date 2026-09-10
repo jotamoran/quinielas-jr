@@ -69,7 +69,7 @@ async function guardarManuales() {
 }
 
 function fechaPartido(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(fecha));
+  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Mexico_City' }).format(new Date(fecha));
 }
 
 onMounted(async () => {

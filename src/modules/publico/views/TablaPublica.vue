@@ -63,7 +63,7 @@ function formatoMoneda(valor) {
 }
 
 function formatoFecha(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' }).format(new Date(fecha));
+  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeZone: 'America/Mexico_City' }).format(new Date(fecha));
 }
 
 async function actualizar() {
