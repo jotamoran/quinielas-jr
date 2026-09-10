@@ -12,6 +12,7 @@ const premioEditado = ref(0);
 const cierreEditado = ref('');
 const cargando = ref(true);
 const guardando = ref(false);
+const hoy = new Date().toISOString().slice(0, 10);
 
 const jornadasOrdenadas = computed(() => [...jornadas.value].sort((a, b) => {
   const prioridad = { activa: 0, borrador: 1, cerrada: 2, finalizada: 3 };
@@ -46,12 +47,25 @@ function enlacePublico(jornada) {
   return new URL(router.resolve({ name: 'tabla-publica', params: { jornadaId: jornada.id } }).href, window.location.origin).href;
 }
 
-async function copiarEnlace(jornada) {
+function enlaceRegistro() {
+  return new URL(router.resolve({ name: 'llenar-quiniela' }).href, window.location.origin).href;
+}
+
+async function compartirRegistro(jornada) {
+  const url = enlaceRegistro();
+  if (!navigator.share) {
+    try {
+      await navigator.clipboard.writeText(url);
+      await alertaExito('Enlace copiado', 'Ya puedes compartirlo para que se registren.');
+    } catch (error) {
+      await alertaError(error, 'No se pudo copiar el enlace');
+    }
+    return;
+  }
   try {
-    await navigator.clipboard.writeText(enlacePublico(jornada));
-    await alertaExito('Enlace copiado', 'Ya puedes compartir la tabla pública de resultados.');
+    await navigator.share({ title: jornada.nombre, text: `Regístrate en ${jornada.nombre}`, url });
   } catch (error) {
-    await alertaError(error, 'No se pudo copiar el enlace');
+    if (error.name !== 'AbortError') await alertaError(error, 'No se pudo compartir');
   }
 }
 
@@ -102,6 +116,10 @@ async function guardarPremio() {
 
 async function guardarCierre() {
   if (!abierta.value || !cierreEditado.value) return;
+  if (cierreEditado.value < hoy) {
+    await alertaError(new Error('La fecha de cierre no puede ser anterior a hoy'));
+    return;
+  }
   guardando.value = true;
   try {
     const fecha = new Date(`${cierreEditado.value}T23:59:59`).toISOString();
@@ -195,7 +213,7 @@ onMounted(async () => {
           </div>
           <div class="mt-5 grid gap-2 sm:grid-cols-3">
             <button @click="compartirEnlace(abierta)" class="rounded-xl bg-white px-3 py-2.5 font-semibold text-quiniela-verdeOscuro">Compartir resultados</button>
-            <button @click="copiarEnlace(abierta)" class="rounded-xl border border-white/40 px-3 py-2.5 font-semibold">Copiar enlace</button>
+            <button @click="compartirRegistro(abierta)" class="rounded-xl border border-white/40 px-3 py-2.5 font-semibold">Compartir quiniela</button>
             <button @click="compartirImagen(abierta)" class="rounded-xl bg-quiniela-dorado px-3 py-2.5 font-semibold text-quiniela-grisTexto">Compartir imagen</button>
           </div>
         </article>
@@ -207,7 +225,7 @@ onMounted(async () => {
 
         <form @submit.prevent="guardarCierre" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label class="form-label flex-1">Fecha límite de registro<input v-model="cierreEditado" type="date" class="form-control mt-1" /></label>
+            <label class="form-label flex-1">Fecha límite de registro<input v-model="cierreEditado" type="date" :min="hoy" class="form-control mt-1" /></label>
             <button :disabled="guardando || !cierreEditado" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">Guardar fecha</button>
             <button v-if="new Date(abierta.fecha_cierre) > new Date()" type="button" @click="cerrarRegistro" :disabled="guardando" class="rounded-xl border border-red-300 px-5 py-3 font-semibold text-red-700 disabled:opacity-50">Cerrar registro ahora</button>
             <span v-else class="rounded-xl bg-gray-100 px-4 py-3 text-center text-sm font-bold text-gray-600">Registro cerrado</span>
