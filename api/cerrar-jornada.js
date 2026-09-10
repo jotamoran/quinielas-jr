@@ -43,6 +43,7 @@ export default async function handler(req, res) {
       .from('partidos')
       .select('id', { count: 'exact', head: true })
       .eq('jornada_id', jornada_id)
+      .eq('cancelado', false)
       .is('resultado_oficial', null);
     if (errorResultados) throw errorResultados;
     if (resultadosPendientes > 0) {
