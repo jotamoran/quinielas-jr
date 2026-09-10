@@ -85,7 +85,7 @@ export async function obtenerRanking(jornadaId) {
 export async function obtenerPronosticosDeQuiniela(quinielaId) {
   const { data, error } = await supabase
     .from('predicciones')
-    .select('partido_id, pronostico, partidos(equipo_local, equipo_visitante, logo_local, logo_visitante, resultado_oficial, fecha_partido)')
+    .select('partido_id, pronostico, partidos(equipo_local, equipo_visitante, logo_local, logo_visitante, resultado_oficial, cancelado, fecha_partido)')
     .eq('quiniela_id', quinielaId);
   if (error) throw error;
   return (data ?? [])
@@ -93,11 +93,12 @@ export async function obtenerPronosticosDeQuiniela(quinielaId) {
     .sort((a, b) => new Date(a.partidos?.fecha_partido ?? 0) - new Date(b.partidos?.fecha_partido ?? 0))
     .map((item) => ({
       partido_id: item.partido_id,
-      equipo_local: item.partidos.equipo_local,
-      equipo_visitante: item.partidos.equipo_visitante,
-      logo_local: item.partidos.logo_local,
-      logo_visitante: item.partidos.logo_visitante,
+      equipo_local: item.partidos?.equipo_local,
+      equipo_visitante: item.partidos?.equipo_visitante,
+      logo_local: item.partidos?.logo_local,
+      logo_visitante: item.partidos?.logo_visitante,
       pronostico: item.pronostico,
-      resultado_oficial: item.partidos.resultado_oficial,
+      resultado_oficial: item.partidos?.resultado_oficial,
+      cancelado: item.partidos?.cancelado ?? false,
     }));
 }

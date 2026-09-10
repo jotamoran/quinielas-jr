@@ -8,11 +8,11 @@ function etiquetaPronostico(valor) {
 }
 
 function esAcierto(detalle) {
-  return detalle.resultado_oficial != null && detalle.resultado_oficial === detalle.pronostico;
+  return !detalle.cancelado && detalle.resultado_oficial != null && detalle.resultado_oficial === detalle.pronostico;
 }
 
 function esFallo(detalle) {
-  return detalle.resultado_oficial != null && detalle.resultado_oficial !== detalle.pronostico;
+  return !detalle.cancelado && detalle.resultado_oficial != null && detalle.resultado_oficial !== detalle.pronostico;
 }
 </script>
 
@@ -25,7 +25,7 @@ function esFallo(detalle) {
         <p class="truncate font-semibold">{{ detalle.equipo_local }} vs {{ detalle.equipo_visitante }}</p>
         <img v-if="detalle.logo_visitante" :src="detalle.logo_visitante" alt="" class="h-5 w-5 shrink-0 object-contain" /><span v-else class="h-5 w-5 shrink-0 rounded-full bg-gray-100"></span>
       </div>
-      <span class="shrink-0 rounded-full px-2 py-1 text-xs font-bold" :class="esAcierto(detalle) ? 'bg-green-100 text-green-700' : esFallo(detalle) ? 'bg-red-100 text-red-700' : 'bg-green-50 text-quiniela-verde'">{{ esAcierto(detalle) ? '✓ ' : esFallo(detalle) ? '✗ ' : '' }}{{ etiquetaPronostico(detalle.pronostico) }}</span>
+      <span class="shrink-0 rounded-full px-2 py-1 text-xs font-bold" :class="esAcierto(detalle) ? 'bg-green-100 text-green-700' : esFallo(detalle) ? 'bg-red-100 text-red-700' : 'bg-green-50 text-quiniela-verde'">{{ esAcierto(detalle) ? '✓ ' : esFallo(detalle) ? '✗ ' : '' }}{{ detalle.cancelado ? 'Cancelado' : etiquetaPronostico(detalle.pronostico) }}</span>
     </div>
   </div>
 </template>
