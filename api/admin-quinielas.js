@@ -28,20 +28,25 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const { jornada_id: jornadaId, alias, correo_contacto: correoContactoRaw, estatus_pago: estatus, predicciones } = req.body ?? {};
-      if (!jornadaId || !alias?.trim() || !ESTATUS.has(estatus) || !Array.isArray(predicciones) || predicciones.length !== 9) {
-        return res.status(400).json({ error: 'Completa la entrada, el estatus y los 9 pronósticos' });
+      if (!jornadaId || !alias?.trim() || !ESTATUS.has(estatus) || !Array.isArray(predicciones)) {
+        return res.status(400).json({ error: 'Completa la entrada, el estatus y los pronósticos' });
       }
       const correoContacto = normalizarCorreo(correoContactoRaw);
-      if (new Set(predicciones.map((item) => item.partido_id)).size !== 9 || predicciones.some((item) => !PRONOSTICOS.has(item.pronostico))) {
-        return res.status(400).json({ error: 'Los pronósticos no son válidos' });
-      }
 
       const { data: jornada, error: jornadaError } = await supabase.from('jornadas').select('id, costo, fecha_cierre, estatus').eq('id', jornadaId).single();
       if (jornadaError) throw jornadaError;
       if (jornada.estatus !== 'activa' || new Date(jornada.fecha_cierre) <= new Date()) return res.status(409).json({ error: 'La jornada ya no admite quinielas' });
-      const { data: partidos, error: partidosError } = await supabase.from('partidos').select('id').eq('jornada_id', jornadaId).in('id', predicciones.map((item) => item.partido_id));
+
+      const { data: partidosActivos, error: partidosError } = await supabase.from('partidos').select('id').eq('jornada_id', jornadaId).eq('cancelado', false);
       if (partidosError) throw partidosError;
-      if (partidos.length !== 9) return res.status(400).json({ error: 'Los partidos no corresponden a la jornada' });
+      const idsActivos = new Set(partidosActivos.map((p) => p.id));
+
+      if (predicciones.length !== idsActivos.size) {
+        return res.status(400).json({ error: `Completa los ${idsActivos.size} pronósticos` });
+      }
+      if (new Set(predicciones.map((item) => item.partido_id)).size !== idsActivos.size || predicciones.some((item) => !PRONOSTICOS.has(item.pronostico) || !idsActivos.has(item.partido_id))) {
+        return res.status(400).json({ error: 'Los pronósticos no son válidos' });
+      }
 
       const pagada = estatus === 'aprobado';
       const { data: quiniela, error: quinielaError } = await supabase.from('quinielas').insert({
