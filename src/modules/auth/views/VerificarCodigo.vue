@@ -30,13 +30,13 @@ async function onSubmit() {
       <img src="@assets/logo.png" alt="Quinielas JR" class="h-16 w-16 mx-auto rounded-full mb-2" />
       <h1 class="text-2xl font-bold text-quiniela-verdeOscuro text-center">Verifica tu correo</h1>
       <p class="text-sm text-gray-600">Enviamos un código a {{ email }}</p>
-      <input v-model="codigo" type="text" placeholder="Código de 6 dígitos" required
-        class="w-full border rounded px-3 py-2" />
-      <p v-if="error" class="text-quiniela-error text-sm">{{ error }}</p>
+      <label class="form-label">Código de verificación<input v-model="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Código de 6 dígitos" required class="form-control min-h-11 tracking-widest" /></label>
+      <p v-if="error" role="alert" class="rounded-lg bg-red-50 p-2 text-quiniela-error text-sm">{{ error }}</p>
       <button type="submit" :disabled="cargando"
-        class="w-full bg-quiniela-dorado hover:bg-quiniela-doradoOscuro text-quiniela-grisTexto font-semibold py-2 rounded">
+        class="min-h-11 w-full rounded-xl bg-quiniela-dorado py-2 font-semibold text-quiniela-grisTexto hover:bg-quiniela-doradoOscuro">
         {{ cargando ? 'Verificando...' : 'Verificar' }}
       </button>
+      <router-link :to="{ name: 'registro' }" class="block text-center text-sm font-semibold text-quiniela-verde">← Corregir correo</router-link>
     </form>
   </div>
 </template>

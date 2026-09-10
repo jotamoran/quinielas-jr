@@ -12,8 +12,14 @@ async function llamarApi(ruta, body) {
   return datos;
 }
 
-export async function obtenerJornadaActiva() {
-  const { data, error } = await supabase.from('jornadas').select('*').eq('estatus', 'activa').order('fecha_cierre', { ascending: true }).limit(1).maybeSingle();
+export async function obtenerJornadaActiva(jornadaId = null, { soloAbierta = false } = {}) {
+  let consulta = supabase.from('jornadas').select('*').eq('estatus', 'activa');
+  if (jornadaId) consulta = consulta.eq('id', jornadaId);
+  else {
+    if (soloAbierta) consulta = consulta.gt('fecha_cierre', new Date().toISOString());
+    consulta = consulta.order('fecha_cierre', { ascending: true }).limit(1);
+  }
+  const { data, error } = await consulta.maybeSingle();
   if (error) throw error;
   return data;
 }

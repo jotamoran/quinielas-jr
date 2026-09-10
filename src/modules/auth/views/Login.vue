@@ -29,13 +29,11 @@ async function onSubmit() {
     <form @submit.prevent="onSubmit" class="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-md sm:p-8">
       <img src="@assets/logo.png" alt="Quinielas JR" class="h-16 w-16 mx-auto rounded-full mb-2" />
       <h1 class="text-2xl font-bold text-quiniela-verdeOscuro text-center">Quinielas JR</h1>
-      <input v-model="email" type="text" inputmode="email" autocomplete="username" placeholder="Correo (o &quot;admin&quot;)" required
-        class="w-full border rounded px-3 py-2" />
-      <input v-model="password" type="password" placeholder="Contraseña" required
-        class="w-full border rounded px-3 py-2" />
-      <p v-if="error" class="text-quiniela-error text-sm">{{ error }}</p>
+      <label class="form-label">Correo<input v-model="email" type="text" inputmode="email" autocomplete="username" placeholder="correo@ejemplo.com o admin" required class="form-control min-h-11" /></label>
+      <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required class="form-control min-h-11" /></label>
+      <p v-if="error" role="alert" class="rounded-lg bg-red-50 p-2 text-quiniela-error text-sm">{{ error }}</p>
       <button type="submit" :disabled="cargando"
-        class="w-full bg-quiniela-dorado hover:bg-quiniela-doradoOscuro text-quiniela-grisTexto font-semibold py-2 rounded">
+        class="min-h-11 w-full rounded-xl bg-quiniela-dorado py-2 font-semibold text-quiniela-grisTexto hover:bg-quiniela-doradoOscuro">
         {{ cargando ? 'Entrando...' : 'Iniciar sesión' }}
       </button>
       <div class="text-center text-sm space-x-2">

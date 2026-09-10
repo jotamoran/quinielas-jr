@@ -30,10 +30,10 @@ function cerrarMenu() {
 <template>
   <nav class="sticky top-0 z-40 bg-quiniela-verdeOscuro px-4 py-3 text-white shadow-lg sm:px-6">
     <div class="mx-auto flex max-w-7xl items-center justify-between">
-      <div class="flex items-center gap-2">
+      <router-link :to="{ name: authStore.isLoggedIn ? 'mis-quinielas' : 'llenar-quiniela' }" class="flex items-center gap-2 rounded-lg focus-visible:outline-offset-4">
         <img src="@assets/logo.png" alt="Quinielas JR" class="h-8 w-8 rounded-full" />
         <span class="font-bold">Quinielas JR</span>
-      </div>
+      </router-link>
 
       <div class="hidden items-center gap-2 text-sm md:flex">
         <template v-if="authStore.isLoggedIn">
@@ -47,7 +47,7 @@ function cerrarMenu() {
 
       <!-- Botón hamburguesa en móvil -->
       <button
-        class="md:hidden text-white"
+        class="grid h-11 w-11 place-items-center rounded-lg text-white hover:bg-white/10 md:hidden"
         @click="menuAbierto = !menuAbierto"
         aria-label="Abrir menú"
       >
