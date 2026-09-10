@@ -27,7 +27,8 @@ const necesitaLogin = computed(() => !authStore.isLoggedIn);
 watch(necesitaLogin, (v) => {
   if (v && paso.value === 'pago') paso.value = 'pronosticos';
 });
-const completo = computed(() => partidos.value.length === 9 && partidos.value.every((partido) => pronosticos.value[partido.id]));
+const partidosActivos = computed(() => partidos.value.filter((p) => !p.cancelado));
+const completo = computed(() => partidosActivos.value.length > 0 && partidosActivos.value.every((partido) => pronosticos.value[partido.id]));
 const urgencia = computed(() => {
   if (!tiempoRestante.value || tiempoRestante.value.vencido) return 'cerrada';
   const totalMinutos = tiempoRestante.value.dias * 1440 + tiempoRestante.value.horas * 60 + tiempoRestante.value.minutos;
