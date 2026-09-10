@@ -41,6 +41,9 @@ export default async function handler(req, res) {
       if (partidosError) throw partidosError;
       const idsActivos = new Set(partidosActivos.map((p) => p.id));
 
+      if (idsActivos.size === 0) {
+        return res.status(409).json({ error: 'La jornada no tiene partidos activos' });
+      }
       if (predicciones.length !== idsActivos.size) {
         return res.status(400).json({ error: `Completa los ${idsActivos.size} pronósticos` });
       }

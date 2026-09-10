@@ -125,7 +125,7 @@ onUnmounted(() => clearInterval(intervalo));
             <span class="text-xs font-bold text-gray-400">VS</span>
             <div><img v-if="p.logo_visitante" :src="p.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-bold text-quiniela-verdeOscuro">{{ p.equipo_visitante }}</p></div>
           </div>
-          <p v-if="p.resultado_oficial" class="mt-3 text-center text-sm font-semibold text-quiniela-verde">Ganador: {{ p.resultado_oficial === 'L' ? p.equipo_local : p.resultado_oficial === 'V' ? p.equipo_visitante : 'Empate' }}</p>
+          <p v-if="!p.cancelado && p.resultado_oficial" class="mt-3 text-center text-sm font-semibold text-quiniela-verde">Ganador: {{ p.resultado_oficial === 'L' ? p.equipo_local : p.resultado_oficial === 'V' ? p.equipo_visitante : 'Empate' }}</p>
         </article>
       </div>
       <p v-if="!partidos.length" class="empty-state">Esta jornada todavía no tiene partidos.</p>

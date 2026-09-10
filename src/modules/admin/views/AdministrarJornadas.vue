@@ -12,7 +12,7 @@ const premioEditado = ref(0);
 const cierreEditado = ref('');
 const cargando = ref(true);
 const guardando = ref(false);
-const hoy = new Date().toISOString().slice(0, 10);
+const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
 const jornadasOrdenadas = computed(() => [...jornadas.value].sort((a, b) => {
   const prioridad = { activa: 0, borrador: 1, cerrada: 2, finalizada: 3 };
@@ -161,21 +161,27 @@ async function cerrarRegistro() {
 
 async function alternarCancelacion(partido) {
   const accion = partido.cancelado ? 'reactivar' : 'cancelar';
+  const yaPasoElCierre = new Date(abierta.value.fecha_cierre) <= new Date();
   const confirmado = await confirmarAccion({
     title: partido.cancelado ? 'Reactivar partido' : 'Cancelar partido',
     text: partido.cancelado
-      ? 'Volverá a contar para los pronósticos y para el cierre de la jornada.'
+      ? (yaPasoElCierre
+          ? 'Ya cerró el registro; quienes se registraron con el partido cancelado no podrán ganar ese punto. Volverá a contar para el cierre de la jornada.'
+          : 'Volverá a contar para los pronósticos y para el cierre de la jornada.')
       : 'Ya no contará para ninguna quiniela ni bloqueará el cierre de la jornada.',
     confirmText: partido.cancelado ? 'Reactivar' : 'Cancelar partido',
     danger: !partido.cancelado,
   });
   if (!confirmado) return;
+  guardando.value = true;
   try {
     await cancelarPartido(partido.id, !partido.cancelado);
     partido.cancelado = !partido.cancelado;
     await alertaExito(partido.cancelado ? 'Partido cancelado' : 'Partido reactivado');
   } catch (error) {
     await alertaError(error, `No se pudo ${accion} el partido`);
+  } finally {
+    guardando.value = false;
   }
 }
 
@@ -251,7 +257,7 @@ onMounted(async () => {
             </div>
             <p v-if="partido.cancelado" class="mt-3 text-center text-sm font-bold text-red-700">Cancelado — no cuenta para las quinielas</p>
             <p v-else-if="partido.resultado_oficial" class="mt-3 text-center text-sm font-bold text-quiniela-verde">Resultado: {{ partido.resultado_oficial }}</p>
-            <button v-if="abierta.estatus !== 'finalizada'" type="button" @click="alternarCancelacion(partido)" class="mt-3 w-full rounded-lg border py-2 text-sm font-semibold" :class="partido.cancelado ? 'border-quiniela-verde text-quiniela-verde' : 'border-red-300 text-red-700'">{{ partido.cancelado ? 'Reactivar partido' : 'Cancelar partido' }}</button>
+            <button v-if="abierta.estatus !== 'finalizada'" type="button" @click="alternarCancelacion(partido)" :disabled="guardando" class="mt-3 w-full rounded-lg border py-2 text-sm font-semibold disabled:opacity-50" :class="partido.cancelado ? 'border-quiniela-verde text-quiniela-verde' : 'border-red-300 text-red-700'">{{ partido.cancelado ? 'Reactivar partido' : 'Cancelar partido' }}</button>
           </article>
         </div>
       </section>
