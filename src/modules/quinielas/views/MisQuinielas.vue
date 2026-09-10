@@ -1,18 +1,44 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import { obtenerMisQuinielas, obtenerRanking, obtenerJornadaActiva } from '../services/quinielasService';
+import { computed, ref, onMounted } from 'vue';
+import { supabase } from '@/lib/supabase';
+import { obtenerMisQuinielas, obtenerRanking, obtenerJornadaActiva, obtenerPartidos } from '../services/quinielasService';
 import { calcularResumenBalance } from '../utils/balance';
 import TablaPosiciones from '../components/TablaPosiciones.vue';
 
 const quinielas = ref([]);
 const resumen = ref(null);
-const jornadaActivaId = ref(null);
+const jornadaActiva = ref(null);
+const partidosJornadaActiva = ref([]);
 
 async function cargar() {
   quinielas.value = await obtenerMisQuinielas();
   resumen.value = calcularResumenBalance(quinielas.value);
-  const jornadaActiva = await obtenerJornadaActiva();
-  jornadaActivaId.value = jornadaActiva?.id ?? null;
+  jornadaActiva.value = await obtenerJornadaActiva();
+  partidosJornadaActiva.value = jornadaActiva.value ? await obtenerPartidos(jornadaActiva.value.id) : [];
+}
+
+const jornadaActivaId = computed(() => jornadaActiva.value?.id ?? null);
+const tengoEntradaEnJornadaActiva = computed(() => quinielas.value.some((q) => q.jornada_id === jornadaActivaId.value));
+const bloqueada = computed(() => jornadaActiva.value && new Date(jornadaActiva.value.fecha_cierre) <= new Date());
+const empezaronPartidos = computed(() => partidosJornadaActiva.value.some((p) => new Date(p.fecha_partido) <= new Date()));
+const mostrarDestacados = computed(() => bloqueada.value || empezaronPartidos.value);
+
+async function obtenerPronosticosPublicos(quinielaId) {
+  const { data, error: queryError } = await supabase
+    .from('vista_pronosticos_publicos')
+    .select('partido_id, pronostico')
+    .eq('jornada_id', jornadaActivaId.value)
+    .eq('quiniela_id', quinielaId);
+  if (queryError) throw queryError;
+  const porPartido = new Map((data ?? []).map((item) => [item.partido_id, item.pronostico]));
+  return partidosJornadaActiva.value.map((partido) => ({
+    partido_id: partido.id,
+    equipo_local: partido.equipo_local,
+    equipo_visitante: partido.equipo_visitante,
+    logo_local: partido.logo_local,
+    logo_visitante: partido.logo_visitante,
+    pronostico: porPartido.get(partido.id),
+  }));
 }
 
 onMounted(cargar);
@@ -70,9 +96,9 @@ onMounted(cargar);
     </div>
     <div v-if="!quinielas.length" class="empty-state">Aún no has registrado una quiniela.</div>
 
-    <div v-if="jornadaActivaId">
+    <div v-if="jornadaActivaId && tengoEntradaEnJornadaActiva">
       <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones</h2>
-      <TablaPosiciones :jornadaId="jornadaActivaId" :obtenerRankingFn="obtenerRanking" />
+      <TablaPosiciones :jornadaId="jornadaActivaId" :obtenerRankingFn="obtenerRanking" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
     </div>
   </main>
 </template>
