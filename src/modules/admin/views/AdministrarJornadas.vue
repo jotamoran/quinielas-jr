@@ -236,7 +236,7 @@ onMounted(async () => {
         <button v-for="jornada in jornadasOrdenadas" :key="jornada.id" type="button" @click="abrir(jornada)" class="w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition" :class="abierta?.id === jornada.id ? 'border-quiniela-verde ring-2 ring-green-100' : 'border-gray-200 hover:border-green-300'">
           <div class="flex items-start justify-between gap-3">
             <div><p class="font-bold text-quiniela-verdeOscuro">{{ jornada.nombre }}</p><p class="mt-1 text-sm text-gray-500">{{ formatoFecha(jornada.fecha_cierre) }}</p></div>
-            <span class="rounded-full px-2.5 py-1 text-xs font-bold capitalize" :class="jornada.estatus === 'activa' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'">{{ jornada.estatus }}</span>
+            <span class="rounded-full px-2.5 py-1 text-xs font-bold capitalize" :class="jornada.estatus === 'activa' ? 'bg-green-100 text-green-800' : jornada.estatus === 'cancelada' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'">{{ jornada.estatus }}</span>
           </div>
           <p class="mt-3 text-sm font-semibold text-gray-700">{{ jornada.partidos?.length ?? 0 }} partidos · {{ formatoMoneda(jornada.premio) }}</p>
         </button>

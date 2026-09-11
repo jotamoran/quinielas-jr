@@ -42,10 +42,11 @@ export default async function handler(req, res) {
 
     const supabaseAdmin = getSupabaseAdmin();
 
-    const { data: jornadaActual, error: errorJornadaActual } = await supabaseAdmin.from('jornadas').select('estatus').eq('id', jornada_id).single();
+    const { data: jornadaActual, error: errorJornadaActual } = await supabaseAdmin.from('jornadas').select('estatus').eq('id', jornada_id).maybeSingle();
     if (errorJornadaActual) throw errorJornadaActual;
     if (!jornadaActual) return res.status(404).json({ error: 'La jornada no existe' });
     if (jornadaActual.estatus === 'finalizada') return res.status(409).json({ error: 'Esta jornada ya fue finalizada' });
+    if (jornadaActual.estatus === 'cancelada') return res.status(409).json({ error: 'Esta jornada fue cancelada' });
 
     const { count: resultadosPendientes, error: errorResultados } = await supabaseAdmin
       .from('partidos')
@@ -96,6 +97,7 @@ export default async function handler(req, res) {
       .update({ estatus: 'finalizada' })
       .eq('id', jornada_id)
       .neq('estatus', 'finalizada')
+      .neq('estatus', 'cancelada')
       .select('id')
       .maybeSingle();
     if (errorFinalizarJornada) throw errorFinalizarJornada;

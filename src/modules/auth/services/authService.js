@@ -50,6 +50,7 @@ export async function recuperarPassword({ email }) {
 
 export async function actualizarNombre(nombreCompleto) {
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Debes iniciar sesión de nuevo.');
   const { error } = await supabase.from('perfiles').update({ nombre_completo: nombreCompleto }).eq('id', user.id);
   if (error) throw error;
 }

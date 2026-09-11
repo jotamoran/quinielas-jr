@@ -9,7 +9,7 @@ const resultado = ref(null);
 const cargando = ref(false);
 
 async function cargar() {
-  const { data } = await supabase.from('jornadas').select('id, nombre, estatus').neq('estatus', 'finalizada');
+  const { data } = await supabase.from('jornadas').select('id, nombre, estatus').not('estatus', 'in', '(finalizada,cancelada)');
   jornadas.value = data ?? [];
 }
 

@@ -42,7 +42,7 @@ async function onGuardarCorreo() {
   guardandoCorreo.value = true;
   try {
     await actualizarCorreo(nuevoCorreo.value.trim());
-    exitoCorreo.value = 'Revisa tu nuevo correo para confirmar el cambio.';
+    exitoCorreo.value = 'Revisa tu correo (el actual y/o el nuevo) para confirmar el cambio.';
     nuevoCorreo.value = '';
   } catch (e) {
     errorCorreo.value = traducirErrorAuth(e.message);
