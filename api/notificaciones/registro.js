@@ -1,6 +1,6 @@
 import { requireUser, ErrorHttp } from '../_lib/auth.js';
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js';
-import { enviarCorreo } from '../_lib/email.js';
+import { enviarCorreo, escaparHtml } from '../_lib/email.js';
 
 async function notificarAdmin(supabaseAdmin, { alias, metodoPago, estatusPago, jornadaNombre }) {
   const { data: admins } = await supabaseAdmin.from('perfiles').select('id').eq('rol', 'admin');
@@ -13,8 +13,8 @@ async function notificarAdmin(supabaseAdmin, { alias, metodoPago, estatusPago, j
       subject: `Nueva quiniela registrada: ${jornadaNombre}`,
       heading: '📋 Nueva quiniela registrada',
       bodyHtml: `<p>Alguien acaba de registrar una quiniela.</p>
-        <p>Jornada: <b>${jornadaNombre}</b></p>
-        <p>Entrada: ${alias ?? 'Entrada'}</p>
+        <p>Jornada: <b>${escaparHtml(jornadaNombre)}</b></p>
+        <p>Entrada: ${escaparHtml(alias ?? 'Entrada')}</p>
         <p>Método de pago: ${metodoPago}</p>
         <p>Estatus: ${estatusPago}</p>`,
     });
@@ -48,8 +48,8 @@ export default async function handler(req, res) {
       to: user.email,
       subject: `Quiniela registrada: ${quiniela.jornadas?.nombre ?? ''}`,
       heading: '¡Tu quiniela quedó registrada!',
-      bodyHtml: `<p>Jornada: <b>${quiniela.jornadas?.nombre ?? ''}</b></p>
-        <p>Entrada: ${quiniela.alias ?? 'Entrada'}</p>
+      bodyHtml: `<p>Jornada: <b>${escaparHtml(quiniela.jornadas?.nombre)}</b></p>
+        <p>Entrada: ${escaparHtml(quiniela.alias ?? 'Entrada')}</p>
         <p>Método de pago: ${quiniela.metodo_pago}</p>
         <p>Monto: $${Number(quiniela.monto_pagado ?? 0).toFixed(2)}</p>
         <p>Estatus: ${quiniela.estatus_pago}</p>

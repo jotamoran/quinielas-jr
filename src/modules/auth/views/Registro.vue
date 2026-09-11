@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { registrar, usernameDisponible } from '../services/authService';
+import { registrar, usernameDisponible, traducirErrorAuth } from '../services/authService';
 
 const nombreCompleto = ref('');
 const email = ref('');
@@ -23,7 +23,7 @@ async function onSubmit() {
     await registrar({ email: email.value, password: password.value, nombreCompleto: nombreCompleto.value, username: usernameNormalizado });
     router.push({ name: 'verificar-codigo', query: { email: email.value } });
   } catch (e) {
-    error.value = e.message;
+    error.value = /database error/i.test(e.message) ? 'Ese nombre de usuario ya está en uso. Elige otro.' : traducirErrorAuth(e.message);
   } finally {
     cargando.value = false;
   }

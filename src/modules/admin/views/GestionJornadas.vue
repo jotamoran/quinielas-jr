@@ -72,6 +72,11 @@ async function buscarPorRonda() {
   try {
     const { fixtures: encontrados } = await buscarFixtures({ leagues: [ligaPrincipal.id], ronda: ronda.value });
     fixtures.value = encontrados;
+    if (encontrados.length) {
+      const fechas = encontrados.map((f) => f.fixture.date.slice(0, 10)).sort();
+      desde.value = fechas[0];
+      hasta.value = fechas.at(-1);
+    }
   } catch (e) {
     error.value = e.message;
   } finally {
