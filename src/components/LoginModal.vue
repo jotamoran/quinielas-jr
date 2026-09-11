@@ -3,11 +3,11 @@
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLoginModalStore } from '@/store/loginModal';
-import { iniciarSesion, resolverCorreo, traducirErrorAuth } from '@/modules/auth/services/authService';
+import { iniciarSesion, traducirErrorAuth } from '@/modules/auth/services/authService';
 
 const loginModalStore = useLoginModalStore();
 const route = useRoute();
-const email = ref('');
+const entrada = ref('');
 const password = ref('');
 const error = ref('');
 const cargando = ref(false);
@@ -22,7 +22,7 @@ watch(() => loginModalStore.abierto, async (abierto) => {
     focoAnterior = document.activeElement;
     overflowAnterior = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    email.value = '';
+    entrada.value = '';
     password.value = '';
     error.value = '';
     await nextTick();
@@ -41,8 +41,7 @@ async function onSubmit() {
   error.value = '';
   cargando.value = true;
   try {
-    const correoFinal = resolverCorreo(email.value);
-    await iniciarSesion({ email: correoFinal, password: password.value });
+    await iniciarSesion({ entrada: entrada.value, password: password.value });
     password.value = '';
     loginModalStore.cerrar();
   } catch (e) {
@@ -81,7 +80,7 @@ onUnmounted(() => {
         <h2 id="login-modal-titulo" class="text-2xl font-bold text-quiniela-verdeOscuro">Inicia sesión</h2>
         <p id="login-modal-descripcion" class="text-sm text-gray-500">Entra para registrar y consultar tus quinielas.</p>
       </div>
-      <label class="form-label">Correo<input ref="emailInput" v-model="email" type="text" inputmode="email" autocomplete="username" placeholder="correo@ejemplo.com o admin" required class="form-control min-h-11" /></label>
+      <label class="form-label">Correo o usuario<input ref="emailInput" v-model="entrada" type="text" inputmode="email" autocomplete="username" placeholder="correo@ejemplo.com o tu usuario" required class="form-control min-h-11" /></label>
       <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required class="form-control min-h-11" /></label>
       <p v-if="error" id="login-modal-error" role="alert" class="rounded-lg bg-red-50 p-2 text-sm text-quiniela-error">{{ error }}</p>
       <button type="submit" :disabled="cargando" class="min-h-11 w-full rounded-xl bg-quiniela-dorado px-4 py-2.5 font-semibold text-quiniela-grisTexto transition hover:bg-quiniela-doradoOscuro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiniela-verde focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70">
