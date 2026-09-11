@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     if (!jornada_id) return res.status(400).json({ error: 'Falta jornada_id' });
 
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: jornada, error: errorJornada } = await supabaseAdmin.from('jornadas').select('id, nombre, estatus').eq('id', jornada_id).single();
+    const { data: jornada, error: errorJornada } = await supabaseAdmin.from('jornadas').select('id, nombre, estatus').eq('id', jornada_id).maybeSingle();
     if (errorJornada) throw errorJornada;
     if (!jornada) return res.status(404).json({ error: 'La jornada no existe' });
     if (jornada.estatus === 'finalizada') return res.status(409).json({ error: 'No se puede cancelar una jornada ya finalizada' });

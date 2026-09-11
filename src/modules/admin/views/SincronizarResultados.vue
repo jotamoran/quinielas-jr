@@ -13,7 +13,7 @@ const cargando = ref(false);
 const opciones = [{ value: 'L', label: 'Local' }, { value: 'E', label: 'Empate' }, { value: 'V', label: 'Visita' }];
 
 async function cargar() {
-  const { data, error: queryError } = await supabase.from('jornadas').select('id, nombre, estatus').neq('estatus', 'finalizada').order('creado_el', { ascending: false });
+  const { data, error: queryError } = await supabase.from('jornadas').select('id, nombre, estatus').not('estatus', 'in', '(finalizada,cancelada)').order('creado_el', { ascending: false });
   if (queryError) throw queryError;
   jornadas.value = data ?? [];
 }

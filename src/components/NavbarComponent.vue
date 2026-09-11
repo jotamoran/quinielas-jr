@@ -64,7 +64,7 @@ function cerrarMenu() {
         <p class="px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Mi cuenta</p>
         <router-link :to="{ name: 'mis-quinielas' }" @click="cerrarMenu" class="mobile-nav-link">Mis quinielas</router-link>
         <router-link :to="{ name: 'llenar-quiniela' }" @click="cerrarMenu" class="mobile-nav-link">Llenar quiniela</router-link>
-        <router-link :to="{ name: 'mi-cuenta' }" @click="cerrarMenu" class="mobile-nav-link">Configuración</router-link>
+        <router-link :to="{ name: 'mi-cuenta' }" @click="cerrarMenu" class="mobile-nav-link">Mi cuenta</router-link>
         <template v-if="authStore.isAdmin">
           <p class="mt-2 px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Administración</p>
           <router-link :to="{ name: 'admin-jornadas' }" @click="cerrarMenu" class="mobile-nav-link">Crear jornada</router-link>
