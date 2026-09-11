@@ -1,9 +1,9 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { iniciarSesion, resolverCorreo, traducirErrorAuth } from '../services/authService';
+import { iniciarSesion, traducirErrorAuth } from '../services/authService';
 
-const email = ref('');
+const entrada = ref('');
 const password = ref('');
 const error = ref('');
 const cargando = ref(false);
@@ -13,8 +13,7 @@ async function onSubmit() {
   error.value = '';
   cargando.value = true;
   try {
-    const correoFinal = resolverCorreo(email.value);
-    await iniciarSesion({ email: correoFinal, password: password.value });
+    await iniciarSesion({ entrada: entrada.value, password: password.value });
     router.push({ name: 'mis-quinielas' });
   } catch (e) {
     error.value = traducirErrorAuth(e.message);
@@ -29,7 +28,7 @@ async function onSubmit() {
     <form @submit.prevent="onSubmit" class="w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-md sm:p-8">
       <img src="@assets/logo.png" alt="Quinielas JR" class="h-16 w-16 mx-auto rounded-full mb-2" />
       <h1 class="text-2xl font-bold text-quiniela-verdeOscuro text-center">Quinielas JR</h1>
-      <label class="form-label">Correo<input v-model="email" type="text" inputmode="email" autocomplete="username" placeholder="correo@ejemplo.com o admin" required class="form-control min-h-11" /></label>
+      <label class="form-label">Correo o usuario<input v-model="entrada" type="text" inputmode="email" autocomplete="username" placeholder="correo@ejemplo.com o tu usuario" required class="form-control min-h-11" /></label>
       <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required class="form-control min-h-11" /></label>
       <p v-if="error" role="alert" class="rounded-lg bg-red-50 p-2 text-quiniela-error text-sm">{{ error }}</p>
       <button type="submit" :disabled="cargando"
