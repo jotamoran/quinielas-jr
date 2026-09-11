@@ -13,6 +13,7 @@ const ligasComplementarias = LIGAS_DISPONIBLES.filter((liga) => !liga.principal)
 const ligasSeleccionadas = ref([ligaPrincipal.id]);
 const desde = ref('');
 const hasta = ref('');
+const ronda = ref(null);
 const fixtures = ref([]);
 const seleccionados = ref([]);
 const nombreJornada = ref('');
@@ -60,6 +61,22 @@ async function buscar() {
   ligasSeleccionadas.value = [ligaPrincipal.id];
   seleccionados.value = [];
   await buscarLigas([ligaPrincipal.id], true);
+}
+
+async function buscarPorRonda() {
+  ligasSeleccionadas.value = [ligaPrincipal.id];
+  seleccionados.value = [];
+  error.value = '';
+  mensaje.value = '';
+  cargando.value = true;
+  try {
+    const { fixtures: encontrados } = await buscarFixtures({ leagues: [ligaPrincipal.id], ronda: ronda.value });
+    fixtures.value = encontrados;
+  } catch (e) {
+    error.value = e.message;
+  } finally {
+    cargando.value = false;
+  }
 }
 
 async function agregarLiga(liga) {
@@ -163,6 +180,12 @@ function irADatos() {
       <button @click="buscar" :disabled="!desde || !hasta || cargando" class="mt-4 w-full rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50 sm:w-auto">
         {{ cargando ? 'Buscando…' : 'Buscar partidos' }}
       </button>
+      <div class="mt-5 border-t border-green-100 pt-5">
+        <label class="text-sm font-semibold text-gray-700">O buscar por jornada/ronda (solo Liga MX)<input v-model.number="ronda" type="number" min="1" class="mt-1 w-full max-w-[160px] rounded-xl border-gray-300" placeholder="Ej. 8" /></label>
+        <button @click="buscarPorRonda" :disabled="!ronda || cargando" class="mt-3 w-full rounded-xl border border-quiniela-verde bg-white px-5 py-3 font-semibold text-quiniela-verde disabled:opacity-50 sm:w-auto">
+          {{ cargando ? 'Buscando…' : 'Buscar por ronda' }}
+        </button>
+      </div>
     </section>
 
     <div v-if="error" role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
