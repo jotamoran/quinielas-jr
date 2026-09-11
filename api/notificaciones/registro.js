@@ -5,19 +5,23 @@ import { enviarCorreo, escaparHtml } from '../_lib/email.js';
 async function notificarAdmin(supabaseAdmin, { alias, metodoPago, estatusPago, jornadaNombre }) {
   const { data: admins } = await supabaseAdmin.from('perfiles').select('id').eq('rol', 'admin');
   for (const admin of admins ?? []) {
-    const { data: cuenta } = await supabaseAdmin.auth.admin.getUserById(admin.id);
-    const correoAdmin = cuenta?.user?.email;
-    if (!correoAdmin) continue;
-    await enviarCorreo({
-      to: correoAdmin,
-      subject: `Nueva quiniela registrada: ${jornadaNombre}`,
-      heading: '📋 Nueva quiniela registrada',
-      bodyHtml: `<p>Alguien acaba de registrar una quiniela.</p>
-        <p>Jornada: <b>${escaparHtml(jornadaNombre)}</b></p>
-        <p>Entrada: ${escaparHtml(alias ?? 'Entrada')}</p>
-        <p>Método de pago: ${metodoPago}</p>
-        <p>Estatus: ${estatusPago}</p>`,
-    });
+    try {
+      const { data: cuenta } = await supabaseAdmin.auth.admin.getUserById(admin.id);
+      const correoAdmin = cuenta?.user?.email;
+      if (!correoAdmin) continue;
+      await enviarCorreo({
+        to: correoAdmin,
+        subject: `Nueva quiniela registrada: ${jornadaNombre}`,
+        heading: '📋 Nueva quiniela registrada',
+        bodyHtml: `<p>Alguien acaba de registrar una quiniela.</p>
+          <p>Jornada: <b>${escaparHtml(jornadaNombre)}</b></p>
+          <p>Entrada: ${escaparHtml(alias ?? 'Entrada')}</p>
+          <p>Método de pago: ${metodoPago}</p>
+          <p>Estatus: ${estatusPago}</p>`,
+      });
+    } catch (error) {
+      console.error(`notificaciones/registro: falló el aviso al admin ${admin.id}`, error.message);
+    }
   }
 }
 
