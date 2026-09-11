@@ -11,11 +11,17 @@ const error = ref('');
 const cargando = ref(false);
 const router = useRouter();
 
+const PATRON_USERNAME = /^[a-z0-9_]{3,20}$/;
+
 async function onSubmit() {
   error.value = '';
   cargando.value = true;
   try {
     const usernameNormalizado = username.value.trim().toLowerCase();
+    if (!PATRON_USERNAME.test(usernameNormalizado)) {
+      error.value = 'El nombre de usuario debe tener de 3 a 20 caracteres, solo minúsculas, números y guión bajo.';
+      return;
+    }
     if (!(await usernameDisponible(usernameNormalizado))) {
       error.value = 'Ese nombre de usuario ya está en uso.';
       return;

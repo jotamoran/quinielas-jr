@@ -44,7 +44,17 @@ export function seasonRangeForDate(date) {
 export async function getFixtures({ league, from, to, round, season }) {
   if (round) {
     const payload = await request(`eventsround.php?id=${encodeURIComponent(league)}&r=${encodeURIComponent(round)}&s=${encodeURIComponent(season)}`);
-    return (payload.events ?? []).map(normalizeFixture);
+    const eventos = (payload.events ?? []).map(normalizeFixture);
+    if (eventos.length <= 9) return eventos;
+    // Si TheSportsDB agrupa más de un torneo bajo el mismo string de temporada
+    // (posible con Apertura+Clausura de Liga MX), una ronda puede traer el
+    // doble de partidos. Nos quedamos con los 9 más cercanos a hoy — no
+    // verificado en vivo todavía porque el Clausura no ha empezado.
+    const hoy = Date.now();
+    return eventos
+      .sort((a, b) => Math.abs(new Date(a.fixture.date) - hoy) - Math.abs(new Date(b.fixture.date) - hoy))
+      .slice(0, 9)
+      .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
   }
   const payload = await request(`eventsnextleague.php?id=${encodeURIComponent(league)}`);
   return (payload.events ?? [])

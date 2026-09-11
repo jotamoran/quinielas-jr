@@ -16,6 +16,7 @@ export default async function handler(req, res) {
 
     const { numeroJornada } = req.query;
     if (numeroJornada) {
+      if (!/^\d+$/.test(numeroJornada)) return res.status(400).json({ error: 'El número de jornada debe ser un entero positivo' });
       if (leagues.length !== 1) return res.status(400).json({ error: 'La búsqueda por jornada solo admite una liga a la vez' });
       const [league] = leagues;
       if (!LIGAS[league].soportaBusquedaPorJornada) return res.status(400).json({ error: 'Esa liga todavía no soporta búsqueda por jornada' });
