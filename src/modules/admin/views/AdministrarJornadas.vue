@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { actualizarCierreJornada, actualizarPremioJornada, cancelarPartido, listarJornadasAdmin } from '../services/adminService';
+import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
 import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
@@ -159,6 +159,29 @@ async function cerrarRegistro() {
   }
 }
 
+async function cancelarJornadaCompleta() {
+  if (!abierta.value) return;
+  const confirmado = await confirmarAccion({
+    title: 'Cancelar jornada',
+    text: 'Se avisará por correo a quien ya tenga una entrada registrada. Esta acción no se puede deshacer.',
+    confirmText: 'Cancelar jornada',
+    danger: true,
+  });
+  if (!confirmado) return;
+  guardando.value = true;
+  try {
+    await cancelarJornada(abierta.value.id);
+    abierta.value.estatus = 'cancelada';
+    const jornadaEnLista = jornadas.value.find((j) => j.id === abierta.value.id);
+    if (jornadaEnLista) jornadaEnLista.estatus = 'cancelada';
+    await alertaExito('Jornada cancelada');
+  } catch (error) {
+    await alertaError(error, 'No se pudo cancelar la jornada');
+  } finally {
+    guardando.value = false;
+  }
+}
+
 async function alternarCancelacion(partido) {
   const accion = partido.cancelado ? 'reactivar' : 'cancelar';
   const yaPasoElCierre = new Date(abierta.value.fecha_cierre) <= new Date();
@@ -246,6 +269,12 @@ onMounted(async () => {
           </div>
           <p class="mt-2 text-xs text-gray-500">Al llegar esta fecha, el sistema bloquea automáticamente nuevas entradas y habilita los pronósticos públicos.</p>
         </form>
+
+        <div v-if="abierta.estatus !== 'finalizada' && abierta.estatus !== 'cancelada'" class="rounded-2xl border border-red-200 bg-red-50/50 p-4 shadow-sm">
+          <p class="text-sm font-semibold text-red-800">Zona de peligro</p>
+          <p class="mt-1 text-xs text-red-700">Cancela esta jornada completa si se creó por error o ya no se va a jugar. Se avisará por correo a quien ya se haya registrado. No se puede deshacer.</p>
+          <button type="button" @click="cancelarJornadaCompleta" :disabled="guardando" class="mt-3 w-full rounded-xl border border-red-300 bg-white px-5 py-3 font-semibold text-red-700 disabled:opacity-50 sm:w-auto">Cancelar jornada</button>
+        </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
           <article v-for="(partido, index) in abierta.partidos" :key="partido.id" class="rounded-2xl border p-4 shadow-sm" :class="partido.cancelado ? 'border-red-200 bg-red-50/50' : 'border-gray-200 bg-white'">
