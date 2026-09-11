@@ -13,7 +13,7 @@ const ligasComplementarias = LIGAS_DISPONIBLES.filter((liga) => !liga.principal)
 const ligasSeleccionadas = ref([ligaPrincipal.id]);
 const desde = ref('');
 const hasta = ref('');
-const ronda = ref(null);
+const numeroJornada = ref(null);
 const fixtures = ref([]);
 const seleccionados = ref([]);
 const nombreJornada = ref('');
@@ -63,14 +63,14 @@ async function buscar() {
   await buscarLigas([ligaPrincipal.id], true);
 }
 
-async function buscarPorRonda() {
+async function buscarPorJornada() {
   ligasSeleccionadas.value = [ligaPrincipal.id];
   seleccionados.value = [];
   error.value = '';
   mensaje.value = '';
   cargando.value = true;
   try {
-    const { fixtures: encontrados } = await buscarFixtures({ leagues: [ligaPrincipal.id], ronda: ronda.value });
+    const { fixtures: encontrados } = await buscarFixtures({ leagues: [ligaPrincipal.id], numeroJornada: numeroJornada.value });
     fixtures.value = encontrados;
     if (encontrados.length) {
       const fechas = encontrados.map((f) => f.fixture.date.slice(0, 10)).sort();
@@ -186,9 +186,9 @@ function irADatos() {
         {{ cargando ? 'Buscando…' : 'Buscar partidos' }}
       </button>
       <div class="mt-5 border-t border-green-100 pt-5">
-        <label class="text-sm font-semibold text-gray-700">O buscar por jornada/ronda (solo Liga MX)<input v-model.number="ronda" type="number" min="1" class="mt-1 w-full max-w-[160px] rounded-xl border-gray-300" placeholder="Ej. 8" /></label>
-        <button @click="buscarPorRonda" :disabled="!ronda || cargando" class="mt-3 w-full rounded-xl border border-quiniela-verde bg-white px-5 py-3 font-semibold text-quiniela-verde disabled:opacity-50 sm:w-auto">
-          {{ cargando ? 'Buscando…' : 'Buscar por ronda' }}
+        <label class="text-sm font-semibold text-gray-700">O buscar por jornada (solo Liga MX)<input v-model.number="numeroJornada" type="number" min="1" class="mt-1 w-full max-w-[160px] rounded-xl border-gray-300" placeholder="Ej. 8" /></label>
+        <button @click="buscarPorJornada" :disabled="!numeroJornada || cargando" class="mt-3 w-full rounded-xl border border-quiniela-verde bg-white px-5 py-3 font-semibold text-quiniela-verde disabled:opacity-50 sm:w-auto">
+          {{ cargando ? 'Buscando…' : 'Buscar por jornada' }}
         </button>
       </div>
     </section>
