@@ -47,3 +47,19 @@ export async function recuperarPassword({ email }) {
   const { error } = await supabase.auth.resetPasswordForEmail(email);
   if (error) throw error;
 }
+
+export async function actualizarNombre(nombreCompleto) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from('perfiles').update({ nombre_completo: nombreCompleto }).eq('id', user.id);
+  if (error) throw error;
+}
+
+export async function actualizarCorreo(nuevoCorreo) {
+  const { error } = await supabase.auth.updateUser({ email: nuevoCorreo });
+  if (error) throw error;
+}
+
+export async function actualizarPassword(nuevaPassword) {
+  const { error } = await supabase.auth.updateUser({ password: nuevaPassword });
+  if (error) throw error;
+}
