@@ -34,7 +34,18 @@ async function request(endpoint) {
   return response.json();
 }
 
-export async function getFixtures({ league, from, to }) {
+export function seasonRangeForDate(date) {
+  const parsed = new Date(`${date}T12:00:00Z`);
+  const year = parsed.getUTCFullYear();
+  const startYear = parsed.getUTCMonth() < 6 ? year - 1 : year;
+  return `${startYear}-${startYear + 1}`;
+}
+
+export async function getFixtures({ league, from, to, round, season }) {
+  if (round) {
+    const payload = await request(`eventsround.php?id=${encodeURIComponent(league)}&r=${encodeURIComponent(round)}&s=${encodeURIComponent(season)}`);
+    return (payload.events ?? []).map(normalizeFixture);
+  }
   const payload = await request(`eventsnextleague.php?id=${encodeURIComponent(league)}`);
   return (payload.events ?? [])
     .filter((event) => (!from || event.dateEvent >= from) && (!to || event.dateEvent <= to))
