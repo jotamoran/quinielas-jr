@@ -1,5 +1,5 @@
 import { requireAdmin, ErrorHttp } from './_lib/auth.js';
-import { findFixtures, seasonForDate } from './_lib/football/provider.js';
+import { findFixtures, seasonForDate, seasonRangeForDate } from './_lib/football/provider.js';
 import { LIGAS } from './_lib/ligas.js';
 import { guardarEnCache } from './_lib/football/equiposCache.js';
 
@@ -11,12 +11,27 @@ export default async function handler(req, res) {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido' });
 
     const leagues = [...new Set(String(req.query.leagues ?? '').split(',').filter(Boolean))];
-    const { from, to } = req.query;
     if (!leagues.length) return res.status(400).json({ error: 'Debes indicar al menos una liga' });
+    if (leagues.some((id) => !LIGAS[id])) return res.status(400).json({ error: 'La liga solicitada no está permitida' });
+
+    const { ronda } = req.query;
+    if (ronda) {
+      if (leagues.length !== 1) return res.status(400).json({ error: 'La búsqueda por ronda solo admite una liga a la vez' });
+      const [league] = leagues;
+      if (!LIGAS[league].soportaBusquedaPorRonda) return res.status(400).json({ error: 'Esa liga todavía no soporta búsqueda por ronda' });
+
+      const hoy = new Date().toISOString().slice(0, 10);
+      const fixtures = await findFixtures({ league, round: ronda, season: seasonRangeForDate(hoy) });
+      const results = fixtures.map((fixture) => ({ ...fixture, league: { ...fixture.league, name: LIGAS[league].name } }));
+      results.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
+      await guardarEnCache(results.flatMap((f) => [f.teams.home, f.teams.away]));
+      return res.status(200).json({ fixtures: results });
+    }
+
+    const { from, to } = req.query;
     if (!DATE_PATTERN.test(from ?? '') || !DATE_PATTERN.test(to ?? '') || from > to) {
       return res.status(400).json({ error: 'El rango de fechas no es válido' });
     }
-    if (leagues.some((id) => !LIGAS[id])) return res.status(400).json({ error: 'La liga solicitada no está permitida' });
 
     const results = [];
     for (const league of leagues) {
