@@ -13,11 +13,15 @@ export default async function handler(req, res) {
     let correo = entrada.trim();
     if (!CONTIENE_ARROBA.test(correo)) {
       const username = correo.toLowerCase();
-      const { data: perfil } = await supabaseAdmin.from('perfiles').select('id').eq('username', username).maybeSingle();
-      if (!perfil) return res.status(400).json({ error: MENSAJE_GENERICO });
-      const { data: cuenta, error: errorCuenta } = await supabaseAdmin.auth.admin.getUserById(perfil.id);
-      if (errorCuenta || !cuenta?.user?.email) return res.status(400).json({ error: MENSAJE_GENERICO });
-      correo = cuenta.user.email;
+      const { data: perfil, error: errorPerfil } = await supabaseAdmin.from('perfiles').select('id').eq('username', username).maybeSingle();
+      if (errorPerfil) console.error('iniciar-sesion: falló la búsqueda de username', errorPerfil.message);
+      if (perfil) {
+        const { data: cuenta, error: errorCuenta } = await supabaseAdmin.auth.admin.getUserById(perfil.id);
+        if (errorCuenta) console.error('iniciar-sesion: falló getUserById', errorCuenta.message);
+        correo = cuenta?.user?.email ?? `usuario-inexistente-${username}@quinielasjr.invalid`;
+      } else {
+        correo = `usuario-inexistente-${username}@quinielasjr.invalid`;
+      }
     }
 
     const respuesta = await fetch(`${process.env.SUPABASE_URL}/auth/v1/token?grant_type=password`, {
