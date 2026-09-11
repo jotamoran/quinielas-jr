@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', {
       }
       const { data } = await supabase
         .from('perfiles')
-        .select('id, nombre_completo, rol')
+        .select('id, nombre_completo, username, rol')
         .eq('id', this.user.id)
         .single();
       this.perfil = data ?? null;

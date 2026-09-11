@@ -20,8 +20,6 @@ const nombreJornada = ref('');
 const costo = ref(50);
 const premio = ref(0);
 const fechaCierre = ref('');
-const mensaje = ref('');
-const error = ref('');
 const cargando = ref(false);
 const mostrarManual = ref(false);
 const partidoManual = ref({ liga: 'Liga MX', local: null, visitante: null, fecha: '' });
@@ -42,8 +40,6 @@ function estaSeleccionado(fixture) {
 }
 
 async function buscarLigas(leagues, reiniciar = false) {
-  error.value = '';
-  mensaje.value = '';
   cargando.value = true;
   try {
     const { fixtures: encontrados } = await buscarFixtures({ leagues, from: desde.value, to: hasta.value });
@@ -51,7 +47,7 @@ async function buscarLigas(leagues, reiniciar = false) {
     encontrados.forEach((fixture) => existentes.set(fixture.fixture.id, fixture));
     fixtures.value = [...existentes.values()];
   } catch (e) {
-    error.value = e.message;
+    await alertaError(e, 'No se pudieron buscar los partidos');
   } finally {
     cargando.value = false;
   }
@@ -66,8 +62,6 @@ async function buscar() {
 async function buscarPorJornada() {
   ligasSeleccionadas.value = [ligaPrincipal.id];
   seleccionados.value = [];
-  error.value = '';
-  mensaje.value = '';
   cargando.value = true;
   try {
     const { fixtures: encontrados } = await buscarFixtures({ leagues: [ligaPrincipal.id], numeroJornada: numeroJornada.value });
@@ -78,7 +72,7 @@ async function buscarPorJornada() {
       hasta.value = fechas.at(-1);
     }
   } catch (e) {
-    error.value = e.message;
+    await alertaError(e, 'No se pudo buscar la jornada');
   } finally {
     cargando.value = false;
   }
@@ -89,29 +83,28 @@ async function agregarLiga(liga) {
   await buscarLigas([liga.id]);
 }
 
-function alternarSeleccion(fixture) {
+async function alternarSeleccion(fixture) {
   const index = seleccionados.value.findIndex((item) => item.fixture.id === fixture.fixture.id);
   if (index >= 0) return seleccionados.value.splice(index, 1);
   if (completo.value) {
-    error.value = 'Ya seleccionaste 9 partidos. Deselecciona uno para cambiarlo.';
+    await alertaError(new Error('Deselecciona uno para poder cambiarlo.'), 'Ya seleccionaste 9 partidos');
     return;
   }
-  error.value = '';
   seleccionados.value.push(fixture);
 }
 
-function agregarPartidoManual() {
+async function agregarPartidoManual() {
   const { liga, local, visitante, fecha } = partidoManual.value;
   if (!liga.trim() || !local?.name?.trim() || !visitante?.name?.trim() || !fecha) {
-    error.value = 'Completa todos los datos del partido manual.';
+    await alertaError(new Error('Completa liga, fecha y ambos equipos.'), 'Faltan datos del partido');
     return;
   }
   if (fecha < hoyDatetime) {
-    error.value = 'La fecha del partido no puede ser en el pasado.';
+    await alertaError(new Error('Selecciona una fecha y hora futura.'), 'Fecha no válida');
     return;
   }
   if (completo.value) {
-    error.value = 'Ya seleccionaste 9 partidos. Deselecciona uno para cambiarlo.';
+    await alertaError(new Error('Deselecciona uno para poder cambiarlo.'), 'Ya seleccionaste 9 partidos');
     return;
   }
   const fixture = {
@@ -124,27 +117,23 @@ function agregarPartidoManual() {
   seleccionados.value.push(fixture);
   partidoManual.value = { liga: liga.trim(), local: null, visitante: null, fecha: '' };
   mostrarManual.value = false;
-  error.value = '';
 }
 
 async function guardarJornada() {
-  error.value = '';
   if (!completo.value) return;
   if (fechaCierre.value < hoy) {
-    error.value = 'La fecha de cierre no puede ser en el pasado.';
+    await alertaError(new Error('Selecciona hoy o una fecha posterior.'), 'Fecha de cierre no válida');
     return;
   }
   try {
     const cierreIso = new Date(`${fechaCierre.value}T23:59:59`).toISOString();
     await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: cierreIso, partidosSeleccionados: seleccionados.value });
-    mensaje.value = 'Jornada publicada correctamente.';
     await alertaExito('Jornada publicada', 'Los 9 partidos ya están disponibles para los participantes.');
     seleccionados.value = [];
     fixtures.value = [];
     nombreJornada.value = '';
     fechaCierre.value = '';
   } catch (e) {
-    error.value = e.message;
     await alertaError(e, 'No se pudo publicar la jornada');
   }
 }
@@ -192,9 +181,6 @@ function irADatos() {
         </button>
       </div>
     </section>
-
-    <div v-if="error" role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error }}</div>
-    <div v-if="mensaje" role="status" class="rounded-xl border border-green-200 bg-green-50 p-3 font-semibold text-green-800">{{ mensaje }}</div>
 
     <section class="rounded-2xl border border-dashed border-quiniela-verde bg-green-50/50 p-4 sm:p-6">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

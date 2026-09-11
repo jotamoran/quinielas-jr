@@ -33,6 +33,7 @@ body {
 }
 
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button { min-height: 44px; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(255, 184, 12, 0.55); outline-offset: 2px; }
 
 @layer components {
@@ -41,10 +42,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     .page-description { @apply mt-1 text-sm text-gray-600 sm:text-base; }
     .eyebrow { @apply text-xs font-semibold uppercase tracking-widest text-quiniela-verde sm:text-sm; }
     .form-label { @apply block text-sm font-semibold text-gray-700; }
-    .form-control { @apply mt-1 w-full rounded-xl border-gray-300; }
+    .form-control { @apply mt-1 min-h-11 w-full rounded-xl border-gray-300; }
+    .auth-page { @apply flex min-h-dvh items-center justify-center bg-[radial-gradient(circle_at_top,_#e7f4ec_0,_#f2f2f2_46%,_#f2f2f2_100%)] px-4 py-6 sm:py-10; }
+    .auth-card { @apply w-full max-w-sm space-y-4 rounded-3xl border border-white/80 bg-white p-5 shadow-xl shadow-green-950/10 sm:p-8; }
+    .auth-logo { @apply mx-auto h-[4.5rem] w-[4.5rem] rounded-full object-contain shadow-sm; }
+    .auth-title { @apply text-center text-2xl font-bold text-quiniela-verdeOscuro; }
+    .auth-description { @apply text-center text-sm leading-relaxed text-gray-500; }
+    .primary-action { @apply min-h-11 w-full rounded-xl bg-quiniela-dorado px-4 py-2.5 font-semibold text-quiniela-grisTexto transition hover:bg-quiniela-doradoOscuro disabled:cursor-wait disabled:opacity-60; }
+    .auth-link { @apply rounded-md px-2 py-1.5 text-sm font-semibold text-quiniela-verde hover:underline; }
     .empty-state { @apply rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500; }
-    .nav-link { @apply rounded-lg px-3 py-2 font-semibold text-white/90 hover:bg-white/10 hover:text-white; }
-    .mobile-nav-link { @apply rounded-lg px-3 py-2.5 font-semibold hover:bg-white/10; }
+    .nav-link { @apply inline-flex min-h-11 items-center rounded-lg px-3 py-2 font-semibold text-white/90 hover:bg-white/10 hover:text-white; }
+    .mobile-nav-link { @apply flex min-h-11 items-center rounded-lg px-3 py-2.5 font-semibold hover:bg-white/10; }
 }
 
 /* ====== PATRONES RESPONSIVE ====== */
@@ -111,4 +119,30 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .swal-sobre-modal {
     z-index: 99999 !important;
+    font-family: 'Regular', sans-serif;
+}
+
+.swal-responsive {
+    width: min(32rem, calc(100vw - 2rem)) !important;
+    padding: 1.25rem !important;
+}
+
+.swal-boton {
+    min-height: 44px;
+}
+
+@media (max-width: 420px) {
+    .swal-responsive {
+        width: calc(100vw - 1.5rem) !important;
+        padding: 1rem !important;
+    }
+
+    .swal2-actions {
+        width: 100%;
+    }
+
+    .swal2-actions .swal2-styled {
+        flex: 1;
+        margin-inline: 0.25rem;
+    }
 }

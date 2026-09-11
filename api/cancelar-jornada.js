@@ -38,7 +38,11 @@ export default async function handler(req, res) {
       }
     }
 
-    const { data: quinielas } = await supabaseAdmin.from('quinielas').select('usuario_id, alias, correo_contacto').eq('jornada_id', jornada_id);
+    const { data: quinielas, error: errorQuinielas } = await supabaseAdmin.from('quinielas').select('usuario_id, alias, correo_contacto').eq('jornada_id', jornada_id);
+    if (errorQuinielas) {
+      console.error(`cancelar-jornada (${jornada_id}) — no se pudieron consultar participantes:`, errorQuinielas.message);
+      avisos.push('No se pudo obtener la lista completa de participantes para enviar avisos.');
+    }
     for (const quiniela of quinielas ?? []) {
       let correo = quiniela.correo_contacto;
       if (quiniela.usuario_id) {

@@ -40,7 +40,7 @@ function cerrarMenu() {
           <router-link :to="{ name: 'mis-quinielas' }" class="nav-link">Mis quinielas</router-link>
           <router-link :to="{ name: 'llenar-quiniela' }" class="nav-link">Jugar</router-link>
           <router-link :to="{ name: 'mi-cuenta' }" class="nav-link">Mi cuenta</router-link>
-          <div v-if="authStore.isAdmin" class="relative"><button @click="adminAbierto = !adminAbierto" class="nav-link flex items-center gap-1">Administración <span class="text-xs">▾</span></button><div v-if="adminAbierto" class="absolute right-0 mt-2 w-60 rounded-xl bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-administrar-jornadas', label: 'Ver jornadas' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" @click="adminAbierto = false" class="block rounded-lg px-3 py-2 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
+          <div v-if="authStore.isAdmin" class="relative"><button type="button" @click="adminAbierto = !adminAbierto" class="nav-link flex min-h-11 items-center gap-1" :aria-expanded="adminAbierto" aria-haspopup="menu">Administración <span class="text-xs" aria-hidden="true">▾</span></button><div v-if="adminAbierto" role="menu" class="absolute right-0 mt-2 w-60 rounded-xl border border-gray-100 bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-administrar-jornadas', label: 'Ver jornadas' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" role="menuitem" @click="adminAbierto = false" class="block min-h-11 rounded-lg px-3 py-2.5 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
           <button @click="salir" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Salir</button>
         </template>
         <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
@@ -50,7 +50,9 @@ function cerrarMenu() {
       <button
         class="grid h-11 w-11 place-items-center rounded-lg text-white hover:bg-white/10 md:hidden"
         @click="menuAbierto = !menuAbierto"
-        aria-label="Abrir menú"
+        :aria-label="menuAbierto ? 'Cerrar menú' : 'Abrir menú'"
+        :aria-expanded="menuAbierto"
+        aria-controls="menu-principal-movil"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path v-if="!menuAbierto" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -59,7 +61,7 @@ function cerrarMenu() {
       </button>
     </div>
 
-    <div v-if="menuAbierto" class="mx-auto mt-3 flex max-w-7xl flex-col gap-1 border-t border-white/20 pt-3 text-sm md:hidden">
+    <div v-if="menuAbierto" id="menu-principal-movil" class="mx-auto mt-3 flex max-w-7xl flex-col gap-1 border-t border-white/20 pt-3 text-sm md:hidden">
       <template v-if="authStore.isLoggedIn">
         <p class="px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Mi cuenta</p>
         <router-link :to="{ name: 'mis-quinielas' }" @click="cerrarMenu" class="mobile-nav-link">Mis quinielas</router-link>
@@ -74,9 +76,9 @@ function cerrarMenu() {
           <router-link :to="{ name: 'admin-sincronizar' }" @click="cerrarMenu" class="mobile-nav-link">Resultados</router-link>
           <router-link :to="{ name: 'admin-cerrar-jornada' }" @click="cerrarMenu" class="mobile-nav-link">Cerrar jornada</router-link>
         </template>
-        <button @click="salir(); cerrarMenu()" class="mt-2 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Cerrar sesión</button>
+        <button @click="salir(); cerrarMenu()" class="mt-2 min-h-11 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Cerrar sesión</button>
       </template>
-      <button v-else type="button" @click="loginModalStore.abrir(); cerrarMenu()" class="mt-2 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
+      <button v-else type="button" @click="loginModalStore.abrir(); cerrarMenu()" class="mt-2 min-h-11 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
     </div>
   </nav>
 </template>
