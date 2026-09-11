@@ -1,10 +1,10 @@
 import { supabase } from '@/lib/supabase';
 
-export async function registrar({ email, password, nombreCompleto }) {
+export async function registrar({ email, password, nombreCompleto, username }) {
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { nombre_completo: nombreCompleto } },
+    options: { data: { nombre_completo: nombreCompleto, username } },
   });
   if (error) throw error;
 }
@@ -14,14 +14,23 @@ export async function verificarCodigo({ email, codigo }) {
   if (error) throw error;
 }
 
-export async function iniciarSesion({ email, password }) {
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+export async function usernameDisponible(username) {
+  const respuesta = await fetch(`/api/auth/username-disponible?${new URLSearchParams({ username })}`);
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.error ?? 'Error inesperado');
+  return datos.disponible;
 }
 
-export function resolverCorreo(entrada) {
-  const limpio = entrada.trim();
-  return limpio.toLowerCase() === 'admin' ? import.meta.env.VITE_ADMIN_ALIAS_EMAIL : limpio;
+export async function iniciarSesion({ entrada, password }) {
+  const respuesta = await fetch('/api/auth/iniciar-sesion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entrada, password }),
+  });
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.error ?? 'Error inesperado');
+  const { error } = await supabase.auth.setSession({ access_token: datos.access_token, refresh_token: datos.refresh_token });
+  if (error) throw error;
 }
 
 const MENSAJES_ERROR_AUTH = {
