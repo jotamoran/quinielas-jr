@@ -151,3 +151,7 @@ export async function editarQuinielaManual(quinielaId, cambios) {
   const { error } = await supabase.from('quinielas').update(cambios).eq('id', quinielaId);
   if (error) throw error;
 }
+
+export async function cancelarJornada(jornadaId) {
+  return llamarApi('cancelar-jornada', { method: 'POST', body: JSON.stringify({ jornada_id: jornadaId }) });
+}
