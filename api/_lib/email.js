@@ -6,6 +6,10 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const plantillaBase = readFileSync(path.join(__dirname, 'templates', 'base.html'), 'utf-8');
 
+export function escaparHtml(texto) {
+  return String(texto ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 let transportador;
 
 function getTransportador() {
