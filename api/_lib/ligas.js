@@ -1,5 +1,5 @@
 export const LIGAS = {
-  '4350': { name: 'Liga MX', seasonMode: 'calendar' },
+  '4350': { name: 'Liga MX', seasonMode: 'calendar', soportaBusquedaPorRonda: true },
   '5206': { name: 'Liga MX Femenil', seasonMode: 'calendar' },
   '4654': { name: 'Liga de Expansión MX', seasonMode: 'calendar' },
   '4480': { name: 'UEFA Champions League', seasonMode: 'european' },
