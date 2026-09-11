@@ -7,6 +7,7 @@ import TarjetaPartido from '../components/TarjetaPartido.vue';
 import PasoPago from '../components/PasoPago.vue';
 import { calcularTiempoRestante, estaBloqueado } from '../utils/countdown';
 import { obtenerJornadaActiva, obtenerPartidos, crearQuiniela, guardarPredicciones, subirComprobante, notificarRegistro, aplicarCupon } from '../services/quinielasService';
+import { alertaError } from '@/lib/alertas';
 
 const router = useRouter();
 const route = useRoute();
@@ -71,7 +72,7 @@ async function confirmarPago({ metodo, archivo, codigoCupon }) {
     confirmacion.value = { alias: alias.value, jornada: jornada.value.nombre };
     paso.value = 'confirmacion';
   } catch (e) {
-    error.value = e.message;
+    await alertaError(e, 'No se pudo registrar la quiniela');
   } finally {
     procesando.value = false;
   }

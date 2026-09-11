@@ -2,13 +2,12 @@
 import { onMounted, ref } from 'vue';
 import { supabase } from '@/lib/supabase';
 import { guardarResultadosManuales, sincronizarResultados } from '../services/adminService';
+import { alertaAdvertencia, alertaError, alertaExito } from '@/lib/alertas';
 
 const jornadas = ref([]);
 const jornadaSeleccionada = ref(null);
 const partidos = ref([]);
 const resultados = ref({});
-const mensaje = ref('');
-const error = ref('');
 const cargando = ref(false);
 const opciones = [{ value: 'L', label: 'Local' }, { value: 'E', label: 'Empate' }, { value: 'V', label: 'Visita' }];
 
@@ -20,11 +19,9 @@ async function cargar() {
 
 async function abrirJornada(jornada) {
   jornadaSeleccionada.value = jornada;
-  mensaje.value = '';
-  error.value = '';
   const { data, error: queryError } = await supabase.from('partidos').select('id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial, provider, cancelado').eq('jornada_id', jornada.id).order('fecha_partido');
   if (queryError) {
-    error.value = queryError.message;
+    await alertaError(queryError, 'No se pudieron cargar los partidos');
     return;
   }
   partidos.value = data ?? [];
@@ -33,14 +30,12 @@ async function abrirJornada(jornada) {
 
 async function sincronizar() {
   cargando.value = true;
-  mensaje.value = '';
-  error.value = '';
   try {
     const response = await sincronizarResultados(jornadaSeleccionada.value.id);
     await abrirJornada(jornadaSeleccionada.value);
-    mensaje.value = `${response.actualizados} resultado(s) sincronizado(s) desde TheSportsDB.`;
+    await alertaExito('Resultados sincronizados', `${response.actualizados} resultado(s) actualizado(s) desde TheSportsDB.`);
   } catch (e) {
-    error.value = e.message;
+    await alertaError(e, 'No se pudieron sincronizar los resultados');
   } finally {
     cargando.value = false;
   }
@@ -51,18 +46,16 @@ async function guardarManuales() {
     .filter((partido) => resultados.value[partido.id] && resultados.value[partido.id] !== partido.resultado_oficial)
     .map((partido) => ({ partido_id: partido.id, resultado: resultados.value[partido.id] }));
   if (!cambios.length) {
-    error.value = 'No hay resultados nuevos o modificados para guardar.';
+    await alertaAdvertencia('No hay cambios', 'Selecciona o modifica al menos un resultado antes de guardar.');
     return;
   }
   cargando.value = true;
-  mensaje.value = '';
-  error.value = '';
   try {
     const response = await guardarResultadosManuales(jornadaSeleccionada.value.id, cambios);
     await abrirJornada(jornadaSeleccionada.value);
-    mensaje.value = `${response.actualizados} resultado(s) guardado(s) y puntos recalculados.`;
+    await alertaExito('Resultados guardados', `${response.actualizados} resultado(s) actualizado(s) y puntos recalculados.`);
   } catch (e) {
-    error.value = e.message;
+    await alertaError(e, 'No se pudieron guardar los resultados');
   } finally {
     cargando.value = false;
   }
@@ -73,16 +66,13 @@ function fechaPartido(fecha) {
 }
 
 onMounted(async () => {
-  try { await cargar(); } catch (e) { error.value = e.message; }
+  try { await cargar(); } catch (e) { await alertaError(e, 'No se pudieron cargar las jornadas'); }
 });
 </script>
 
 <template>
   <main class="mx-auto max-w-4xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
     <header><p class="text-sm font-semibold uppercase tracking-widest text-quiniela-verde">Administración</p><h1 class="text-3xl font-bold text-quiniela-verdeOscuro">Resultados de partidos</h1><p class="mt-1 text-gray-600">Sincroniza TheSportsDB o captura el resultado manualmente.</p></header>
-
-    <div v-if="error" role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">{{ error }}</div>
-    <div v-if="mensaje" role="status" class="rounded-xl border border-green-200 bg-green-50 p-3 text-green-800">{{ mensaje }}</div>
 
     <section v-if="!jornadaSeleccionada" class="grid gap-3 sm:grid-cols-2">
       <button v-for="jornada in jornadas" :key="jornada.id" @click="abrirJornada(jornada)" class="rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm hover:border-quiniela-verde"><p class="font-bold text-quiniela-verdeOscuro">{{ jornada.nombre }}</p><p class="mt-1 text-sm capitalize text-gray-500">{{ jornada.estatus }}</p></button>

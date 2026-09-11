@@ -2,70 +2,64 @@
 import { ref } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { actualizarNombre, actualizarCorreo, actualizarPassword, traducirErrorAuth } from '../services/authService';
+import { alertaError, alertaExito } from '@/lib/alertas';
 
 const authStore = useAuthStore();
 
 const nombreCompleto = ref(authStore.perfil?.nombre_completo ?? '');
 const guardandoNombre = ref(false);
-const errorNombre = ref('');
-const exitoNombre = ref('');
 
 const nuevoCorreo = ref('');
 const guardandoCorreo = ref(false);
-const errorCorreo = ref('');
-const exitoCorreo = ref('');
 
 const nuevaPassword = ref('');
 const confirmarPassword = ref('');
 const guardandoPassword = ref(false);
-const errorPassword = ref('');
-const exitoPassword = ref('');
 
 async function onGuardarNombre() {
-  errorNombre.value = '';
-  exitoNombre.value = '';
+  const nombre = nombreCompleto.value.trim();
+  if (!nombre) {
+    await alertaError(new Error('Escribe tu nombre completo.'), 'Nombre no válido');
+    return;
+  }
   guardandoNombre.value = true;
   try {
-    await actualizarNombre(nombreCompleto.value.trim());
+    await actualizarNombre(nombre);
     await authStore.cargarPerfil();
-    exitoNombre.value = 'Nombre actualizado.';
+    await alertaExito('Nombre actualizado');
   } catch (e) {
-    errorNombre.value = traducirErrorAuth(e.message);
+    await alertaError(new Error(traducirErrorAuth(e.message)), 'No se pudo actualizar el nombre');
   } finally {
     guardandoNombre.value = false;
   }
 }
 
 async function onGuardarCorreo() {
-  errorCorreo.value = '';
-  exitoCorreo.value = '';
   guardandoCorreo.value = true;
   try {
     await actualizarCorreo(nuevoCorreo.value.trim());
-    exitoCorreo.value = 'Revisa tu correo (el actual y/o el nuevo) para confirmar el cambio.';
     nuevoCorreo.value = '';
+    await alertaExito('Solicitud enviada', 'Revisa tu correo actual y el nuevo para confirmar el cambio.');
   } catch (e) {
-    errorCorreo.value = traducirErrorAuth(e.message);
+    await alertaError(new Error(traducirErrorAuth(e.message)), 'No se pudo cambiar el correo');
   } finally {
     guardandoCorreo.value = false;
   }
 }
 
 async function onGuardarPassword() {
-  errorPassword.value = '';
-  exitoPassword.value = '';
   if (nuevaPassword.value !== confirmarPassword.value) {
-    errorPassword.value = 'Las contraseñas no coinciden.';
+    await alertaError(new Error('Verifica ambos campos e inténtalo nuevamente.'), 'Las contraseñas no coinciden');
     return;
   }
   guardandoPassword.value = true;
   try {
     await actualizarPassword(nuevaPassword.value);
-    exitoPassword.value = 'Contraseña actualizada.';
     nuevaPassword.value = '';
     confirmarPassword.value = '';
+    await alertaExito('Contraseña actualizada');
   } catch (e) {
-    errorPassword.value = traducirErrorAuth(e.message);
+    await alertaError(new Error(traducirErrorAuth(e.message)), 'No se pudo cambiar la contraseña');
   } finally {
     guardandoPassword.value = false;
   }
@@ -80,30 +74,29 @@ async function onGuardarPassword() {
       <p class="page-description">Administra tu nombre, correo y contraseña.</p>
     </header>
 
+    <section class="flex items-center gap-4 rounded-2xl bg-quiniela-verdeOscuro p-4 text-white shadow-sm sm:p-5">
+      <img src="@assets/logo.png" alt="" class="h-14 w-14 shrink-0 rounded-full object-contain" />
+      <div class="min-w-0"><p class="truncate font-bold">{{ authStore.perfil?.nombre_completo }}</p><p class="truncate text-sm text-green-100">@{{ authStore.perfil?.username }}</p></div>
+    </section>
+
     <form @submit.prevent="onGuardarNombre" class="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
       <h2 class="font-bold text-quiniela-verdeOscuro">Nombre completo</h2>
       <label class="form-label">Nombre<input v-model="nombreCompleto" type="text" autocomplete="name" required class="form-control min-h-11" /></label>
-      <p v-if="errorNombre" role="alert" class="rounded-lg bg-red-50 p-2 text-sm text-quiniela-error">{{ errorNombre }}</p>
-      <p v-if="exitoNombre" role="status" class="rounded-lg bg-green-50 p-2 text-sm text-quiniela-verde">{{ exitoNombre }}</p>
-      <button type="submit" :disabled="guardandoNombre" class="min-h-11 rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50">{{ guardandoNombre ? 'Guardando…' : 'Guardar nombre' }}</button>
+      <button type="submit" :disabled="guardandoNombre" class="min-h-11 w-full rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{{ guardandoNombre ? 'Guardando…' : 'Guardar nombre' }}</button>
     </form>
 
     <form @submit.prevent="onGuardarCorreo" class="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
       <h2 class="font-bold text-quiniela-verdeOscuro">Correo</h2>
-      <p class="text-sm text-gray-600">Correo actual: <b>{{ authStore.user?.email }}</b></p>
+      <p class="break-all text-sm text-gray-600">Correo actual: <b>{{ authStore.user?.email }}</b></p>
       <label class="form-label">Nuevo correo<input v-model="nuevoCorreo" type="email" autocomplete="email" placeholder="nuevo@correo.com" required class="form-control min-h-11" /></label>
-      <p v-if="errorCorreo" role="alert" class="rounded-lg bg-red-50 p-2 text-sm text-quiniela-error">{{ errorCorreo }}</p>
-      <p v-if="exitoCorreo" role="status" class="rounded-lg bg-green-50 p-2 text-sm text-quiniela-verde">{{ exitoCorreo }}</p>
-      <button type="submit" :disabled="guardandoCorreo" class="min-h-11 rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50">{{ guardandoCorreo ? 'Enviando…' : 'Cambiar correo' }}</button>
+      <button type="submit" :disabled="guardandoCorreo" class="min-h-11 w-full rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{{ guardandoCorreo ? 'Enviando…' : 'Cambiar correo' }}</button>
     </form>
 
     <form @submit.prevent="onGuardarPassword" class="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
       <h2 class="font-bold text-quiniela-verdeOscuro">Contraseña</h2>
       <label class="form-label">Nueva contraseña<input v-model="nuevaPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required minlength="6" class="form-control min-h-11" /></label>
       <label class="form-label">Confirmar contraseña<input v-model="confirmarPassword" type="password" autocomplete="new-password" required minlength="6" class="form-control min-h-11" /></label>
-      <p v-if="errorPassword" role="alert" class="rounded-lg bg-red-50 p-2 text-sm text-quiniela-error">{{ errorPassword }}</p>
-      <p v-if="exitoPassword" role="status" class="rounded-lg bg-green-50 p-2 text-sm text-quiniela-verde">{{ exitoPassword }}</p>
-      <button type="submit" :disabled="guardandoPassword" class="min-h-11 rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50">{{ guardandoPassword ? 'Guardando…' : 'Cambiar contraseña' }}</button>
+      <button type="submit" :disabled="guardandoPassword" class="min-h-11 w-full rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{{ guardandoPassword ? 'Guardando…' : 'Cambiar contraseña' }}</button>
     </form>
   </main>
 </template>

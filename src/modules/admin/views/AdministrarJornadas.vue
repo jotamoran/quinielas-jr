@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
-import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
+import { alertaAdvertencia, alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
 const router = useRouter();
 const jornadas = ref([]);
@@ -170,11 +170,15 @@ async function cancelarJornadaCompleta() {
   if (!confirmado) return;
   guardando.value = true;
   try {
-    await cancelarJornada(abierta.value.id);
+    const resultado = await cancelarJornada(abierta.value.id);
     abierta.value.estatus = 'cancelada';
     const jornadaEnLista = jornadas.value.find((j) => j.id === abierta.value.id);
     if (jornadaEnLista) jornadaEnLista.estatus = 'cancelada';
-    await alertaExito('Jornada cancelada');
+    if (resultado.avisos?.length) {
+      await alertaAdvertencia('Jornada cancelada con avisos', resultado.avisos.join(' '));
+    } else {
+      await alertaExito('Jornada cancelada', 'Los participantes fueron notificados correctamente.');
+    }
   } catch (error) {
     await alertaError(error, 'No se pudo cancelar la jornada');
   } finally {
@@ -183,6 +187,7 @@ async function cancelarJornadaCompleta() {
 }
 
 async function alternarCancelacion(partido) {
+  if (!abierta.value || ['finalizada', 'cancelada'].includes(abierta.value.estatus)) return;
   const accion = partido.cancelado ? 'reactivar' : 'cancelar';
   const yaPasoElCierre = new Date(abierta.value.fecha_cierre) <= new Date();
   const confirmado = await confirmarAccion({
@@ -211,7 +216,7 @@ async function alternarCancelacion(partido) {
 onMounted(async () => {
   try {
     jornadas.value = await listarJornadasAdmin();
-    if (jornadasOrdenadas.value[0]?.estatus === 'activa') abrir(jornadasOrdenadas.value[0]);
+    if (jornadasOrdenadas.value[0]) abrir(jornadasOrdenadas.value[0]);
   } catch (error) {
     await alertaError(error, 'No se pudieron cargar las jornadas');
   } finally {
@@ -286,7 +291,7 @@ onMounted(async () => {
             </div>
             <p v-if="partido.cancelado" class="mt-3 text-center text-sm font-bold text-red-700">Cancelado — no cuenta para las quinielas</p>
             <p v-else-if="partido.resultado_oficial" class="mt-3 text-center text-sm font-bold text-quiniela-verde">Resultado: {{ partido.resultado_oficial }}</p>
-            <button v-if="abierta.estatus !== 'finalizada'" type="button" @click="alternarCancelacion(partido)" :disabled="guardando" class="mt-3 w-full rounded-lg border py-2 text-sm font-semibold disabled:opacity-50" :class="partido.cancelado ? 'border-quiniela-verde text-quiniela-verde' : 'border-red-300 text-red-700'">{{ partido.cancelado ? 'Reactivar partido' : 'Cancelar partido' }}</button>
+            <button v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)" type="button" @click="alternarCancelacion(partido)" :disabled="guardando" class="mt-3 min-h-11 w-full rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-50" :class="partido.cancelado ? 'border-quiniela-verde text-quiniela-verde' : 'border-red-300 text-red-700'">{{ partido.cancelado ? 'Reactivar partido' : 'Cancelar partido' }}</button>
           </article>
         </div>
       </section>
