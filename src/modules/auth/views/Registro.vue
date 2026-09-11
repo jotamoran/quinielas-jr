@@ -1,10 +1,11 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { registrar } from '../services/authService';
+import { registrar, usernameDisponible } from '../services/authService';
 
 const nombreCompleto = ref('');
 const email = ref('');
+const username = ref('');
 const password = ref('');
 const error = ref('');
 const cargando = ref(false);
@@ -14,7 +15,12 @@ async function onSubmit() {
   error.value = '';
   cargando.value = true;
   try {
-    await registrar({ email: email.value, password: password.value, nombreCompleto: nombreCompleto.value });
+    const usernameNormalizado = username.value.trim().toLowerCase();
+    if (!(await usernameDisponible(usernameNormalizado))) {
+      error.value = 'Ese nombre de usuario ya está en uso.';
+      return;
+    }
+    await registrar({ email: email.value, password: password.value, nombreCompleto: nombreCompleto.value, username: usernameNormalizado });
     router.push({ name: 'verificar-codigo', query: { email: email.value } });
   } catch (e) {
     error.value = e.message;
@@ -31,6 +37,7 @@ async function onSubmit() {
       <h1 class="text-2xl font-bold text-quiniela-verdeOscuro text-center">Crear cuenta</h1>
       <label class="form-label">Nombre completo<input v-model="nombreCompleto" type="text" autocomplete="name" placeholder="Tu nombre" required class="form-control min-h-11" /></label>
       <label class="form-label">Correo<input v-model="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required class="form-control min-h-11" /></label>
+      <label class="form-label">Nombre de usuario<input v-model="username" type="text" autocomplete="username" placeholder="letras, números y _ (3-20)" required minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" class="form-control min-h-11" @input="username = username.toLowerCase()" /></label>
       <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required minlength="6" class="form-control min-h-11" /></label>
       <p v-if="error" role="alert" class="rounded-lg bg-red-50 p-2 text-quiniela-error text-sm">{{ error }}</p>
       <button type="submit" :disabled="cargando"
