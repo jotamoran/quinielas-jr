@@ -74,18 +74,18 @@ defineExpose({ recargar: cargar });
 
 <template>
   <div v-if="filas.length" class="space-y-2">
-    <p v-if="resaltarExtremos" class="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
-      <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-amber-300"></span> Va(n) ganando el premio en este momento (si hay empate en el primer lugar, se reparte entre quienes empataron).</span>
-      <span class="flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-red-400"></span> "Por tarugo": hasta el momento va perdiendo y se llevará el cupón de consolación (si hay empate en el último lugar, no se otorga).</span>
-    </p>
+    <div v-if="resaltarExtremos" class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+      <div class="flex items-start gap-2"><span class="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-amber-300"></span><span><strong class="font-bold text-gray-700">Ganador:</strong> va(n) al frente del premio en este momento (si hay empate en el primer lugar, se reparte entre quienes empataron).</span></div>
+      <div class="flex items-start gap-2"><span class="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-red-400"></span><span><strong class="font-bold text-gray-700">Tarugo:</strong> hasta el momento va con menos aciertos y se llevará el cupón de consolación (si hay empate en el último lugar, no se otorga).</span></div>
+    </div>
     <article v-for="fila in filas" :key="fila.quiniela_id ?? fila.mostrar_como" class="overflow-hidden rounded-2xl border shadow-sm" :class="esLider(fila) ? 'border-amber-300 bg-amber-50' : esPorTarugo(fila) ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'">
       <div class="grid grid-cols-[42px_1fr_auto] items-center gap-3 p-3.5 sm:grid-cols-[56px_1fr_110px_auto] sm:px-5">
         <span class="grid h-10 w-10 place-items-center rounded-full font-bold" :class="fila.posicion <= 3 ? 'bg-quiniela-dorado text-quiniela-grisTexto' : 'bg-green-50 text-quiniela-verde'">{{ fila.posicion }}</span>
         <div class="min-w-0">
           <p class="truncate font-bold text-quiniela-verdeOscuro">{{ nombreParticipante(fila) }}</p>
           <p class="text-xs text-gray-500 sm:hidden">{{ fila.aciertos }} aciertos</p>
-          <span v-if="esLider(fila)" class="mt-1 inline-block rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-900">Va ganando</span>
-          <span v-else-if="esPorTarugo(fila)" class="mt-1 inline-block rounded-full bg-red-400 px-2 py-0.5 text-[10px] font-bold text-white">Por tarugo</span>
+          <span v-if="esLider(fila)" class="mt-1 inline-block rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-900">Ganador</span>
+          <span v-else-if="esPorTarugo(fila)" class="mt-1 inline-block rounded-full bg-red-400 px-2 py-0.5 text-[10px] font-bold text-white">Tarugo</span>
         </div>
         <strong class="hidden text-right text-quiniela-verde sm:block">{{ fila.aciertos }} aciertos</strong>
         <button v-if="bloqueada && obtenerPronosticosFn" type="button" @click="alternar(fila)" class="rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-semibold text-quiniela-verde hover:bg-green-50" :aria-expanded="abiertaId === fila.quiniela_id">
