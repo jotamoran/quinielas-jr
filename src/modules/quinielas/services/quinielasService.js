@@ -106,5 +106,6 @@ export async function obtenerPronosticosDeQuiniela(quinielaId) {
       pronostico: item.pronostico,
       resultado_oficial: item.partidos?.resultado_oficial,
       cancelado: item.partidos?.cancelado ?? false,
+      fecha_partido: item.partidos?.fecha_partido,
     }));
 }

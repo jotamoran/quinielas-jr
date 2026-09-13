@@ -63,6 +63,7 @@ async function obtenerPronosticosPublicos(quinielaId) {
     pronostico: porPartido.get(partido.id),
     resultado_oficial: partido.resultado_oficial,
     cancelado: partido.cancelado,
+    fecha_partido: partido.fecha_partido,
   }));
 }
 
