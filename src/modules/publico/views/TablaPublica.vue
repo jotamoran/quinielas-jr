@@ -55,6 +55,8 @@ async function obtenerPronosticosPublicos(quinielaId) {
     logo_local: partido.logo_local,
     logo_visitante: partido.logo_visitante,
     pronostico: porPartido.get(partido.id),
+    resultado_oficial: partido.resultado_oficial,
+    cancelado: partido.cancelado,
   }));
 }
 
