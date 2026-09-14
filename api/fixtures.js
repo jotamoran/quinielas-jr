@@ -5,6 +5,13 @@ import { guardarEnCache } from './_lib/football/equiposCache.js';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+function ligaParaBusquedaPorRonda(leagues, mensajeMultiplesLigas) {
+  if (leagues.length !== 1) throw new ErrorHttp(400, mensajeMultiplesLigas);
+  const [league] = leagues;
+  if (!LIGAS[league].soportaBusquedaPorJornada) throw new ErrorHttp(400, 'Esa liga todavía no soporta búsqueda por jornada');
+  return league;
+}
+
 export default async function handler(req, res) {
   try {
     await requireAdmin(req);
@@ -15,18 +22,14 @@ export default async function handler(req, res) {
     if (leagues.some((id) => !LIGAS[id])) return res.status(400).json({ error: 'La liga solicitada no está permitida' });
 
     if (req.query.proximaJornada === '1') {
-      if (leagues.length !== 1) return res.status(400).json({ error: 'La detección de jornada solo admite una liga a la vez' });
-      const [league] = leagues;
-      if (!LIGAS[league].soportaBusquedaPorJornada) return res.status(400).json({ error: 'Esa liga todavía no soporta búsqueda por jornada' });
+      const league = ligaParaBusquedaPorRonda(leagues, 'La detección de jornada solo admite una liga a la vez');
       return res.status(200).json({ numeroJornada: await findNextRound(league) });
     }
 
     const { numeroJornada } = req.query;
     if (numeroJornada) {
       if (!/^[1-9]\d*$/.test(numeroJornada)) return res.status(400).json({ error: 'El número de jornada debe ser un entero positivo' });
-      if (leagues.length !== 1) return res.status(400).json({ error: 'La búsqueda por jornada solo admite una liga a la vez' });
-      const [league] = leagues;
-      if (!LIGAS[league].soportaBusquedaPorJornada) return res.status(400).json({ error: 'Esa liga todavía no soporta búsqueda por jornada' });
+      const league = ligaParaBusquedaPorRonda(leagues, 'La búsqueda por jornada solo admite una liga a la vez');
 
       const hoy = new Date().toISOString().slice(0, 10);
       const fixtures = await findFixtures({ league, round: numeroJornada, season: seasonRangeForDate(hoy) });
