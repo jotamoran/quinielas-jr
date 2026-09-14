@@ -51,9 +51,14 @@ async function cargar() {
   try {
     jornada.value = await obtenerJornadaActiva(route.params.jornadaId ?? null, { soloAbierta: !route.params.jornadaId });
     if (jornada.value) partidos.value = await obtenerPartidos(jornada.value.id);
-    datosBancarios.value = await obtenerDatosBancarios();
   } catch (e) {
     error.value = e.message;
+    return;
+  }
+  try {
+    datosBancarios.value = await obtenerDatosBancarios();
+  } catch {
+    datosBancarios.value = null;
   }
 }
 
