@@ -6,7 +6,7 @@ import { useLoginModalStore } from '@/store/loginModal';
 import TarjetaPartido from '../components/TarjetaPartido.vue';
 import PasoPago from '../components/PasoPago.vue';
 import { calcularTiempoRestante, estaBloqueado } from '../utils/countdown';
-import { obtenerJornadaActiva, obtenerPartidos, crearQuiniela, guardarPredicciones, subirComprobante, notificarRegistro, aplicarCupon } from '../services/quinielasService';
+import { obtenerJornadaActiva, obtenerPartidos, crearQuiniela, guardarPredicciones, subirComprobante, notificarRegistro, aplicarCupon, obtenerDatosBancarios } from '../services/quinielasService';
 import { alertaError } from '@/lib/alertas';
 
 const router = useRouter();
@@ -16,6 +16,7 @@ const loginModalStore = useLoginModalStore();
 const jornada = ref(null);
 const partidos = ref([]);
 const pronosticos = ref({});
+const datosBancarios = ref(null);
 const alias = ref('Entrada 1');
 const paso = ref('pronosticos');
 const confirmacion = ref(null);
@@ -50,6 +51,7 @@ async function cargar() {
   try {
     jornada.value = await obtenerJornadaActiva(route.params.jornadaId ?? null, { soloAbierta: !route.params.jornadaId });
     if (jornada.value) partidos.value = await obtenerPartidos(jornada.value.id);
+    datosBancarios.value = await obtenerDatosBancarios();
   } catch (e) {
     error.value = e.message;
   }
@@ -112,7 +114,7 @@ watch(() => route.params.jornadaId, async () => { await cargar(); actualizarTiem
         <p v-if="partidos.length !== 9" class="text-center text-sm text-amber-700">Esta jornada no contiene los 9 partidos requeridos.</p>
       </section>
 
-      <section v-else-if="paso === 'pago'" class="space-y-3"><button @click="paso = 'pronosticos'" class="text-sm font-semibold text-quiniela-verde">← Volver a pronósticos</button><PasoPago :procesando="procesando" @confirmar="confirmarPago" /></section>
+      <section v-else-if="paso === 'pago'" class="space-y-3"><button @click="paso = 'pronosticos'" class="text-sm font-semibold text-quiniela-verde">← Volver a pronósticos</button><PasoPago :procesando="procesando" :datos-bancarios="datosBancarios" @confirmar="confirmarPago" /></section>
 
       <section v-else class="rounded-2xl bg-white p-6 text-center shadow-sm sm:p-10"><div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-green-100 text-3xl">✓</div><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">¡Quiniela registrada!</h2><dl class="my-6 rounded-xl bg-gray-50 p-4 text-left"><div class="flex justify-between gap-4"><dt class="text-gray-500">Entrada</dt><dd class="font-semibold">{{ confirmacion.alias }}</dd></div><div class="mt-2 flex justify-between gap-4"><dt class="text-gray-500">Jornada</dt><dd class="font-semibold">{{ confirmacion.jornada }}</dd></div></dl><button @click="router.push('/mis-quinielas')" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white">Ver mi quiniela</button><p class="mt-3 text-sm text-gray-500">También enviamos la confirmación a tu correo.</p></section>
     </template>
