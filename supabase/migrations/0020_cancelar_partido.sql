@@ -1,4 +1,3 @@
--- supabase/migrations/0020_cancelar_partido.sql
 ALTER TABLE partidos ADD COLUMN cancelado BOOLEAN NOT NULL DEFAULT false;
 
 CREATE OR REPLACE FUNCTION calcular_puntos(p_jornada_id UUID)

@@ -1,4 +1,3 @@
--- supabase/migrations/0022_username.sql
 ALTER TABLE perfiles ADD COLUMN username TEXT;
 
 WITH candidatos AS (

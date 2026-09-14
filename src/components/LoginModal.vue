@@ -1,4 +1,3 @@
-<!-- src/components/LoginModal.vue -->
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';

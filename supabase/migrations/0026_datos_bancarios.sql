@@ -1,4 +1,3 @@
--- supabase/migrations/0026_datos_bancarios.sql
 CREATE TABLE datos_bancarios (
   id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   banco TEXT,

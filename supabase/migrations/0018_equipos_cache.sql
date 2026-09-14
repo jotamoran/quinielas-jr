@@ -1,4 +1,3 @@
--- supabase/migrations/0018_equipos_cache.sql
 CREATE TABLE equipos_cache (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   nombre TEXT NOT NULL,

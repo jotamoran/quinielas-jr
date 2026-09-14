@@ -147,5 +147,8 @@ B:/
 # Subagent-driven-development scratch workspace
 .superpowers/
 
+# Notas y planes de trabajo, solo para consulta local
+docs/
+
 # Vercel CLI local project link
 .vercel/

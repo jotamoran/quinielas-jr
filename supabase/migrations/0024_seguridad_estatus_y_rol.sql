@@ -1,5 +1,3 @@
--- supabase/migrations/0024_seguridad_estatus_y_rol.sql
-
 -- Las políticas de predicciones solo validaban que no hubiera pasado la
 -- fecha de cierre, no que la jornada siguiera activa. Cierra el hueco de
 -- que, en el instante entre crear la quiniela e insertar los pronósticos,
