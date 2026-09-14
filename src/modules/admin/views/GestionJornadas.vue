@@ -102,7 +102,8 @@ async function alternarSeleccion(fixture) {
 async function detectarProximaJornada() {
   try {
     const respuesta = await buscarFixtures({ leagues: [ligaPrincipal.id], proximaJornada: true });
-    if (respuesta.numeroJornada) numeroJornada.value = respuesta.numeroJornada;
+    // No pisar lo que el admin ya haya escrito mientras esta consulta estaba en curso.
+    if (respuesta.numeroJornada && !numeroJornada.value) numeroJornada.value = respuesta.numeroJornada;
   } catch {
     // El administrador todavía puede escribir la jornada manualmente.
   } finally {
