@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useLoginModalStore } from '@/store/loginModal';
 import TablaPosiciones from '@/modules/quinielas/components/TablaPosiciones.vue';
+import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -15,6 +16,7 @@ const partidos = ref([]);
 const cargando = ref(true);
 const error = ref('');
 const tablaPosiciones = ref(null);
+const actualizadoEl = ref(null);
 let intervalo;
 const bloqueada = computed(() => jornada.value && new Date(jornada.value.fecha_cierre) <= new Date());
 const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
@@ -73,10 +75,15 @@ function formatoFechaPartido(fecha) {
   return new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' }).format(new Date(fecha));
 }
 
+function formatoActualizacion(fecha) {
+  return fecha?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Mexico_City' }) ?? '';
+}
+
 async function actualizar() {
   try {
     await cargar();
     await tablaPosiciones.value?.recargar();
+    actualizadoEl.value = new Date();
     error.value = '';
   } catch (e) {
     error.value = e.message;
@@ -94,7 +101,7 @@ onUnmounted(() => clearInterval(intervalo));
 
 <template>
   <main class="page-shell max-w-3xl">
-    <div v-if="cargando" class="empty-state">Cargando resultados…</div>
+    <EsqueletoCarga v-if="cargando" :cantidad="4" />
     <div v-else-if="error" role="alert" class="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-700">{{ error }}</div>
 
     <template v-else>
@@ -130,16 +137,16 @@ onUnmounted(() => clearInterval(intervalo));
           <div class="mb-1 flex items-center justify-between gap-2 text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ p.liga_nombre }}</span><span class="rounded-full px-2 py-1 font-bold" :class="p.cancelado ? 'bg-red-50 text-red-700' : p.resultado_oficial ? 'bg-green-50 text-quiniela-verde' : 'bg-gray-100'">{{ p.cancelado ? 'Cancelado' : p.resultado_oficial ? 'Finalizado' : 'Pendiente' }}</span></div>
           <p class="mb-3 text-center text-xs capitalize text-gray-400">{{ formatoFechaPartido(p.fecha_partido) }} · hora CDMX</p>
           <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-            <div><img v-if="p.logo_local" :src="p.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-bold text-quiniela-verdeOscuro">{{ p.equipo_local }}</p></div>
+            <div class="min-w-0"><img v-if="p.logo_local" :src="p.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_local }}</p></div>
             <span class="text-xs font-bold text-gray-400">VS</span>
-            <div><img v-if="p.logo_visitante" :src="p.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-bold text-quiniela-verdeOscuro">{{ p.equipo_visitante }}</p></div>
+            <div class="min-w-0"><img v-if="p.logo_visitante" :src="p.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_visitante }}</p></div>
           </div>
           <p v-if="!p.cancelado && p.resultado_oficial" class="mt-3 text-center text-sm font-semibold text-quiniela-verde">Ganador: {{ p.resultado_oficial === 'L' ? p.equipo_local : p.resultado_oficial === 'V' ? p.equipo_visitante : 'Empate' }}</p>
         </article>
       </div>
       <p v-if="!partidos.length" class="empty-state">Esta jornada todavía no tiene partidos.</p>
     </section>
-    <p class="text-center text-xs text-gray-500">Los resultados se actualizan automáticamente cada 30 segundos.</p>
+    <p class="text-center text-xs text-gray-500">Actualización automática cada 30 segundos<span v-if="actualizadoEl"> · Última actualización: {{ formatoActualizacion(actualizadoEl) }} h CDMX</span>.</p>
     </template>
   </main>
 </template>

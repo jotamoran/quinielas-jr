@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { actualizarNombre, actualizarCorreo, actualizarPassword, traducirErrorAuth } from '../services/authService';
 import { alertaError, alertaExito } from '@/lib/alertas';
+import CampoPassword from '@/components/CampoPassword.vue';
 
 const authStore = useAuthStore();
 
@@ -94,8 +95,8 @@ async function onGuardarPassword() {
 
     <form @submit.prevent="onGuardarPassword" class="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
       <h2 class="font-bold text-quiniela-verdeOscuro">Contraseña</h2>
-      <label class="form-label">Nueva contraseña<input v-model="nuevaPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required minlength="6" class="form-control min-h-11" /></label>
-      <label class="form-label">Confirmar contraseña<input v-model="confirmarPassword" type="password" autocomplete="new-password" required minlength="6" class="form-control min-h-11" /></label>
+      <CampoPassword v-model="nuevaPassword" label="Nueva contraseña" autocomplete="new-password" placeholder="Mínimo 6 caracteres" :minlength="6" />
+      <CampoPassword v-model="confirmarPassword" label="Confirmar contraseña" autocomplete="new-password" :minlength="6" />
       <button type="submit" :disabled="guardandoPassword" class="min-h-11 w-full rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{{ guardandoPassword ? 'Guardando…' : 'Cambiar contraseña' }}</button>
     </form>
   </main>

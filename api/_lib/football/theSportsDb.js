@@ -8,7 +8,7 @@ function apiKey() {
 function normalizeFixture(event) {
   const timestamp = event.strTimestamp || `${event.dateEvent}T${event.strTime || '00:00:00'}`;
   return {
-    fixture: { id: String(event.idEvent), date: /(?:Z|[+-]\d{2}:?\d{2})$/.test(timestamp) ? timestamp : `${timestamp}Z` },
+    fixture: { id: String(event.idEvent), date: /(?:Z|[+-]\d{2}:?\d{2})$/.test(timestamp) ? timestamp : `${timestamp}Z`, round: Number(event.intRound) || null },
     league: { id: String(event.idLeague), name: event.strLeague },
     teams: {
       home: { name: event.strHomeTeam, logo: event.strHomeTeamBadge },
@@ -16,6 +16,12 @@ function normalizeFixture(event) {
     },
     provider: 'thesportsdb',
   };
+}
+
+export async function getNextRound(league) {
+  const payload = await request(`eventsnextleague.php?id=${encodeURIComponent(league)}`);
+  const round = Number(payload.events?.[0]?.intRound);
+  return Number.isInteger(round) && round > 0 ? round : null;
 }
 
 function resultFromEvent(event) {

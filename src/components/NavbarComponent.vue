@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useAuthStore } from '@/store/auth';
 import { useLoginModalStore } from '@/store/loginModal';
 import { useRoute, useRouter } from 'vue-router';
@@ -11,6 +11,31 @@ const route = useRoute();
 const router = useRouter();
 const menuAbierto = ref(false);
 const adminAbierto = ref(false);
+const nav = ref(null);
+const esRutaAdmin = computed(() => String(route.name ?? '').startsWith('admin-'));
+
+function cerrarDesplegables() {
+  menuAbierto.value = false;
+  adminAbierto.value = false;
+}
+
+function alPuntero(evento) {
+  if (!nav.value?.contains(evento.target)) cerrarDesplegables();
+}
+
+function alTeclado(evento) {
+  if (evento.key === 'Escape') cerrarDesplegables();
+}
+
+watch(() => route.fullPath, cerrarDesplegables);
+onMounted(() => {
+  document.addEventListener('pointerdown', alPuntero);
+  window.addEventListener('keydown', alTeclado);
+});
+onUnmounted(() => {
+  document.removeEventListener('pointerdown', alPuntero);
+  window.removeEventListener('keydown', alTeclado);
+});
 
 async function salir() {
   const confirmed = await confirmarAccion({ title: 'Cerrar sesión', text: 'Tendrás que iniciar sesión nuevamente.', confirmText: 'Salir' });
@@ -28,7 +53,7 @@ function cerrarMenu() {
 </script>
 
 <template>
-  <nav class="sticky top-0 z-40 bg-quiniela-verdeOscuro px-4 py-3 text-white shadow-lg sm:px-6">
+  <nav ref="nav" class="sticky top-0 z-40 bg-quiniela-verdeOscuro px-4 py-3 text-white shadow-lg sm:px-6">
     <div class="mx-auto flex max-w-7xl items-center justify-between">
       <router-link :to="{ name: authStore.isLoggedIn ? 'mis-quinielas' : 'llenar-quiniela' }" class="flex items-center gap-2 rounded-lg focus-visible:outline-offset-4">
         <img src="@assets/logo.png" alt="Quinielas JR" class="h-8 w-8 rounded-full" />
@@ -40,7 +65,7 @@ function cerrarMenu() {
           <router-link :to="{ name: 'mis-quinielas' }" class="nav-link">Mis quinielas</router-link>
           <router-link :to="{ name: 'llenar-quiniela' }" class="nav-link">Jugar</router-link>
           <router-link :to="{ name: 'mi-cuenta' }" class="nav-link">Mi cuenta</router-link>
-          <div v-if="authStore.isAdmin" class="relative"><button type="button" @click="adminAbierto = !adminAbierto" class="nav-link flex min-h-11 items-center gap-1" :aria-expanded="adminAbierto" aria-haspopup="menu">Administración <span class="text-xs" aria-hidden="true">▾</span></button><div v-if="adminAbierto" role="menu" class="absolute right-0 mt-2 w-60 rounded-xl border border-gray-100 bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-administrar-jornadas', label: 'Ver jornadas' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" role="menuitem" @click="adminAbierto = false" class="block min-h-11 rounded-lg px-3 py-2.5 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
+          <div v-if="authStore.isAdmin" class="relative"><button type="button" @click="adminAbierto = !adminAbierto" class="nav-link flex min-h-11 items-center gap-1" :class="esRutaAdmin ? 'bg-white/15 text-white' : ''" :aria-expanded="adminAbierto" aria-haspopup="menu">Administración <span class="text-xs" aria-hidden="true">▾</span></button><div v-if="adminAbierto" role="menu" class="absolute right-0 mt-2 w-60 rounded-xl border border-gray-100 bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-administrar-jornadas', label: 'Ver jornadas' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" role="menuitem" @click="adminAbierto = false" class="block min-h-11 rounded-lg px-3 py-2.5 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
           <button @click="salir" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Salir</button>
         </template>
         <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>

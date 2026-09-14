@@ -5,6 +5,8 @@ import { obtenerMisQuinielas, obtenerRanking, obtenerJornadaActiva, obtenerParti
 import { calcularResumenBalance } from '../utils/balance';
 import TablaPosiciones from '../components/TablaPosiciones.vue';
 import DetallePronosticos from '../components/DetallePronosticos.vue';
+import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
+import { alertaError } from '@/lib/alertas';
 
 const quinielas = ref([]);
 const resumen = ref(null);
@@ -14,6 +16,7 @@ const abiertaEntrada = ref(null);
 const detallesEntrada = ref({});
 const cargandoEntrada = ref(null);
 const errorEntrada = ref({});
+const cargando = ref(true);
 
 async function alternarDetalleEntrada(quiniela) {
   if (abiertaEntrada.value === quiniela.id) {
@@ -67,14 +70,19 @@ async function obtenerPronosticosPublicos(quinielaId) {
   }));
 }
 
-onMounted(cargar);
+onMounted(async () => {
+  try { await cargar(); } catch (error) { await alertaError(error, 'No se pudieron cargar tus quinielas'); }
+  finally { cargando.value = false; }
+});
 </script>
 
 <template>
   <main class="page-shell max-w-4xl">
     <header><p class="eyebrow">Mi cuenta</p><h1 class="page-title">Mis quinielas</h1><p class="page-description">Consulta tus entradas, pagos y resultados.</p></header>
 
-    <div v-if="resumen" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <EsqueletoCarga v-if="cargando" :cantidad="4" />
+
+    <div v-if="!cargando && resumen" class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div class="bg-white rounded-lg shadow p-4 text-center">
         <p class="text-xs text-gray-500">Gastado</p>
         <p class="text-xl font-bold text-quiniela-verde">${{ resumen.totalGastado }}</p>
@@ -141,7 +149,7 @@ onMounted(cargar);
         </tbody>
       </table>
     </div>
-    <div v-if="!quinielas.length" class="empty-state">Aún no has registrado una quiniela.</div>
+    <div v-if="!cargando && !quinielas.length" class="empty-state">Aún no has registrado una quiniela.</div>
 
     <div v-if="jornadaActivaId && tengoEntradaEnJornadaActiva">
       <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones</h2>

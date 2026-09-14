@@ -28,7 +28,7 @@ function fechaPartido(fecha) {
         <div class="flex min-w-0 items-center gap-1.5">
           <span class="shrink-0 text-xs text-gray-400">{{ index + 1 }}</span>
           <img v-if="detalle.logo_local" :src="detalle.logo_local" alt="" class="h-5 w-5 shrink-0 object-contain" /><span v-else class="h-5 w-5 shrink-0 rounded-full bg-gray-100"></span>
-          <p class="min-w-0 truncate font-semibold">{{ detalle.equipo_local }} vs {{ detalle.equipo_visitante }}</p>
+          <p class="min-w-0 truncate font-semibold" :title="`${detalle.equipo_local} vs ${detalle.equipo_visitante}`">{{ detalle.equipo_local }} vs {{ detalle.equipo_visitante }}</p>
           <img v-if="detalle.logo_visitante" :src="detalle.logo_visitante" alt="" class="h-5 w-5 shrink-0 object-contain" /><span v-else class="h-5 w-5 shrink-0 rounded-full bg-gray-100"></span>
         </div>
         <p v-if="detalle.fecha_partido" class="truncate pl-5 text-[11px] capitalize text-gray-400">{{ fechaPartido(detalle.fecha_partido) }} · hora CDMX</p>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { buscarFixtures, crearJornada } from '../services/adminService';
 import { LIGAS_DISPONIBLES } from '../utils/ligas';
 import EquipoAutocomplete from '../components/EquipoAutocomplete.vue';
@@ -21,8 +21,10 @@ const costo = ref(50);
 const premio = ref(0);
 const fechaCierre = ref('');
 const cargando = ref(false);
+const accionEnCurso = ref('');
 const mostrarManual = ref(false);
 const partidoManual = ref({ liga: 'Liga MX', local: null, visitante: null, fecha: '' });
+const detectandoJornada = ref(true);
 
 const faltantes = computed(() => MAX_PARTIDOS - seleccionados.value.length);
 const completo = computed(() => seleccionados.value.length === MAX_PARTIDOS);
@@ -41,6 +43,7 @@ function estaSeleccionado(fixture) {
 
 async function buscarLigas(leagues, reiniciar = false) {
   cargando.value = true;
+  accionEnCurso.value = reiniciar ? 'buscar-rango' : 'agregar-liga';
   try {
     const { fixtures: encontrados } = await buscarFixtures({ leagues, from: desde.value, to: hasta.value });
     const existentes = new Map((reiniciar ? [] : fixtures.value).map((fixture) => [fixture.fixture.id, fixture]));
@@ -50,6 +53,7 @@ async function buscarLigas(leagues, reiniciar = false) {
     await alertaError(e, 'No se pudieron buscar los partidos');
   } finally {
     cargando.value = false;
+    accionEnCurso.value = '';
   }
 }
 
@@ -63,6 +67,7 @@ async function buscarPorJornada() {
   ligasSeleccionadas.value = [ligaPrincipal.id];
   seleccionados.value = [];
   cargando.value = true;
+  accionEnCurso.value = 'buscar-jornada';
   try {
     const { fixtures: encontrados } = await buscarFixtures({ leagues: [ligaPrincipal.id], numeroJornada: numeroJornada.value });
     fixtures.value = encontrados;
@@ -75,6 +80,7 @@ async function buscarPorJornada() {
     await alertaError(e, 'No se pudo buscar la jornada');
   } finally {
     cargando.value = false;
+    accionEnCurso.value = '';
   }
 }
 
@@ -91,6 +97,17 @@ async function alternarSeleccion(fixture) {
     return;
   }
   seleccionados.value.push(fixture);
+}
+
+async function detectarProximaJornada() {
+  try {
+    const respuesta = await buscarFixtures({ leagues: [ligaPrincipal.id], proximaJornada: true });
+    if (respuesta.numeroJornada) numeroJornada.value = respuesta.numeroJornada;
+  } catch {
+    // El administrador todavía puede escribir la jornada manualmente.
+  } finally {
+    detectandoJornada.value = false;
+  }
 }
 
 async function agregarPartidoManual() {
@@ -125,6 +142,8 @@ async function guardarJornada() {
     await alertaError(new Error('Selecciona hoy o una fecha posterior.'), 'Fecha de cierre no válida');
     return;
   }
+  cargando.value = true;
+  accionEnCurso.value = 'publicar';
   try {
     const cierreIso = new Date(`${fechaCierre.value}T23:59:59`).toISOString();
     await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: cierreIso, partidosSeleccionados: seleccionados.value });
@@ -135,6 +154,9 @@ async function guardarJornada() {
     fechaCierre.value = '';
   } catch (e) {
     await alertaError(e, 'No se pudo publicar la jornada');
+  } finally {
+    cargando.value = false;
+    accionEnCurso.value = '';
   }
 }
 
@@ -145,6 +167,8 @@ function fechaPartido(fecha) {
 function irADatos() {
   document.getElementById('datos-jornada')?.scrollIntoView({ behavior: 'smooth' });
 }
+
+onMounted(detectarProximaJornada);
 </script>
 
 <template>
@@ -155,7 +179,7 @@ function irADatos() {
       <p class="mt-1 text-gray-600">Selecciona exactamente nueve partidos y publica la jornada.</p>
     </header>
 
-    <ol class="grid grid-cols-4 gap-2 text-center text-xs sm:text-sm">
+    <ol class="grid grid-cols-2 gap-x-2 gap-y-4 text-center text-xs min-[420px]:grid-cols-4 sm:text-sm">
       <li v-for="(paso, index) in ['Buscar', 'Seleccionar 9', 'Datos', 'Publicar']" :key="paso" class="space-y-1">
         <span class="mx-auto grid h-8 w-8 place-items-center rounded-full font-bold" :class="index === 0 || (index === 1 && fixtures.length) || (index > 1 && completo) ? 'bg-quiniela-verde text-white' : 'bg-gray-200 text-gray-500'">{{ index + 1 }}</span>
         <span class="block">{{ paso }}</span>
@@ -172,12 +196,12 @@ function irADatos() {
         <label class="text-sm font-semibold text-gray-700">Al<input v-model="hasta" type="date" :min="hoy" class="mt-1 w-full rounded-xl border-gray-300" /></label>
       </div>
       <button @click="buscar" :disabled="!desde || !hasta || cargando" class="mt-4 w-full rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50 sm:w-auto">
-        {{ cargando ? 'Buscando…' : 'Buscar partidos' }}
+        {{ accionEnCurso === 'buscar-rango' ? 'Buscando…' : 'Buscar partidos' }}
       </button>
       <div class="mt-5 border-t border-green-100 pt-5">
-        <label class="text-sm font-semibold text-gray-700">O buscar por jornada (solo Liga MX)<input v-model.number="numeroJornada" type="number" min="1" class="mt-1 w-full max-w-[160px] rounded-xl border-gray-300" placeholder="Ej. 8" /></label>
+        <label class="text-sm font-semibold text-gray-700">O buscar por jornada (solo Liga MX)<input v-model.number="numeroJornada" type="number" min="1" class="mt-1 w-full max-w-[160px] rounded-xl border-gray-300" :placeholder="detectandoJornada ? 'Detectando…' : 'Ej. 8'" /><span class="mt-1 block text-xs font-normal text-gray-500">{{ detectandoJornada ? 'Consultando la próxima jornada…' : numeroJornada ? `Próxima jornada detectada: ${numeroJornada}` : 'Escribe el número si no pudo detectarse.' }}</span></label>
         <button @click="buscarPorJornada" :disabled="!numeroJornada || cargando" class="mt-3 w-full rounded-xl border border-quiniela-verde bg-white px-5 py-3 font-semibold text-quiniela-verde disabled:opacity-50 sm:w-auto">
-          {{ cargando ? 'Buscando…' : 'Buscar por jornada' }}
+          {{ accionEnCurso === 'buscar-jornada' ? 'Buscando…' : 'Buscar por jornada' }}
         </button>
       </div>
     </section>
@@ -203,9 +227,9 @@ function irADatos() {
           <button v-for="fixture in grupo.fixtures" :key="fixture.fixture.id" type="button" @click="alternarSeleccion(fixture)" class="rounded-2xl border bg-white p-4 text-left shadow-sm transition" :class="estaSeleccionado(fixture) ? 'border-quiniela-verde ring-2 ring-green-100' : 'border-gray-200 hover:border-green-300'">
             <div class="mb-4 flex justify-between text-xs text-gray-500"><span>{{ fixture.league.name }}<span v-if="fixture.provider === 'manual'"> · Manual</span></span><span>{{ fechaPartido(fixture.fixture.date) }}</span></div>
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-              <div><img v-if="fixture.teams.home.logo" :src="fixture.teams.home.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-semibold">{{ fixture.teams.home.name }}</p></div>
+              <div class="min-w-0"><img v-if="fixture.teams.home.logo" :src="fixture.teams.home.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-semibold leading-tight">{{ fixture.teams.home.name }}</p></div>
               <span class="text-xs font-bold text-gray-400">VS</span>
-              <div><img v-if="fixture.teams.away.logo" :src="fixture.teams.away.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="text-sm font-semibold">{{ fixture.teams.away.name }}</p></div>
+              <div class="min-w-0"><img v-if="fixture.teams.away.logo" :src="fixture.teams.away.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-semibold leading-tight">{{ fixture.teams.away.name }}</p></div>
             </div>
             <p class="mt-3 text-center text-sm font-semibold" :class="estaSeleccionado(fixture) ? 'text-quiniela-verde' : 'text-gray-500'">{{ estaSeleccionado(fixture) ? '✓ Seleccionado' : 'Seleccionar' }}</p>
           </button>
@@ -224,11 +248,11 @@ function irADatos() {
     <section v-if="completo" id="datos-jornada" class="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
       <h2 class="mb-4 text-xl font-bold text-quiniela-verdeOscuro">Datos de la jornada</h2>
       <div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-semibold">Nombre<input v-model="nombreJornada" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Cierre<input v-model="fechaCierre" type="date" :min="hoy" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Costo<input v-model.number="costo" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Premio<input v-model.number="premio" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label></div>
-      <button @click="guardarJornada" :disabled="!nombreJornada || !fechaCierre" class="mt-5 w-full rounded-xl bg-quiniela-dorado py-3 font-bold text-quiniela-grisTexto disabled:opacity-50">Publicar jornada</button>
+      <button @click="guardarJornada" :disabled="!nombreJornada || !fechaCierre || cargando" class="mt-5 w-full rounded-xl bg-quiniela-dorado py-3 font-bold text-quiniela-grisTexto disabled:opacity-50">{{ accionEnCurso === 'publicar' ? 'Publicando…' : 'Publicar jornada' }}</button>
     </section>
 
     <div v-if="fixtures.length" class="fixed inset-x-0 bottom-0 z-20 border-t bg-white/95 p-3 shadow-2xl backdrop-blur sm:sticky sm:rounded-2xl sm:border">
-      <div class="mx-auto flex max-w-5xl items-center gap-4"><div class="flex-1"><p class="font-bold text-quiniela-verdeOscuro">{{ seleccionados.length }} de 9 seleccionados</p><div class="mt-1 h-2 overflow-hidden rounded-full bg-gray-200"><div class="h-full bg-quiniela-verde transition-all" :style="{ width: `${seleccionados.length / 9 * 100}%` }"></div></div></div><button :disabled="!completo" @click="irADatos" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-40">Continuar</button></div>
+      <div class="mx-auto flex max-w-5xl items-center gap-4"><div class="flex-1"><p class="font-bold text-quiniela-verdeOscuro">{{ seleccionados.length }} de 9 seleccionados</p><div class="mt-1 h-2 overflow-hidden rounded-full bg-gray-200"><div class="h-full bg-quiniela-verde transition-all" :style="{ width: `${seleccionados.length / 9 * 100}%` }"></div></div></div><button :disabled="!completo || cargando" @click="irADatos" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-40">Continuar</button></div>
     </div>
   </main>
 </template>

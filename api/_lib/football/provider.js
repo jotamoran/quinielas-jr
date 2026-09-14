@@ -1,4 +1,4 @@
-import { getFixtures, getFinalResults, seasonRangeForDate } from './theSportsDb.js';
+import { getFixtures, getFinalResults, getNextRound, seasonRangeForDate } from './theSportsDb.js';
 
 export const FOOTBALL_PROVIDER = 'thesportsdb';
 
@@ -10,4 +10,5 @@ export function seasonForDate(date, mode = 'calendar') {
 
 export const findFixtures = getFixtures;
 export const findFinalResults = getFinalResults;
+export const findNextRound = getNextRound;
 export { seasonRangeForDate };

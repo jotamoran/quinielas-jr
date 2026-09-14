@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { useLoginModalStore } from '@/store/loginModal';
 import { iniciarSesion, traducirErrorAuth } from '@/modules/auth/services/authService';
 import { alertaError } from '@/lib/alertas';
+import CampoPassword from '@/components/CampoPassword.vue';
 
 const loginModalStore = useLoginModalStore();
 const route = useRoute();
@@ -79,7 +80,7 @@ onUnmounted(() => {
         <p id="login-modal-descripcion" class="text-sm text-gray-500">Entra para registrar y consultar tus quinielas.</p>
       </div>
       <label class="form-label">Correo o usuario<input ref="emailInput" v-model="entrada" type="text" autocomplete="username" placeholder="correo@ejemplo.com o tu usuario" required class="form-control" /></label>
-      <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required class="form-control min-h-11" /></label>
+      <CampoPassword v-model="password" placeholder="Tu contraseña" />
       <button type="submit" :disabled="cargando" class="min-h-11 w-full rounded-xl bg-quiniela-dorado px-4 py-2.5 font-semibold text-quiniela-grisTexto transition hover:bg-quiniela-doradoOscuro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiniela-verde focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70">
         {{ cargando ? 'Entrando...' : 'Iniciar sesión' }}
       </button>

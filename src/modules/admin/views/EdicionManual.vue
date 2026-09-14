@@ -17,6 +17,7 @@ const pronosticos = ref({});
 const search = ref('');
 const filtroEstatus = ref('todos');
 const loading = ref(false);
+const procesandoId = ref(null);
 
 const estados = [{ value: 'pendiente', label: 'Pendiente' }, { value: 'aprobado', label: 'Pagada' }, { value: 'rechazado', label: 'Cancelada' }];
 const partidosActivos = computed(() => partidos.value.filter((p) => !p.cancelado));
@@ -68,6 +69,7 @@ async function registrar() {
 async function guardar(item) {
   const confirmed = await confirmarAccion({ title: 'Guardar cambios', text: `El estatus será ${etiquetaEstatus(item.estatusEditado).toLowerCase()}.`, confirmText: 'Guardar', danger: item.estatusEditado === 'rechazado' });
   if (!confirmed) return;
+  procesandoId.value = item.id;
   try {
     await actualizarQuinielaAdmin({ quiniela_id: item.id, alias: item.aliasEditado, correo_contacto: item.correoEditado, estatus_pago: item.estatusEditado });
     item.alias = item.aliasEditado;
@@ -77,6 +79,8 @@ async function guardar(item) {
     await alertaExito('Cambios guardados');
   } catch (error) {
     await alertaError(error);
+  } finally {
+    procesandoId.value = null;
   }
 }
 
@@ -98,7 +102,7 @@ onMounted(async () => { try { await cargar(); } catch (error) { await alertaErro
         <article v-for="item in filtradas" :key="item.id" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="mb-3 flex items-start justify-between gap-3"><div><span class="mb-2 inline-flex rounded-full px-2.5 py-1 text-xs font-bold" :class="statusClass(item.estatus_pago)">{{ etiquetaEstatus(item.estatus_pago) }}</span><h2 class="font-bold text-quiniela-verdeOscuro">{{ item.alias }}</h2><p class="text-sm text-gray-500">{{ item.jornadas?.nombre }}</p></div><span class="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">{{ item.origen === 'manual_admin' ? 'Presencial' : 'Web' }}</span></div>
           <dl class="grid grid-cols-2 gap-2 border-y py-3 text-sm"><div><dt class="text-gray-500">Participante</dt><dd class="font-semibold">{{ item.perfiles?.nombre_completo ?? 'Sin cuenta' }}</dd></div><div><dt class="text-gray-500">Aciertos</dt><dd class="font-semibold">{{ item.aciertos }}</dd></div><div v-if="item.correo_contacto" class="col-span-2"><dt class="text-gray-500">Correo de contacto</dt><dd class="font-semibold">{{ item.correo_contacto }}</dd></div></dl>
-          <div v-if="item.editando" class="mt-4 space-y-3"><input v-model="item.aliasEditado" class="w-full rounded-xl border-gray-300" placeholder="Nombre de la entrada" /><input v-model="item.correoEditado" type="email" class="w-full rounded-xl border-gray-300" placeholder="Correo de contacto (opcional)" /><select v-model="item.estatusEditado" class="w-full rounded-xl border-gray-300"><option v-for="estadoItem in estados" :key="estadoItem.value" :value="estadoItem.value">{{ estadoItem.label }}</option></select><div class="grid grid-cols-2 gap-2"><button @click="item.editando = false" class="rounded-xl border py-2 font-semibold text-gray-600">Cancelar</button><button @click="guardar(item)" class="rounded-xl bg-quiniela-verde py-2 font-semibold text-white">Guardar</button></div></div>
+          <div v-if="item.editando" class="mt-4 space-y-3"><input v-model="item.aliasEditado" class="w-full rounded-xl border-gray-300" placeholder="Nombre de la entrada" /><input v-model="item.correoEditado" type="email" class="w-full rounded-xl border-gray-300" placeholder="Correo de contacto (opcional)" /><select v-model="item.estatusEditado" class="w-full rounded-xl border-gray-300"><option v-for="estadoItem in estados" :key="estadoItem.value" :value="estadoItem.value">{{ estadoItem.label }}</option></select><div class="grid grid-cols-2 gap-2"><button @click="item.editando = false" :disabled="procesandoId === item.id" class="rounded-xl border py-2 font-semibold text-gray-600 disabled:opacity-50">Cancelar</button><button @click="guardar(item)" :disabled="procesandoId === item.id" class="rounded-xl bg-quiniela-verde py-2 font-semibold text-white disabled:opacity-50">{{ procesandoId === item.id ? 'Guardando…' : 'Guardar' }}</button></div></div>
           <button v-else @click="item.editando = true" class="mt-4 w-full rounded-xl border border-quiniela-verde py-2 font-semibold text-quiniela-verde">Editar entrada y estatus</button>
         </article>
       </div>

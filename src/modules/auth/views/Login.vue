@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { iniciarSesion, traducirErrorAuth } from '../services/authService';
 import { alertaError } from '@/lib/alertas';
+import CampoPassword from '@/components/CampoPassword.vue';
 
 const entrada = ref('');
 const password = ref('');
@@ -28,7 +29,7 @@ async function onSubmit() {
       <img src="@assets/logo.png" alt="Quinielas JR" class="auth-logo" />
       <div class="space-y-1"><h1 class="auth-title">Inicia sesión</h1><p class="auth-description">Entra para registrar y consultar tus quinielas.</p></div>
       <label class="form-label">Correo o usuario<input v-model="entrada" type="text" autocomplete="username" placeholder="correo@ejemplo.com o tu usuario" required class="form-control" /></label>
-      <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required class="form-control min-h-11" /></label>
+      <CampoPassword v-model="password" placeholder="Tu contraseña" />
       <button type="submit" :disabled="cargando" class="primary-action">
         {{ cargando ? 'Entrando...' : 'Iniciar sesión' }}
       </button>

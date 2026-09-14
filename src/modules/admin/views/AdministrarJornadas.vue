@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
 import { alertaAdvertencia, alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
+import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
 
 const router = useRouter();
 const jornadas = ref([]);
@@ -12,6 +13,7 @@ const premioEditado = ref(0);
 const cierreEditado = ref('');
 const cargando = ref(true);
 const guardando = ref(false);
+const accionEnCurso = ref('');
 const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
 const jornadasOrdenadas = computed(() => [...jornadas.value].sort((a, b) => {
@@ -111,6 +113,7 @@ async function compartirImagen(jornada) {
 async function guardarPremio() {
   if (!abierta.value || premioEditado.value < 0) return;
   guardando.value = true;
+  accionEnCurso.value = 'premio';
   try {
     await actualizarPremioJornada(abierta.value.id, premioEditado.value);
     abierta.value.premio = premioEditado.value;
@@ -119,6 +122,7 @@ async function guardarPremio() {
     await alertaError(error, 'No se pudo actualizar el premio');
   } finally {
     guardando.value = false;
+    accionEnCurso.value = '';
   }
 }
 
@@ -129,6 +133,7 @@ async function guardarCierre() {
     return;
   }
   guardando.value = true;
+  accionEnCurso.value = 'fecha';
   try {
     const fecha = new Date(`${cierreEditado.value}T23:59:59`).toISOString();
     await actualizarCierreJornada(abierta.value.id, fecha);
@@ -138,6 +143,7 @@ async function guardarCierre() {
     await alertaError(error, 'No se pudo actualizar el cierre');
   } finally {
     guardando.value = false;
+    accionEnCurso.value = '';
   }
 }
 
@@ -146,6 +152,7 @@ async function cerrarRegistro() {
   const confirmado = await confirmarAccion({ title: 'Cerrar registro ahora', text: 'Desde este momento ya no se podrán registrar nuevas quinielas.', confirmText: 'Cerrar registro', danger: true });
   if (!confirmado) return;
   guardando.value = true;
+  accionEnCurso.value = 'cierre';
   try {
     const fecha = new Date().toISOString();
     await actualizarCierreJornada(abierta.value.id, fecha);
@@ -156,6 +163,7 @@ async function cerrarRegistro() {
     await alertaError(error, 'No se pudo cerrar el registro');
   } finally {
     guardando.value = false;
+    accionEnCurso.value = '';
   }
 }
 
@@ -169,6 +177,7 @@ async function cancelarJornadaCompleta() {
   });
   if (!confirmado) return;
   guardando.value = true;
+  accionEnCurso.value = 'cancelar-jornada';
   try {
     const resultado = await cancelarJornada(abierta.value.id);
     abierta.value.estatus = 'cancelada';
@@ -183,6 +192,7 @@ async function cancelarJornadaCompleta() {
     await alertaError(error, 'No se pudo cancelar la jornada');
   } finally {
     guardando.value = false;
+    accionEnCurso.value = '';
   }
 }
 
@@ -202,6 +212,7 @@ async function alternarCancelacion(partido) {
   });
   if (!confirmado) return;
   guardando.value = true;
+  accionEnCurso.value = `partido:${partido.id}`;
   try {
     await cancelarPartido(partido.id, !partido.cancelado);
     partido.cancelado = !partido.cancelado;
@@ -210,6 +221,7 @@ async function alternarCancelacion(partido) {
     await alertaError(error, `No se pudo ${accion} el partido`);
   } finally {
     guardando.value = false;
+    accionEnCurso.value = '';
   }
 }
 
@@ -233,7 +245,7 @@ onMounted(async () => {
       <p class="page-description">Consulta partidos, administra el premio y comparte cada jornada.</p>
     </header>
 
-    <div v-if="cargando" class="empty-state">Cargando jornadas…</div>
+    <EsqueletoCarga v-if="cargando" :cantidad="4" />
     <div v-else-if="!jornadas.length" class="empty-state">Todavía no hay jornadas creadas.</div>
 
     <div v-else class="grid gap-5 lg:grid-cols-[340px_1fr]">
@@ -262,14 +274,14 @@ onMounted(async () => {
 
         <form @submit.prevent="guardarPremio" class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
           <label class="form-label flex-1">Premio de la jornada<input v-model.number="premioEditado" type="number" min="0" step="0.01" class="form-control mt-1" /></label>
-          <button :disabled="guardando || premioEditado === abierta.premio" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">{{ guardando ? 'Guardando…' : 'Actualizar premio' }}</button>
+          <button :disabled="guardando || premioEditado === abierta.premio" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">{{ accionEnCurso === 'premio' ? 'Guardando…' : 'Actualizar premio' }}</button>
         </form>
 
         <form @submit.prevent="guardarCierre" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label class="form-label flex-1">Fecha límite de registro<input v-model="cierreEditado" type="date" :min="hoy" class="form-control mt-1" /></label>
-            <button :disabled="guardando || !cierreEditado" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">Guardar fecha</button>
-            <button v-if="new Date(abierta.fecha_cierre) > new Date()" type="button" @click="cerrarRegistro" :disabled="guardando" class="rounded-xl border border-red-300 px-5 py-3 font-semibold text-red-700 disabled:opacity-50">Cerrar registro ahora</button>
+            <button :disabled="guardando || !cierreEditado" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">{{ accionEnCurso === 'fecha' ? 'Guardando…' : 'Guardar fecha' }}</button>
+            <button v-if="new Date(abierta.fecha_cierre) > new Date()" type="button" @click="cerrarRegistro" :disabled="guardando" class="rounded-xl border border-red-300 px-5 py-3 font-semibold text-red-700 disabled:opacity-50">{{ accionEnCurso === 'cierre' ? 'Cerrando…' : 'Cerrar registro ahora' }}</button>
             <span v-else class="rounded-xl bg-gray-100 px-4 py-3 text-center text-sm font-bold text-gray-600">Registro cerrado</span>
           </div>
           <p class="mt-2 text-xs text-gray-500">Al llegar esta fecha, el sistema bloquea automáticamente nuevas entradas y habilita los pronósticos públicos.</p>
@@ -278,20 +290,20 @@ onMounted(async () => {
         <div v-if="abierta.estatus !== 'finalizada' && abierta.estatus !== 'cancelada'" class="rounded-2xl border border-red-200 bg-red-50/50 p-4 shadow-sm">
           <p class="text-sm font-semibold text-red-800">Zona de peligro</p>
           <p class="mt-1 text-xs text-red-700">Cancela esta jornada completa si se creó por error o ya no se va a jugar. Se avisará por correo a quien ya se haya registrado. No se puede deshacer.</p>
-          <button type="button" @click="cancelarJornadaCompleta" :disabled="guardando" class="mt-3 w-full rounded-xl border border-red-300 bg-white px-5 py-3 font-semibold text-red-700 disabled:opacity-50 sm:w-auto">Cancelar jornada</button>
+          <button type="button" @click="cancelarJornadaCompleta" :disabled="guardando" class="mt-3 w-full rounded-xl border border-red-300 bg-white px-5 py-3 font-semibold text-red-700 disabled:opacity-50 sm:w-auto">{{ accionEnCurso === 'cancelar-jornada' ? 'Cancelando…' : 'Cancelar jornada' }}</button>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
           <article v-for="(partido, index) in abierta.partidos" :key="partido.id" class="rounded-2xl border p-4 shadow-sm" :class="partido.cancelado ? 'border-red-200 bg-red-50/50' : 'border-gray-200 bg-white'">
             <div class="mb-3 flex justify-between text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ partido.liga_nombre }}</span><span>{{ formatoFechaPartido(partido.fecha_partido) }}</span></div>
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-              <div><img v-if="partido.logo_local" :src="partido.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="text-sm font-bold">{{ partido.equipo_local }}</p></div>
+              <div class="min-w-0"><img v-if="partido.logo_local" :src="partido.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight">{{ partido.equipo_local }}</p></div>
               <span class="text-xs font-bold text-gray-400">VS</span>
-              <div><img v-if="partido.logo_visitante" :src="partido.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="text-sm font-bold">{{ partido.equipo_visitante }}</p></div>
+              <div class="min-w-0"><img v-if="partido.logo_visitante" :src="partido.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight">{{ partido.equipo_visitante }}</p></div>
             </div>
             <p v-if="partido.cancelado" class="mt-3 text-center text-sm font-bold text-red-700">Cancelado — no cuenta para las quinielas</p>
             <p v-else-if="partido.resultado_oficial" class="mt-3 text-center text-sm font-bold text-quiniela-verde">Resultado: {{ partido.resultado_oficial }}</p>
-            <button v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)" type="button" @click="alternarCancelacion(partido)" :disabled="guardando" class="mt-3 min-h-11 w-full rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-50" :class="partido.cancelado ? 'border-quiniela-verde text-quiniela-verde' : 'border-red-300 text-red-700'">{{ partido.cancelado ? 'Reactivar partido' : 'Cancelar partido' }}</button>
+            <button v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)" type="button" @click="alternarCancelacion(partido)" :disabled="guardando" class="mt-3 min-h-11 w-full rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-50" :class="partido.cancelado ? 'border-quiniela-verde text-quiniela-verde' : 'border-red-300 text-red-700'">{{ accionEnCurso === `partido:${partido.id}` ? 'Guardando…' : partido.cancelado ? 'Reactivar partido' : 'Cancelar partido' }}</button>
           </article>
         </div>
       </section>

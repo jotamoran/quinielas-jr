@@ -1,5 +1,5 @@
 import { requireAdmin, ErrorHttp } from './_lib/auth.js';
-import { findFixtures, seasonForDate, seasonRangeForDate } from './_lib/football/provider.js';
+import { findFixtures, findNextRound, seasonForDate, seasonRangeForDate } from './_lib/football/provider.js';
 import { LIGAS } from './_lib/ligas.js';
 import { guardarEnCache } from './_lib/football/equiposCache.js';
 
@@ -13,6 +13,13 @@ export default async function handler(req, res) {
     const leagues = [...new Set(String(req.query.leagues ?? '').split(',').filter(Boolean))];
     if (!leagues.length) return res.status(400).json({ error: 'Debes indicar al menos una liga' });
     if (leagues.some((id) => !LIGAS[id])) return res.status(400).json({ error: 'La liga solicitada no está permitida' });
+
+    if (req.query.proximaJornada === '1') {
+      if (leagues.length !== 1) return res.status(400).json({ error: 'La detección de jornada solo admite una liga a la vez' });
+      const [league] = leagues;
+      if (!LIGAS[league].soportaBusquedaPorJornada) return res.status(400).json({ error: 'Esa liga todavía no soporta búsqueda por jornada' });
+      return res.status(200).json({ numeroJornada: await findNextRound(league) });
+    }
 
     const { numeroJornada } = req.query;
     if (numeroJornada) {

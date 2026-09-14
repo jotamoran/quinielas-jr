@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { registrar, usernameDisponible, traducirErrorAuth } from '../services/authService';
 import { alertaError } from '@/lib/alertas';
+import CampoPassword from '@/components/CampoPassword.vue';
 
 const nombreCompleto = ref('');
 const email = ref('');
@@ -44,7 +45,7 @@ async function onSubmit() {
       <label class="form-label">Nombre completo<input v-model="nombreCompleto" type="text" autocomplete="name" placeholder="Tu nombre" required class="form-control min-h-11" /></label>
       <label class="form-label">Correo<input v-model="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required class="form-control min-h-11" /></label>
       <label class="form-label">Nombre de usuario<input v-model="username" type="text" autocomplete="username" placeholder="letras, números y _ (3-20)" required minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" class="form-control min-h-11" @input="username = username.toLowerCase()" /></label>
-      <label class="form-label">Contraseña<input v-model="password" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" required minlength="6" class="form-control min-h-11" /></label>
+      <CampoPassword v-model="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" :minlength="6" />
       <button type="submit" :disabled="cargando" class="primary-action">
         {{ cargando ? 'Creando...' : 'Registrarme' }}
       </button>

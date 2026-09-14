@@ -2,9 +2,11 @@
 import { ref, onMounted } from 'vue';
 import { listarPagosPendientes, aprobarPago, rechazarPago, registrarPagoEfectivo, obtenerComprobanteUrl } from '../services/adminService';
 import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
+import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
 
 const pendientes = ref([]);
 const cargando = ref(true);
+const procesando = ref('');
 
 async function cargar() {
   pendientes.value = await listarPagosPendientes();
@@ -21,17 +23,23 @@ async function verComprobante(path) {
 
 async function aprobar(id) {
   if (!await confirmarAccion({ title: 'Marcar como pagada', confirmText: 'Confirmar pago' })) return;
+  procesando.value = `${id}:aprobar`;
   try { await aprobarPago(id); await cargar(); await alertaExito('Pago confirmado'); } catch (error) { await alertaError(error); }
+  finally { procesando.value = ''; }
 }
 
 async function rechazar(id) {
   if (!await confirmarAccion({ title: 'Cancelar quiniela', text: 'La entrada dejará de participar.', confirmText: 'Cancelar quiniela', danger: true })) return;
+  procesando.value = `${id}:rechazar`;
   try { await rechazarPago(id); await cargar(); await alertaExito('Quiniela cancelada'); } catch (error) { await alertaError(error); }
+  finally { procesando.value = ''; }
 }
 
 async function marcarEfectivo(id, monto) {
   if (!await confirmarAccion({ title: 'Confirmar pago en efectivo', text: 'La entrada comenzará a participar.', confirmText: 'Confirmar pago' })) return;
+  procesando.value = `${id}:efectivo`;
   try { await registrarPagoEfectivo(id, monto); await cargar(); await alertaExito('Pago en efectivo confirmado'); } catch (error) { await alertaError(error); }
+  finally { procesando.value = ''; }
 }
 
 onMounted(async () => {
@@ -43,7 +51,7 @@ onMounted(async () => {
 <template>
   <main class="page-shell max-w-4xl">
     <header><p class="eyebrow">Administración</p><h1 class="page-title">Pagos pendientes</h1><p class="page-description">Revisa comprobantes y confirma el estatus de cada entrada.</p></header>
-    <div v-if="cargando" class="empty-state">Cargando pagos…</div>
+    <EsqueletoCarga v-if="cargando" :cantidad="2" />
     <template v-else>
       <div v-for="q in pendientes" :key="q.id" class="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -52,9 +60,9 @@ onMounted(async () => {
         </div>
         <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
           <button v-if="q.comprobante_url" @click="verComprobante(q.comprobante_url)" class="rounded-lg border px-3 py-2 text-sm font-semibold text-quiniela-verde">Comprobante</button>
-          <button v-if="q.metodo_pago === 'efectivo'" @click="marcarEfectivo(q.id, q.monto_pagado)" class="rounded-lg bg-quiniela-dorado px-3 py-2 text-sm font-semibold text-quiniela-grisTexto">Pago efectivo</button>
-          <button @click="aprobar(q.id)" class="rounded-lg bg-quiniela-verdeAcento px-3 py-2 text-sm font-semibold text-white">Marcar pagada</button>
-          <button @click="rechazar(q.id)" class="rounded-lg bg-quiniela-error px-3 py-2 text-sm font-semibold text-white">Cancelar</button>
+          <button v-if="q.metodo_pago === 'efectivo'" @click="marcarEfectivo(q.id, q.monto_pagado)" :disabled="!!procesando" class="rounded-lg bg-quiniela-dorado px-3 py-2 text-sm font-semibold text-quiniela-grisTexto disabled:opacity-60">{{ procesando === `${q.id}:efectivo` ? 'Confirmando…' : 'Pago efectivo' }}</button>
+          <button @click="aprobar(q.id)" :disabled="!!procesando" class="rounded-lg bg-quiniela-verdeAcento px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{{ procesando === `${q.id}:aprobar` ? 'Guardando…' : 'Marcar pagada' }}</button>
+          <button @click="rechazar(q.id)" :disabled="!!procesando" class="rounded-lg bg-quiniela-error px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{{ procesando === `${q.id}:rechazar` ? 'Cancelando…' : 'Cancelar' }}</button>
         </div>
       </div>
     </template>
