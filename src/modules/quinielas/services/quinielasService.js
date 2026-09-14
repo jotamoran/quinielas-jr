@@ -109,3 +109,9 @@ export async function obtenerPronosticosDeQuiniela(quinielaId) {
       fecha_partido: item.partidos?.fecha_partido,
     }));
 }
+
+export async function obtenerDatosBancarios() {
+  const { data, error } = await supabase.from('datos_bancarios').select('banco, clabe, titular').eq('id', 1).maybeSingle();
+  if (error) throw error;
+  return data;
+}
