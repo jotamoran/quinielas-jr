@@ -18,9 +18,10 @@ const error = ref('');
 const tablaPosiciones = ref(null);
 const actualizadoEl = ref(null);
 let intervalo;
+const esCancelada = computed(() => jornada.value?.estatus === 'cancelada');
 const bloqueada = computed(() => jornada.value && (jornada.value.estatus !== 'activa' || new Date(jornada.value.fecha_cierre) <= new Date()));
 const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
-const mostrarDestacados = computed(() => bloqueada.value || empezaronPartidos.value);
+const mostrarDestacados = computed(() => !esCancelada.value && (bloqueada.value || empezaronPartidos.value));
 
 async function obtenerRankingPublico(jId) {
   const { data, error } = await supabase
@@ -114,7 +115,8 @@ onUnmounted(() => clearInterval(intervalo));
       <h1 class="mt-1 text-3xl font-bold">{{ jornada?.nombre }}</h1>
       <div class="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2">
         <span class="text-sm text-green-100">Premio</span>
-        <strong v-if="bloqueada" class="text-xl text-quiniela-dorado">{{ formatoMoneda(jornada?.premio) }}</strong>
+        <strong v-if="bloqueada && !esCancelada" class="text-xl text-quiniela-dorado">{{ formatoMoneda(jornada?.premio) }}</strong>
+        <span v-else-if="esCancelada" class="text-sm italic text-green-100">Sin premio por cancelación</span>
         <span v-else class="text-sm italic text-green-100">Se revela al cierre del registro</span>
       </div>
       <p class="mt-4 text-sm text-green-100">Cierre de registro: {{ formatoFecha(jornada?.fecha_cierre) }}</p>
@@ -124,14 +126,15 @@ onUnmounted(() => clearInterval(intervalo));
 
     <section class="space-y-3">
       <div><p class="eyebrow">Clasificación</p><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">Tabla de posiciones</h2></div>
-      <p v-if="!bloqueada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Los pronósticos de cada participante estarán disponibles cuando cierre el registro.</p>
-      <p class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Solo aparecen aquí las quinielas con el pago confirmado. Si registraste una entrada y no aparece en la tabla, debes completar tu pago para participar.</p>
+      <p v-if="!esCancelada && !bloqueada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Los pronósticos de cada participante estarán disponibles cuando cierre el registro.</p>
+      <p v-if="!esCancelada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Solo aparecen aquí las quinielas con el pago confirmado. Si registraste una entrada y no aparece en la tabla, debes completar tu pago para participar.</p>
       <div v-if="!bloqueada && jornada?.estatus !== 'cancelada'" class="flex flex-col items-start gap-2 rounded-xl border border-quiniela-verde bg-green-50 p-3 sm:flex-row sm:items-center sm:justify-between">
         <p class="text-sm font-semibold text-quiniela-verdeOscuro">{{ authStore.isLoggedIn ? '¿Todavía no te registras?' : 'Inicia sesión para registrar una entrada' }}</p>
         <router-link v-if="authStore.isLoggedIn" :to="{ name: 'llenar-quiniela', params: { jornadaId } }" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Registrar</router-link>
         <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Iniciar sesión</button>
       </div>
-      <TablaPosiciones ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
+      <TablaPosiciones v-if="!esCancelada" ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
+      <p v-else class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">No hay clasificación ni pronósticos públicos porque esta jornada fue cancelada.</p>
     </section>
 
     <section class="space-y-3">

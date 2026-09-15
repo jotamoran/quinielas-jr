@@ -20,19 +20,20 @@ export default async function handler(req, res) {
     const supabase = getSupabaseAdmin();
     const { data: jornada, error: jornadaError } = await supabase.from('jornadas').select('estatus').eq('id', jornadaId).single();
     if (jornadaError) throw jornadaError;
-    if (jornada.estatus === 'finalizada') return res.status(409).json({ error: 'No se puede modificar una jornada finalizada' });
+    if (['finalizada', 'cancelada'].includes(jornada.estatus)) return res.status(409).json({ error: 'No se puede modificar una jornada finalizada o cancelada' });
     const { data: partidos, error: partidosError } = await supabase
       .from('partidos')
-      .select('id')
+      .select('id, cancelado')
       .eq('jornada_id', jornadaId)
       .in('id', ids);
     if (partidosError) throw partidosError;
     if (partidos.length !== ids.length) return res.status(400).json({ error: 'Uno o más partidos no pertenecen a la jornada' });
+    if (partidos.some((partido) => partido.cancelado)) return res.status(409).json({ error: 'No se puede capturar resultado de un partido cancelado' });
 
     for (const item of resultados) {
       const { error } = await supabase
         .from('partidos')
-        .update({ resultado_oficial: item.resultado })
+        .update({ resultado_oficial: item.resultado, estado: 'finalizado', actualizado_el: new Date().toISOString() })
         .eq('id', item.partido_id)
         .eq('jornada_id', jornadaId);
       if (error) throw error;

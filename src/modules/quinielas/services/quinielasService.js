@@ -30,26 +30,6 @@ export async function obtenerPartidos(jornadaId) {
   return data;
 }
 
-export async function crearQuiniela({ jornadaId, alias, metodoPago, montoPagado, comprobanteUrl }) {
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data, error } = await supabase.from('quinielas').insert({
-    usuario_id: user.id,
-    jornada_id: jornadaId,
-    alias,
-    metodo_pago: metodoPago,
-    monto_pagado: montoPagado,
-    comprobante_url: comprobanteUrl,
-  }).select().single();
-  if (error) throw error;
-  return data;
-}
-
-export async function guardarPredicciones(quinielaId, predicciones) {
-  const filas = predicciones.map(({ partidoId, pronostico }) => ({ quiniela_id: quinielaId, partido_id: partidoId, pronostico }));
-  const { error } = await supabase.from('predicciones').insert(filas);
-  if (error) throw error;
-}
-
 export async function subirComprobante(archivo) {
   const { data: { user } } = await supabase.auth.getUser();
   const extension = archivo.name.split('.').pop();
@@ -59,12 +39,14 @@ export async function subirComprobante(archivo) {
   return path;
 }
 
-export async function notificarRegistro(quinielaId) {
-  return llamarApi('notificaciones/registro', { quiniela_id: quinielaId });
+export async function eliminarComprobante(path) {
+  if (!path) return;
+  const { error } = await supabase.storage.from('comprobantes').remove([path]);
+  if (error) throw error;
 }
 
-export async function aplicarCupon(codigo, quinielaId) {
-  return llamarApi('cupones/aplicar', { codigo, quiniela_id: quinielaId });
+export async function notificarRegistro(quinielaId) {
+  return llamarApi('notificaciones/registro', { quiniela_id: quinielaId });
 }
 
 export async function obtenerMisQuinielas() {
@@ -115,6 +97,20 @@ export async function obtenerPronosticosDeQuiniela(quinielaId) {
 
 export async function obtenerQuinielaParaEditar(quinielaId) {
   const { data, error } = await supabase.from('quinielas').select('id, jornada_id, alias, jornadas(id, nombre, fecha_cierre, estatus), predicciones(partido_id, pronostico, partidos(id, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, estado, puntos_local, puntos_visitante, cancelado))').eq('id', quinielaId).single();
+  if (error) throw error;
+  return data;
+}
+
+export async function registrarQuiniela({ jornadaId, alias, metodoPago, montoPagado, comprobanteUrl, predicciones, codigoCupon = null }) {
+  const { data, error } = await supabase.rpc('registrar_quiniela_atomica', {
+    p_jornada_id: jornadaId,
+    p_alias: alias,
+    p_metodo_pago: metodoPago,
+    p_monto_pagado: montoPagado,
+    p_comprobante_url: comprobanteUrl,
+    p_predicciones: predicciones.map(({ partidoId, pronostico }) => ({ partido_id: partidoId, pronostico })),
+    p_codigo_cupon: codigoCupon,
+  });
   if (error) throw error;
   return data;
 }

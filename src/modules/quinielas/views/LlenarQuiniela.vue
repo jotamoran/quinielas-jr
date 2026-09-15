@@ -1,13 +1,13 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
 import { useLoginModalStore } from '@/store/loginModal';
 import TarjetaPartido from '../components/TarjetaPartido.vue';
 import PasoPago from '../components/PasoPago.vue';
 import { calcularTiempoRestante, estaBloqueado } from '../utils/countdown';
-import { obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela, crearQuiniela, guardarPredicciones, subirComprobante, notificarRegistro, aplicarCupon, obtenerDatosBancarios } from '../services/quinielasService';
-import { alertaError } from '@/lib/alertas';
+import { obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela, registrarQuiniela, subirComprobante, eliminarComprobante, notificarRegistro, obtenerDatosBancarios } from '../services/quinielasService';
+import { alertaError, confirmarAccion } from '@/lib/alertas';
 import { formatearFecha } from '@/lib/fechas';
 
 const router = useRouter();
@@ -46,6 +46,18 @@ const colorContador = computed(() => ({ normal: 'bg-green-700', media: 'bg-amber
 const horasTotales = computed(() => (tiempoRestante.value?.dias ?? 0) * 24 + (tiempoRestante.value?.horas ?? 0));
 const faltantes = computed(() => partidosActivos.value.filter((partido) => !pronosticos.value[partido.id]).length);
 const progreso = computed(() => partidosActivos.value.length ? Math.round(((partidosActivos.value.length - faltantes.value) / partidosActivos.value.length) * 100) : 0);
+const hayCambiosPendientes = computed(() => paso.value !== 'confirmacion' && (Object.values(pronosticos.value).some(Boolean) || alias.value.trim() !== 'Entrada 1'));
+
+async function confirmarSalida() {
+  if (!hayCambiosPendientes.value || procesando.value) return true;
+  return confirmarAccion({ title: 'Salir de la quiniela', text: 'Perderás los pronósticos que todavía no has registrado.', confirmText: 'Salir', danger: true });
+}
+
+function advertirAntesDeSalir(evento) {
+  if (!hayCambiosPendientes.value || procesando.value) return;
+  evento.preventDefault();
+  evento.returnValue = '';
+}
 
 async function cargar() {
   error.value = '';
@@ -87,16 +99,26 @@ async function confirmarPago({ metodo, archivo, codigoCupon }) {
   error.value = '';
   errorPago.value = '';
   procesando.value = true;
+  let comprobanteUrl = null;
   try {
-    let comprobanteUrl = null;
     if (metodo === 'transferencia' && archivo) comprobanteUrl = await subirComprobante(archivo);
-    const quiniela = await crearQuiniela({ jornadaId: jornada.value.id, alias: alias.value, metodoPago: metodo, montoPagado: metodo === 'cupon' ? 0 : jornada.value.costo, comprobanteUrl });
-    await guardarPredicciones(quiniela.id, Object.entries(pronosticos.value).map(([partidoId, pronostico]) => ({ partidoId, pronostico })));
-    if (metodo === 'cupon') await aplicarCupon(codigoCupon, quiniela.id);
-    await notificarRegistro(quiniela.id);
-    confirmacion.value = { alias: alias.value, jornada: jornada.value.nombre };
+    const quiniela = await registrarQuiniela({
+      jornadaId: jornada.value.id,
+      alias: alias.value,
+      metodoPago: metodo,
+      montoPagado: metodo === 'cupon' ? 0 : jornada.value.costo,
+      comprobanteUrl,
+      predicciones: Object.entries(pronosticos.value).map(([partidoId, pronostico]) => ({ partidoId, pronostico })),
+      codigoCupon: metodo === 'cupon' ? codigoCupon : null,
+    });
+    let notificacionPendiente = false;
+    try { await notificarRegistro(quiniela.id); } catch { notificacionPendiente = true; }
+    confirmacion.value = { alias: alias.value, jornada: jornada.value.nombre, notificacionPendiente };
     paso.value = 'confirmacion';
   } catch (e) {
+    if (comprobanteUrl) {
+      try { await eliminarComprobante(comprobanteUrl); } catch { }
+    }
     errorPago.value = e.message?.toLowerCase().includes('comprobante') || e.message?.toLowerCase().includes('storage')
       ? 'No se pudo cargar el comprobante. Verifica que sea una imagen o PDF de máximo 8 MB e inténtalo de nuevo.'
       : e.message || 'No se pudo confirmar el pago. Revisa los datos e inténtalo de nuevo.';
@@ -111,8 +133,9 @@ function revisarPronosticos() {
   paso.value = 'resumen';
 }
 
-onMounted(async () => { await cargar(); actualizarTiempo(); intervalo = setInterval(actualizarTiempo, 1000); });
-onUnmounted(() => clearInterval(intervalo));
+onBeforeRouteLeave(() => confirmarSalida());
+onMounted(async () => { await cargar(); actualizarTiempo(); intervalo = setInterval(actualizarTiempo, 1000); window.addEventListener('beforeunload', advertirAntesDeSalir); });
+onUnmounted(() => { clearInterval(intervalo); window.removeEventListener('beforeunload', advertirAntesDeSalir); });
 watch(() => route.params.jornadaId, async () => { await cargar(); actualizarTiempo(); });
 </script>
 
@@ -151,7 +174,7 @@ watch(() => route.params.jornadaId, async () => { await cargar(); actualizarTiem
       <section v-else-if="paso === 'resumen'" class="space-y-4"><button @click="paso = 'pronosticos'" class="text-sm font-semibold text-quiniela-verde">← Volver a pronósticos</button><article class="rounded-2xl bg-white p-5 shadow-sm sm:p-6"><div class="flex flex-col gap-1 border-b pb-4 sm:flex-row sm:items-end sm:justify-between"><div><p class="eyebrow">Resumen</p><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">{{ alias }}</h2><p class="text-sm text-gray-500">{{ jornada.nombre }}</p></div><span class="rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-800">{{ partidosActivos.length }} de {{ partidosActivos.length }} seleccionados</span></div><ul class="mt-4 divide-y divide-gray-100"> <li v-for="partido in partidosActivos" :key="partido.id" class="flex items-center justify-between gap-3 py-3 text-sm"><span class="min-w-0 truncate font-semibold text-gray-700">{{ partido.equipo_local }} <span class="font-normal text-gray-400">vs</span> {{ partido.equipo_visitante }}</span><span class="shrink-0 rounded-full bg-green-50 px-2.5 py-1 font-bold text-quiniela-verde">{{ pronosticos[partido.id] === 'L' ? 'Local' : pronosticos[partido.id] === 'V' ? 'Visita' : 'Empate' }}</span></li></ul><dl class="mt-4 rounded-xl bg-gray-50 p-4 text-sm"><div class="flex justify-between gap-3"><dt class="text-gray-500">Costo</dt><dd class="font-bold">${{ Number(jornada.costo ?? 0).toLocaleString('es-MX') }}</dd></div><div class="mt-2 flex justify-between gap-3"><dt class="text-gray-500">Cierre</dt><dd class="text-right font-semibold">{{ formatearFecha(jornada.fecha_cierre, { dateStyle: 'medium', timeStyle: 'short' }) }} h CDMX</dd></div></dl></article><button @click="paso = 'pago'" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white">Continuar al pago</button></section>
       <section v-else-if="paso === 'pago'" class="space-y-3"><button @click="paso = 'resumen'" class="text-sm font-semibold text-quiniela-verde">← Volver al resumen</button><PasoPago :procesando="procesando" :datos-bancarios="datosBancarios" :error="errorPago" @confirmar="confirmarPago" /></section>
 
-      <section v-else class="rounded-2xl bg-white p-6 text-center shadow-sm sm:p-10"><div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-green-100 text-3xl">✓</div><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">¡Quiniela registrada!</h2><dl class="my-6 rounded-xl bg-gray-50 p-4 text-left"><div class="flex justify-between gap-4"><dt class="text-gray-500">Entrada</dt><dd class="font-semibold">{{ confirmacion.alias }}</dd></div><div class="mt-2 flex justify-between gap-4"><dt class="text-gray-500">Jornada</dt><dd class="font-semibold">{{ confirmacion.jornada }}</dd></div></dl><button @click="router.push('/mis-quinielas')" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white">Ver mi quiniela</button><p class="mt-3 text-sm text-gray-500">También enviamos la confirmación a tu correo.</p></section>
+      <section v-else class="rounded-2xl bg-white p-6 text-center shadow-sm sm:p-10"><div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-green-100 text-3xl">✓</div><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">¡Quiniela registrada!</h2><dl class="my-6 rounded-xl bg-gray-50 p-4 text-left"><div class="flex justify-between gap-4"><dt class="text-gray-500">Entrada</dt><dd class="font-semibold">{{ confirmacion.alias }}</dd></div><div class="mt-2 flex justify-between gap-4"><dt class="text-gray-500">Jornada</dt><dd class="font-semibold">{{ confirmacion.jornada }}</dd></div></dl><p v-if="confirmacion.notificacionPendiente" role="status" class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left text-sm text-amber-800">La entrada quedó registrada, pero no pudimos enviar el correo de confirmación.</p><button @click="router.push('/mis-quinielas')" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white">Ver mi quiniela</button><p v-if="!confirmacion.notificacionPendiente" class="mt-3 text-sm text-gray-500">También enviamos la confirmación a tu correo.</p></section>
     </template>
   </main>
 </template>

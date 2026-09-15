@@ -80,8 +80,9 @@ export default async function handler(req, res) {
       const { quiniela_id: quinielaId, alias, correo_contacto: correoContactoRaw, estatus_pago: estatus } = req.body ?? {};
       if (!quinielaId || !alias?.trim() || !ESTATUS.has(estatus)) return res.status(400).json({ error: 'Los datos de la quiniela no son válidos' });
       const correoContacto = normalizarCorreo(correoContactoRaw);
-      const { data: actual, error: actualError } = await supabase.from('quinielas').select('monto_pagado, jornadas(costo)').eq('id', quinielaId).single();
+      const { data: actual, error: actualError } = await supabase.from('quinielas').select('monto_pagado, jornadas(costo, estatus)').eq('id', quinielaId).single();
       if (actualError) throw actualError;
+      if (['finalizada', 'cancelada'].includes(actual.jornadas?.estatus)) return res.status(409).json({ error: 'Una jornada finalizada o cancelada es de solo consulta' });
       const update = {
         alias: alias.trim(),
         correo_contacto: correoContacto,

@@ -5,10 +5,9 @@ import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 async function sincronizarJornada(supabase, jornadaId) {
   const { data: partidos, error } = await supabase
     .from('partidos')
-    .select('id, external_fixture_id')
+    .select('id, external_fixture_id, resultado_oficial, estado')
     .eq('jornada_id', jornadaId)
     .eq('provider', FOOTBALL_PROVIDER)
-    .is('resultado_oficial', null)
     .not('external_fixture_id', 'is', null)
     .eq('cancelado', false);
   if (error) throw error;
@@ -18,7 +17,12 @@ async function sincronizarJornada(supabase, jornadaId) {
   for (const partido of partidos) {
     const resultado = results.get(String(partido.external_fixture_id));
     if (!resultado) continue;
-    const { error: updateError } = await supabase.from('partidos').update({ resultado_oficial: resultado }).eq('id', partido.id);
+    if (resultado === partido.resultado_oficial && partido.estado === 'finalizado') continue;
+    const { error: updateError } = await supabase.from('partidos').update({
+      resultado_oficial: resultado,
+      estado: 'finalizado',
+      actualizado_el: new Date().toISOString(),
+    }).eq('id', partido.id);
     if (updateError) throw updateError;
     actualizados += 1;
   }
@@ -29,31 +33,11 @@ async function sincronizarJornada(supabase, jornadaId) {
   return { revisados: partidos.length, actualizados };
 }
 
-async function ejecutarCron(supabase) {
-  const { data: jornadas, error } = await supabase.from('jornadas').select('id').in('estatus', ['activa', 'cerrada']);
-  if (error) throw error;
-  const resumen = { jornadas: jornadas?.length ?? 0, revisados: 0, actualizados: 0, errores: [] };
-  for (const jornada of jornadas ?? []) {
-    try {
-      const resultado = await sincronizarJornada(supabase, jornada.id);
-      resumen.revisados += resultado.revisados;
-      resumen.actualizados += resultado.actualizados;
-    } catch (errorJornada) {
-      resumen.errores.push({ jornadaId: jornada.id, error: errorJornada.message });
-    }
-  }
-  return resumen;
-}
-
 export default async function handler(req, res) {
   try {
-    const supabase = getSupabaseAdmin();
-    if (req.method === 'GET') {
-      if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ error: 'No autorizado' });
-      return res.status(200).json({ status: 'ok', ...(await ejecutarCron(supabase)) });
-    }
     await requireAdmin(req);
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
+    const supabase = getSupabaseAdmin();
     const { jornada_id: jornadaId } = req.body ?? {};
     if (!jornadaId) return res.status(400).json({ error: 'Falta jornada_id' });
     const { data: jornada, error: jornadaError } = await supabase.from('jornadas').select('estatus').eq('id', jornadaId).maybeSingle();
