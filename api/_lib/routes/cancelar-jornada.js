@@ -1,6 +1,6 @@
-import { requireAdmin, ErrorHttp } from './_lib/auth.js';
-import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
-import { enviarCorreo, escaparHtml } from './_lib/email.js';
+import { requireAdmin, ErrorHttp } from '../auth.js';
+import { getSupabaseAdmin } from '../supabaseAdmin.js';
+import { enviarCorreo, escaparHtml } from '../email.js';
 
 export default async function handler(req, res) {
   try {

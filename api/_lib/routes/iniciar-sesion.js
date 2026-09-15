@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js';
+import { getSupabaseAdmin } from '../supabaseAdmin.js';
 
 const CONTIENE_ARROBA = /@/;
 const MENSAJE_GENERICO = 'Correo/usuario o contraseña incorrectos.';

@@ -1,7 +1,7 @@
-import { requireAdmin, ErrorHttp } from './_lib/auth.js';
-import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
-import { calcularGanadoresYPeor } from './_lib/premios.js';
-import { enviarCorreo } from './_lib/email.js';
+import { requireAdmin, ErrorHttp } from '../auth.js';
+import { getSupabaseAdmin } from '../supabaseAdmin.js';
+import { calcularGanadoresYPeor } from '../premios.js';
+import { enviarCorreo } from '../email.js';
 
 function generarCodigoCupon() {
   return 'QNL-' + Math.random().toString(36).slice(2, 8).toUpperCase();

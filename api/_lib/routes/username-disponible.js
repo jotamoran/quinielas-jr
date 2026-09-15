@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js';
+import { getSupabaseAdmin } from '../supabaseAdmin.js';
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
 

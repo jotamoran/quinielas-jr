@@ -1,4 +1,4 @@
-import { ErrorHttp } from '../_lib/auth.js';
+import { ErrorHttp } from '../auth.js';
 
 export default async function handler(req, res) {
   try {
