@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { supabase } from '@/lib/supabase';
 import { obtenerMisQuinielas, obtenerRanking, obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela } from '../services/quinielasService';
 import { calcularResumenBalance } from '../utils/balance';
@@ -17,6 +18,7 @@ const detallesEntrada = ref({});
 const cargandoEntrada = ref(null);
 const errorEntrada = ref({});
 const cargando = ref(true);
+const router = useRouter();
 
 async function alternarDetalleEntrada(quiniela) {
   if (abiertaEntrada.value === quiniela.id) {
@@ -49,6 +51,10 @@ const bloqueada = computed(() => jornadaActiva.value && new Date(jornadaActiva.v
 const empezaronPartidos = computed(() => partidosJornadaActiva.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => bloqueada.value || empezaronPartidos.value);
 function puedeEditar(quiniela) { return quiniela.jornadas?.estatus === 'activa' && new Date(quiniela.jornadas.fecha_cierre) > new Date(); }
+function puedeDuplicar(quiniela) { return jornadaActivaId.value && quiniela.jornada_id === jornadaActivaId.value && !bloqueada.value && quiniela.jornadas?.estatus === 'activa'; }
+function duplicar(quiniela) { router.push({ name: 'llenar-quiniela', params: { jornadaId: jornadaActivaId.value }, query: { duplicar: quiniela.id } }); }
+function etiquetaJornada(estatus) { return ({ activa: 'Abierta', cerrada: 'Cerrada', finalizada: 'Finalizada', cancelada: 'Cancelada', borrador: 'Pendiente' })[estatus] ?? estatus; }
+function claseJornada(estatus) { return ({ activa: 'bg-green-100 text-green-800', cerrada: 'bg-slate-100 text-slate-700', finalizada: 'bg-blue-100 text-blue-800', cancelada: 'bg-red-100 text-red-800', borrador: 'bg-amber-100 text-amber-800' })[estatus] ?? 'bg-gray-100 text-gray-700'; }
 
 async function obtenerPronosticosPublicos(quinielaId) {
   const { data, error: queryError } = await supabase
@@ -83,7 +89,7 @@ onMounted(async () => {
 
     <EsqueletoCarga v-if="cargando" :cantidad="4" />
 
-    <div v-if="!cargando && resumen" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div v-if="!cargando && resumen" class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">
       <div class="bg-white rounded-lg shadow p-4 text-center">
         <p class="text-xs text-gray-500">Gastado</p>
         <p class="text-xl font-bold text-quiniela-verde">${{ resumen.totalGastado }}</p>
@@ -108,11 +114,12 @@ onMounted(async () => {
 
     <div v-if="quinielas.length" class="grid gap-3 sm:hidden">
       <article v-for="q in quinielas" :key="q.id" class="rounded-2xl bg-white p-4 shadow-sm">
-        <div class="flex items-start justify-between gap-3"><div><p class="font-bold text-quiniela-verdeOscuro">{{ q.alias }}</p><p class="text-sm text-gray-500">{{ q.jornadas?.nombre }}</p></div><span class="rounded-full px-2 py-1 text-xs font-bold" :class="q.estatus_pago === 'aprobado' ? 'bg-green-100 text-green-800' : q.estatus_pago === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}</span></div>
+        <div class="flex items-start justify-between gap-3"><div><p class="font-bold text-quiniela-verdeOscuro">{{ q.alias }}</p><p class="text-sm text-gray-500">{{ q.jornadas?.nombre }}</p></div><div class="flex flex-wrap justify-end gap-1"><span class="rounded-full px-2 py-1 text-xs font-bold" :class="q.estatus_pago === 'aprobado' ? 'bg-green-100 text-green-800' : q.estatus_pago === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}</span><span v-if="q.jornadas?.estatus" class="rounded-full px-2 py-1 text-xs font-bold" :class="claseJornada(q.jornadas.estatus)">{{ etiquetaJornada(q.jornadas.estatus) }}</span></div></div>
         <p v-if="q.estatus_pago !== 'aprobado'" class="mt-2 text-xs text-amber-700">No estás participando todavía — falta confirmar tu pago.</p>
         <p class="mt-4 border-t pt-3 text-sm"><span class="text-gray-500">Aciertos:</span> <strong class="text-quiniela-verde">{{ q.aciertos }}</strong></p>
         <button type="button" @click="alternarDetalleEntrada(q)" class="mt-3 w-full rounded-lg border border-gray-200 py-2 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button>
         <router-link v-if="puedeEditar(q)" :to="{ name: 'editar-quiniela', params: { quinielaId: q.id } }" class="mt-2 block w-full rounded-lg border border-quiniela-verde py-2 text-center text-xs font-semibold text-quiniela-verde">Editar pronósticos</router-link>
+        <button v-if="puedeDuplicar(q)" type="button" @click="duplicar(q)" class="mt-2 w-full rounded-lg bg-green-50 py-2 text-xs font-semibold text-quiniela-verde">Duplicar entrada</button>
         <div v-if="abiertaEntrada === q.id" class="mt-3 border-t pt-3">
           <p v-if="cargandoEntrada === q.id" class="text-center text-sm text-gray-500">Cargando pronósticos…</p>
           <p v-else-if="errorEntrada[q.id]" class="text-center text-sm text-red-600">{{ errorEntrada[q.id] }}</p>
@@ -134,11 +141,11 @@ onMounted(async () => {
         <tbody>
           <template v-for="q in quinielas" :key="q.id">
             <tr class="border-b">
-              <td class="px-4 py-2">{{ q.jornadas?.nombre }}</td>
+              <td class="px-4 py-2"><span>{{ q.jornadas?.nombre }}</span><span v-if="q.jornadas?.estatus" class="ml-2 rounded-full px-2 py-0.5 text-xs font-bold" :class="claseJornada(q.jornadas.estatus)">{{ etiquetaJornada(q.jornadas.estatus) }}</span></td>
               <td class="px-4 py-2">{{ q.alias }}</td>
               <td class="px-4 py-2">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}<span v-if="q.estatus_pago !== 'aprobado'" class="ml-2 text-xs text-amber-700">(no participa todavía)</span></td>
               <td class="px-4 py-2 text-right">{{ q.aciertos }}</td>
-              <td class="px-4 py-2 text-right"><div class="flex justify-end gap-2"><button type="button" @click="alternarDetalleEntrada(q)" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button><router-link v-if="puedeEditar(q)" :to="{ name: 'editar-quiniela', params: { quinielaId: q.id } }" class="rounded-lg border border-quiniela-verde px-3 py-1.5 text-xs font-semibold text-quiniela-verde">Editar</router-link></div></td>
+              <td class="px-4 py-2 text-right"><div class="flex justify-end gap-2"><button type="button" @click="alternarDetalleEntrada(q)" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button><router-link v-if="puedeEditar(q)" :to="{ name: 'editar-quiniela', params: { quinielaId: q.id } }" class="rounded-lg border border-quiniela-verde px-3 py-1.5 text-xs font-semibold text-quiniela-verde">Editar</router-link><button v-if="puedeDuplicar(q)" type="button" @click="duplicar(q)" class="rounded-lg bg-green-50 px-3 py-1.5 text-xs font-semibold text-quiniela-verde">Duplicar</button></div></td>
             </tr>
             <tr v-if="abiertaEntrada === q.id" class="border-b bg-gray-50">
               <td colspan="5" class="p-4">

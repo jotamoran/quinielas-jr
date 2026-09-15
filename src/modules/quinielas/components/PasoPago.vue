@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 
-const props = defineProps({ procesando: { type: Boolean, default: false }, datosBancarios: { type: Object, default: null } });
+const props = defineProps({ procesando: { type: Boolean, default: false }, datosBancarios: { type: Object, default: null }, error: { type: String, default: '' } });
 const emit = defineEmits(['confirmar']);
 const metodo = ref('transferencia');
 const archivo = ref(null);
@@ -12,6 +12,12 @@ const valido = computed(() => metodo.value !== 'transferencia' || Boolean(archiv
 function onArchivo(evento) {
   const seleccionado = evento.target.files[0] ?? null;
   errorArchivo.value = '';
+  if (seleccionado && !(seleccionado.type.startsWith('image/') || seleccionado.type === 'application/pdf')) {
+    errorArchivo.value = 'El comprobante debe ser una imagen o un archivo PDF.';
+    evento.target.value = '';
+    archivo.value = null;
+    return;
+  }
   if (seleccionado && seleccionado.size > 8 * 1024 * 1024) {
     errorArchivo.value = 'El comprobante debe pesar menos de 8 MB.';
     evento.target.value = '';
@@ -25,6 +31,7 @@ function confirmar() { if (valido.value && !props.procesando) emit('confirmar', 
 
 <template>
   <div class="space-y-5 rounded-2xl bg-white p-4 shadow-sm sm:p-6">
+    <p v-if="props.error" role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{{ props.error }}</p>
     <div><h2 class="text-xl font-bold text-quiniela-verdeOscuro">Método de pago</h2><p class="text-sm text-gray-500">Elige cómo quieres registrar tu entrada.</p></div>
     <fieldset><legend class="sr-only">Método de pago</legend><div class="grid gap-2 sm:grid-cols-3"><label v-for="opcion in [{ value: 'transferencia', label: 'Transferencia' }, { value: 'efectivo', label: 'Efectivo' }, { value: 'cupon', label: 'Cupón' }]" :key="opcion.value" class="cursor-pointer rounded-xl border p-3 text-center font-semibold" :class="metodo === opcion.value ? 'border-quiniela-verde bg-green-50 text-quiniela-verdeOscuro' : 'border-gray-200'"><input v-model="metodo" type="radio" :value="opcion.value" class="sr-only" />{{ opcion.label }}</label></div></fieldset>
     <div v-if="metodo === 'transferencia'" class="space-y-3">

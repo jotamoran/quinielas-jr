@@ -1,9 +1,10 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { onBeforeRouteLeave } from 'vue-router';
 import TarjetaPartido from '../components/TarjetaPartido.vue';
 import { actualizarPredicciones, obtenerQuinielaParaEditar } from '../services/quinielasService';
-import { alertaError, alertaExito } from '@/lib/alertas';
+import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
 const route = useRoute();
 const router = useRouter();
@@ -38,7 +39,18 @@ async function guardar() {
 }
 
 onMounted(cargar);
+onBeforeRouteLeave(async () => {
+  if (!tieneCambios.value || guardando.value) return true;
+  return confirmarAccion({ title: 'Salir sin guardar', text: 'Perderás los cambios que hiciste en esta quiniela.', confirmText: 'Salir sin guardar', danger: true });
+});
 function advertirSalida(evento) { if (tieneCambios.value && !guardando.value) { evento.preventDefault(); evento.returnValue = ''; } }
+async function volver() {
+  if (tieneCambios.value && !guardando.value) {
+    const confirmado = await confirmarAccion({ title: 'Salir sin guardar', text: 'Perderás los cambios que hiciste en esta quiniela.', confirmText: 'Salir sin guardar', danger: true });
+    if (!confirmado) return;
+  }
+  router.back();
+}
 onMounted(() => window.addEventListener('beforeunload', advertirSalida));
 onUnmounted(() => window.removeEventListener('beforeunload', advertirSalida));
 </script>
@@ -51,7 +63,7 @@ onUnmounted(() => window.removeEventListener('beforeunload', advertirSalida));
     <template v-else-if="entrada">
       <p v-if="bloqueada" role="status" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">El cierre ya pasó; esta quiniela es solo de consulta.</p>
       <div class="grid gap-4"><TarjetaPartido v-for="partido in partidos" :key="partido.id" :partido="partido" v-model="pronosticos[partido.id]" :deshabilitado="bloqueada" /></div>
-      <div class="sticky bottom-3 flex gap-3 rounded-2xl bg-white/95 p-3 shadow-lg backdrop-blur"><button type="button" @click="router.back()" class="flex-1 rounded-xl border border-gray-300 py-3 font-semibold">Volver</button><button type="button" @click="guardar" :disabled="bloqueada || guardando || !completo || !tieneCambios" class="flex-1 rounded-xl bg-quiniela-verde py-3 font-bold text-white disabled:opacity-50">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></div>
+      <div class="sticky bottom-3 flex gap-3 rounded-2xl bg-white/95 p-3 shadow-lg backdrop-blur"><button type="button" @click="volver" class="flex-1 rounded-xl border border-gray-300 py-3 font-semibold">Volver</button><button type="button" @click="guardar" :disabled="bloqueada || guardando || !completo || !tieneCambios" class="flex-1 rounded-xl bg-quiniela-verde py-3 font-bold text-white disabled:opacity-50">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></div>
     </template>
   </main>
 </template>

@@ -8,7 +8,17 @@ const pendientes = ref([]);
 const cargando = ref(true);
 const procesando = ref('');
 const filtro = ref('');
-const pagosFiltrados = computed(() => pendientes.value.filter((q) => `${q.alias} ${q.perfiles?.nombre_completo} ${q.perfiles?.username} ${q.jornadas?.nombre}`.toLowerCase().includes(filtro.value.trim().toLowerCase())));
+const filtroMetodo = ref('todos');
+const desde = ref('');
+const hasta = ref('');
+const pagosFiltrados = computed(() => pendientes.value.filter((q) => {
+  const texto = `${q.alias} ${q.perfiles?.nombre_completo} ${q.perfiles?.username} ${q.jornadas?.nombre}`.toLowerCase();
+  const fecha = q.creado_el?.slice(0, 10);
+  return texto.includes(filtro.value.trim().toLowerCase())
+    && (filtroMetodo.value === 'todos' || q.metodo_pago === filtroMetodo.value)
+    && (!desde.value || fecha >= desde.value)
+    && (!hasta.value || fecha <= hasta.value);
+}));
 
 async function cargar() {
   pendientes.value = await listarPagosPendientes();
@@ -55,11 +65,11 @@ onMounted(async () => {
     <header><p class="eyebrow">Administración</p><h1 class="page-title">Pagos pendientes</h1><p class="page-description">Revisa comprobantes y confirma el estatus de cada entrada.</p></header>
     <EsqueletoCarga v-if="cargando" :cantidad="2" />
     <template v-else>
-      <label class="form-label block">Buscar pendiente<input v-model="filtro" type="search" placeholder="Nombre, usuario o jornada" class="form-control" /></label>
+      <div class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4"><label class="form-label">Buscar pendiente<input v-model="filtro" type="search" placeholder="Nombre, usuario o jornada" class="form-control" /></label><label class="form-label">Método<select v-model="filtroMetodo" class="form-control"><option value="todos">Todos</option><option value="transferencia">Transferencia</option><option value="efectivo">Efectivo</option><option value="cupon">Cupón</option></select></label><label class="form-label">Desde<input v-model="desde" type="date" class="form-control" /></label><label class="form-label">Hasta<input v-model="hasta" type="date" class="form-control" /></label></div>
       <div v-for="q in pagosFiltrados" :key="q.id" class="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p class="font-semibold">{{ q.perfiles?.nombre_completo }} <span v-if="q.perfiles?.username" class="font-normal text-gray-500">(@{{ q.perfiles.username }})</span> — {{ q.jornadas?.nombre }}</p>
-          <p class="text-sm text-gray-600">{{ q.alias }} · {{ q.metodo_pago }} · ${{ q.monto_pagado ?? '—' }}<span v-if="q.correo_contacto"> · {{ q.correo_contacto }}</span></p>
+          <p class="text-sm text-gray-600">{{ q.alias }} · {{ q.metodo_pago }} · ${{ q.monto_pagado ?? '—' }}<span v-if="q.creado_el"> · Registrado {{ new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeZone: 'America/Mexico_City' }).format(new Date(q.creado_el)) }}</span><span v-if="q.correo_contacto"> · {{ q.correo_contacto }}</span></p>
         </div>
         <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
           <button v-if="q.comprobante_url" @click="verComprobante(q.comprobante_url)" class="rounded-lg border px-3 py-2 text-sm font-semibold text-quiniela-verde">Comprobante</button>

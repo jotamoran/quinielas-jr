@@ -5,7 +5,7 @@ import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, canc
 import { generarImagenJornada } from '../utils/imagenJornada';
 import { alertaAdvertencia, alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
-import { fechaCDMXaISO, fechaParaInput, formatearFecha, hoyParaInput } from '@/lib/fechas';
+import { ahoraParaDatetimeInput, fechaCDMXaISO, fechaHoraParaInput, formatearFecha } from '@/lib/fechas';
 
 const router = useRouter();
 const jornadas = ref([]);
@@ -15,7 +15,7 @@ const cierreEditado = ref('');
 const cargando = ref(true);
 const guardando = ref(false);
 const accionEnCurso = ref('');
-const hoy = hoyParaInput();
+const ahora = ahoraParaDatetimeInput();
 const resumenCierre = ref(null);
 const cargandoResumen = ref(false);
 const errorResumen = ref('');
@@ -38,10 +38,18 @@ function formatoFechaPartido(fecha) {
   return formatearFecha(fecha, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+function etiquetaEstatus(estatus) {
+  return ({ activa: 'Abierta', borrador: 'Pendiente', cerrada: 'Cerrada', finalizada: 'Finalizada', cancelada: 'Cancelada' })[estatus] ?? estatus;
+}
+
+function claseEstatus(estatus) {
+  return ({ activa: 'bg-green-100 text-green-800', borrador: 'bg-amber-100 text-amber-800', cerrada: 'bg-slate-100 text-slate-700', finalizada: 'bg-blue-100 text-blue-800', cancelada: 'bg-red-100 text-red-800' })[estatus] ?? 'bg-gray-100 text-gray-700';
+}
+
 function abrir(jornada) {
   abierta.value = jornada;
   premioEditado.value = Number(jornada.premio ?? 0);
-  cierreEditado.value = fechaParaInput(jornada.fecha_cierre);
+  cierreEditado.value = fechaHoraParaInput(jornada.fecha_cierre);
   resumenCierre.value = null;
   errorResumen.value = '';
   if (jornada.estatus === 'finalizada') cargarResumenCierre(jornada.id);
@@ -135,14 +143,19 @@ async function guardarPremio() {
 
 async function guardarCierre() {
   if (!abierta.value || ['finalizada', 'cancelada'].includes(abierta.value.estatus) || !cierreEditado.value) return;
-  if (cierreEditado.value < hoy) {
-    await alertaError(new Error('La fecha de cierre no puede ser anterior a hoy'));
+  if (cierreEditado.value < ahora) {
+    await alertaError(new Error('La fecha de cierre debe ser futura'));
+    return;
+  }
+  const fecha = fechaCDMXaISO(cierreEditado.value.slice(0, 10), `${cierreEditado.value.slice(11)}:00`);
+  const primerPartido = (abierta.value.partidos ?? []).filter((partido) => !partido.cancelado).reduce((menor, partido) => Math.min(menor, new Date(partido.fecha_partido).getTime()), Number.POSITIVE_INFINITY);
+  if (Number.isFinite(primerPartido) && new Date(fecha).getTime() > primerPartido - 5 * 60 * 1000) {
+    await alertaError(new Error('El cierre debe quedar al menos cinco minutos antes del primer partido.'), 'Fecha de cierre no válida');
     return;
   }
   guardando.value = true;
   accionEnCurso.value = 'fecha';
   try {
-    const fecha = fechaCDMXaISO(cierreEditado.value);
     await actualizarCierreJornada(abierta.value.id, fecha);
     abierta.value.fecha_cierre = fecha;
     await alertaExito('Fecha límite actualizada');
@@ -164,7 +177,7 @@ async function cerrarRegistro() {
     const fecha = new Date().toISOString();
     await actualizarCierreJornada(abierta.value.id, fecha);
     abierta.value.fecha_cierre = fecha;
-    cierreEditado.value = fechaParaInput(fecha);
+    cierreEditado.value = fechaHoraParaInput(fecha);
     await alertaExito('Registro cerrado');
   } catch (error) {
     await alertaError(error, 'No se pudo cerrar el registro');
@@ -252,7 +265,7 @@ onMounted(async () => {
       <p class="page-description">Consulta partidos, administra el premio y comparte cada jornada.</p>
     </header>
 
-    <div v-if="!cargando && jornadas.length" class="grid grid-cols-3 gap-3" aria-label="Resumen de jornadas"><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Activas</p><p class="mt-1 text-2xl font-bold text-quiniela-verde">{{ resumenAdmin.activas }}</p></div><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Resultados pendientes</p><p class="mt-1 text-2xl font-bold text-amber-600">{{ resumenAdmin.pendientes }}</p></div><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Finalizadas</p><p class="mt-1 text-2xl font-bold text-gray-700">{{ resumenAdmin.finalizadas }}</p></div></div>
+    <div v-if="!cargando && jornadas.length" class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-3" aria-label="Resumen de jornadas"><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Activas</p><p class="mt-1 text-2xl font-bold text-quiniela-verde">{{ resumenAdmin.activas }}</p></div><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Resultados pendientes</p><p class="mt-1 text-2xl font-bold text-amber-600">{{ resumenAdmin.pendientes }}</p></div><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Finalizadas</p><p class="mt-1 text-2xl font-bold text-gray-700">{{ resumenAdmin.finalizadas }}</p></div></div>
 
     <EsqueletoCarga v-if="cargando" :cantidad="4" />
     <div v-else-if="!jornadas.length" class="empty-state">Todavía no hay jornadas creadas.</div>
@@ -262,7 +275,7 @@ onMounted(async () => {
         <button v-for="jornada in jornadasOrdenadas" :key="jornada.id" type="button" @click="abrir(jornada)" class="w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition" :class="abierta?.id === jornada.id ? 'border-quiniela-verde ring-2 ring-green-100' : 'border-gray-200 hover:border-green-300'">
           <div class="flex items-start justify-between gap-3">
             <div><p class="font-bold text-quiniela-verdeOscuro">{{ jornada.nombre }}</p><p class="mt-1 text-sm text-gray-500">{{ formatoFecha(jornada.fecha_cierre) }}</p></div>
-            <span class="rounded-full px-2.5 py-1 text-xs font-bold capitalize" :class="jornada.estatus === 'activa' ? 'bg-green-100 text-green-800' : jornada.estatus === 'cancelada' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'">{{ jornada.estatus }}</span>
+            <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="claseEstatus(jornada.estatus)">{{ etiquetaEstatus(jornada.estatus) }}</span>
           </div>
           <p class="mt-3 text-sm font-semibold text-gray-700">{{ jornada.partidos?.length ?? 0 }} partidos · {{ formatoMoneda(jornada.premio) }}</p>
         </button>
@@ -271,7 +284,7 @@ onMounted(async () => {
       <section v-if="abierta" class="space-y-5">
         <article class="rounded-2xl bg-quiniela-verdeOscuro p-5 text-white shadow-lg sm:p-6">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div><span class="text-xs font-bold uppercase tracking-widest text-green-200">{{ abierta.estatus }}</span><h2 class="mt-1 text-2xl font-bold">{{ abierta.nombre }}</h2><p class="mt-1 text-sm text-green-100">Cierre: {{ formatoFecha(abierta.fecha_cierre) }}</p></div>
+            <div><span class="inline-flex rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold">{{ etiquetaEstatus(abierta.estatus) }}</span><h2 class="mt-2 text-2xl font-bold">{{ abierta.nombre }}</h2><p class="mt-1 text-sm text-green-100">Cierre: {{ formatoFecha(abierta.fecha_cierre) }}</p></div>
             <div class="rounded-xl bg-white/10 px-4 py-3"><p class="text-xs uppercase tracking-wider text-green-100">Premio</p><p class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(abierta.premio) }}</p></div>
           </div>
           <div class="mt-5 grid gap-2 sm:grid-cols-3">
@@ -291,7 +304,7 @@ onMounted(async () => {
 
         <form v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)" @submit.prevent="guardarCierre" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label class="form-label flex-1">Fecha límite de registro<input v-model="cierreEditado" type="date" :min="hoy" class="form-control mt-1" /></label>
+            <label class="form-label flex-1">Fecha límite de registro (hora CDMX)<input v-model="cierreEditado" type="datetime-local" :min="ahora" class="form-control mt-1" /><span class="mt-1 block text-xs font-normal text-gray-500">Mínimo cinco minutos antes del primer partido.</span></label>
             <button :disabled="guardando || !cierreEditado" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">{{ accionEnCurso === 'fecha' ? 'Guardando…' : 'Guardar fecha' }}</button>
             <button v-if="new Date(abierta.fecha_cierre) > new Date()" type="button" @click="cerrarRegistro" :disabled="guardando" class="rounded-xl border border-red-300 px-5 py-3 font-semibold text-red-700 disabled:opacity-50">{{ accionEnCurso === 'cierre' ? 'Cerrando…' : 'Cerrar registro ahora' }}</button>
             <span v-else class="rounded-xl bg-gray-100 px-4 py-3 text-center text-sm font-bold text-gray-600">Registro cerrado</span>
@@ -333,9 +346,9 @@ onMounted(async () => {
           <article v-for="(partido, index) in abierta.partidos" :key="partido.id" class="rounded-2xl border p-4 shadow-sm" :class="partido.cancelado ? 'border-red-200 bg-red-50/50' : 'border-gray-200 bg-white'">
             <div class="mb-3 flex justify-between text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ partido.liga_nombre }}</span><span>{{ formatoFechaPartido(partido.fecha_partido) }}</span></div>
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-              <div class="min-w-0"><img v-if="partido.logo_local" :src="partido.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight">{{ partido.equipo_local }}</p></div>
+              <div class="min-w-0"><img v-if="partido.logo_local" :src="partido.logo_local" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight">{{ partido.equipo_local }}</p></div>
               <span class="text-xs font-bold text-gray-400">VS</span>
-              <div class="min-w-0"><img v-if="partido.logo_visitante" :src="partido.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight">{{ partido.equipo_visitante }}</p></div>
+              <div class="min-w-0"><img v-if="partido.logo_visitante" :src="partido.logo_visitante" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight">{{ partido.equipo_visitante }}</p></div>
             </div>
             <p v-if="partido.cancelado" class="mt-3 text-center text-sm font-bold text-red-700">Cancelado — no cuenta para las quinielas</p>
             <p v-else-if="partido.resultado_oficial" class="mt-3 text-center text-sm font-bold text-quiniela-verde">Resultado: {{ partido.resultado_oficial }}</p>

@@ -76,6 +76,12 @@ export async function actualizarPremioJornada(jornadaId, premio) {
 }
 
 export async function actualizarCierreJornada(jornadaId, fechaCierre) {
+  const { data: partidos, error: partidosError } = await supabase.from('partidos').select('fecha_partido, cancelado').eq('jornada_id', jornadaId);
+  if (partidosError) throw partidosError;
+  const primerPartido = (partidos ?? []).filter((partido) => !partido.cancelado).reduce((menor, partido) => Math.min(menor, new Date(partido.fecha_partido).getTime()), Number.POSITIVE_INFINITY);
+  if (Number.isFinite(primerPartido) && Date.now() < primerPartido && new Date(fechaCierre).getTime() > primerPartido - 5 * 60 * 1000) {
+    throw new Error('El cierre debe quedar al menos cinco minutos antes del primer partido.');
+  }
   const { error } = await supabase.from('jornadas').update({ fecha_cierre: fechaCierre }).eq('id', jornadaId);
   if (error) throw error;
 }
@@ -87,6 +93,10 @@ export async function cancelarPartido(partidoId, cancelado) {
 
 export async function crearJornada({ nombre, costo, premio, fechaCierre, partidosSeleccionados }) {
   if (partidosSeleccionados.length !== 9) throw new Error('La jornada debe tener exactamente 9 partidos');
+  const primerPartido = Math.min(...partidosSeleccionados.map((partido) => new Date(partido.fixture.date).getTime()));
+  if (Date.now() < primerPartido && new Date(fechaCierre).getTime() > primerPartido - 5 * 60 * 1000) {
+    throw new Error('El cierre debe quedar al menos cinco minutos antes del primer partido.');
+  }
   const { data: jornada, error } = await supabase
     .from('jornadas')
     .insert({ nombre, costo, premio, fecha_cierre: fechaCierre, estatus: 'borrador' })

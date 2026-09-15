@@ -72,7 +72,7 @@ onUnmounted(() => {
     <form @submit.prevent="onSubmit" class="relative max-h-[calc(100dvh-2rem)] w-full max-w-sm space-y-4 overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-8">
       <button type="button" @click="loginModalStore.cerrar()" class="absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full text-2xl leading-none text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-quiniela-verde focus-visible:ring-offset-2 sm:right-4 sm:top-4" aria-label="Cerrar">×</button>
       <div class="flex justify-center px-12">
-        <img src="@assets/logo.png" alt="" class="h-16 w-16 rounded-full object-contain sm:h-[4.5rem] sm:w-[4.5rem]" />
+        <img src="@assets/logo.png" alt="" width="72" height="72" decoding="async" class="h-16 w-16 rounded-full object-contain sm:h-[4.5rem] sm:w-[4.5rem]" />
       </div>
       <div class="space-y-1 text-center">
         <h2 id="login-modal-titulo" class="text-2xl font-bold text-quiniela-verdeOscuro">Inicia sesión</h2>

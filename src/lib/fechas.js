@@ -10,6 +10,11 @@ export function fechaParaInput(valor) {
   return `${partes.year}-${partes.month}-${partes.day}`;
 }
 
+export function fechaHoraParaInput(valor) {
+  const partes = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_HORARIA, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(valor)).reduce((resultado, parte) => { resultado[parte.type] = parte.value; return resultado; }, {});
+  return `${partes.year}-${partes.month}-${partes.day}T${partes.hour === '24' ? '00' : partes.hour}:${partes.minute}`;
+}
+
 export function hoyParaInput() {
   return fechaParaInput(new Date());
 }

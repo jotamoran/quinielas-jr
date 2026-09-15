@@ -56,7 +56,7 @@ function cerrarMenu() {
   <nav ref="nav" class="sticky top-0 z-40 bg-quiniela-verdeOscuro px-4 py-3 text-white shadow-lg sm:px-6">
     <div class="mx-auto flex max-w-7xl items-center justify-between">
       <router-link :to="{ name: authStore.isLoggedIn ? 'mis-quinielas' : 'inicio' }" class="flex items-center gap-2 rounded-lg focus-visible:outline-offset-4">
-        <img src="@assets/logo.png" alt="Quinielas JR" class="h-8 w-8 rounded-full" />
+        <img src="@assets/logo.png" alt="Quinielas JR" width="32" height="32" decoding="async" class="h-8 w-8 rounded-full" />
         <span class="font-bold">Quinielas JR</span>
       </router-link>
 

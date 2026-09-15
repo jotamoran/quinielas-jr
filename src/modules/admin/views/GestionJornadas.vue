@@ -155,8 +155,8 @@ async function guardarJornada() {
     await alertaError(new Error('Costo y premio deben ser cantidades iguales o mayores a cero.'), 'Importes no válidos');
     return;
   }
-  if (fechaCierre.value < hoy) {
-    await alertaError(new Error('Selecciona hoy o una fecha posterior.'), 'Fecha de cierre no válida');
+  if (!fechaCierre.value || fechaCierre.value < hoyDatetime) {
+    await alertaError(new Error('Selecciona una fecha y hora futura.'), 'Fecha de cierre no válida');
     return;
   }
   const equipos = seleccionados.value.flatMap((partido) => [partido.teams.home.name.trim().toLowerCase(), partido.teams.away.name.trim().toLowerCase()]);
@@ -167,10 +167,10 @@ async function guardarJornada() {
   cargando.value = true;
   accionEnCurso.value = 'publicar';
   try {
-    const cierreIso = fechaCDMXaISO(fechaCierre.value);
+    const cierreIso = fechaCDMXaISO(fechaCierre.value.slice(0, 10), `${fechaCierre.value.slice(11)}:00`);
     const primerPartido = Math.min(...seleccionados.value.map((partido) => new Date(partido.fixture.date).getTime()));
-    if (new Date(cierreIso).getTime() >= primerPartido) {
-      await alertaError(new Error('El cierre debe ser anterior al inicio del primer partido.'), 'Fecha de cierre no válida');
+    if (new Date(cierreIso).getTime() > primerPartido - 5 * 60 * 1000) {
+      await alertaError(new Error('El cierre debe quedar al menos cinco minutos antes del primer partido.'), 'Fecha de cierre no válida');
       return;
     }
     await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: cierreIso, partidosSeleccionados: seleccionados.value });
@@ -256,7 +256,7 @@ onMounted(detectarProximaJornada);
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
               <div class="min-w-0"><img v-if="fixture.teams.home.logo" :src="fixture.teams.home.logo" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-semibold leading-tight">{{ fixture.teams.home.name }}</p></div>
               <span class="text-xs font-bold text-gray-400">VS</span>
-              <div class="min-w-0"><img v-if="fixture.teams.away.logo" :src="fixture.teams.away.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-semibold leading-tight">{{ fixture.teams.away.name }}</p></div>
+              <div class="min-w-0"><img v-if="fixture.teams.away.logo" :src="fixture.teams.away.logo" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-semibold leading-tight">{{ fixture.teams.away.name }}</p></div>
             </div>
             <p class="mt-3 text-center text-sm font-semibold" :class="estaSeleccionado(fixture) ? 'text-quiniela-verde' : 'text-gray-500'">{{ estaSeleccionado(fixture) ? '✓ Seleccionado' : 'Seleccionar' }}</p>
           </button>
@@ -274,7 +274,7 @@ onMounted(detectarProximaJornada);
 
     <section v-if="completo" id="datos-jornada" class="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
       <h2 class="mb-4 text-xl font-bold text-quiniela-verdeOscuro">Datos de la jornada</h2>
-      <div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-semibold">Nombre<input v-model="nombreJornada" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Cierre<input v-model="fechaCierre" type="date" :min="hoy" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Costo<input v-model.number="costo" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Premio<input v-model.number="premio" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label></div>
+      <div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-semibold">Nombre<input v-model="nombreJornada" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Cierre (hora CDMX)<input v-model="fechaCierre" type="datetime-local" :min="hoyDatetime" class="mt-1 w-full rounded-xl border-gray-300" /><span class="mt-1 block text-xs font-normal text-gray-500">Debe ser al menos 5 minutos antes del primer partido.</span></label><label class="text-sm font-semibold">Costo<input v-model.number="costo" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label><label class="text-sm font-semibold">Premio<input v-model.number="premio" type="number" min="0" class="mt-1 w-full rounded-xl border-gray-300" /></label></div>
       <button @click="guardarJornada" :disabled="!nombreJornada || !fechaCierre || cargando" class="mt-5 w-full rounded-xl bg-quiniela-dorado py-3 font-bold text-quiniela-grisTexto disabled:opacity-50">{{ accionEnCurso === 'publicar' ? 'Publicando…' : 'Publicar jornada' }}</button>
     </section>
 
