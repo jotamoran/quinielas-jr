@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin } from '../services/adminService';
+import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin, obtenerResumenCierreJornada } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
 import { alertaAdvertencia, alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
+import { fechaCDMXaISO, fechaParaInput, formatearFecha, hoyParaInput } from '@/lib/fechas';
 
 const router = useRouter();
 const jornadas = ref([]);
@@ -14,7 +15,10 @@ const cierreEditado = ref('');
 const cargando = ref(true);
 const guardando = ref(false);
 const accionEnCurso = ref('');
-const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const hoy = hoyParaInput();
+const resumenCierre = ref(null);
+const cargandoResumen = ref(false);
+const errorResumen = ref('');
 
 const jornadasOrdenadas = computed(() => [...jornadas.value].sort((a, b) => {
   const prioridad = { activa: 0, borrador: 1, cerrada: 2, finalizada: 3 };
@@ -26,23 +30,25 @@ function formatoMoneda(valor) {
 }
 
 function formatoFecha(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeZone: 'America/Mexico_City' }).format(new Date(fecha));
+  return formatearFecha(fecha, { dateStyle: 'medium' });
 }
 
 function formatoFechaPartido(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Mexico_City' }).format(new Date(fecha));
+  return formatearFecha(fecha, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function abrir(jornada) {
   abierta.value = jornada;
   premioEditado.value = Number(jornada.premio ?? 0);
   cierreEditado.value = fechaParaInput(jornada.fecha_cierre);
+  resumenCierre.value = null;
+  errorResumen.value = '';
+  if (jornada.estatus === 'finalizada') cargarResumenCierre(jornada.id);
 }
 
-function fechaParaInput(fecha) {
-  const valor = new Date(fecha);
-  valor.setMinutes(valor.getMinutes() - valor.getTimezoneOffset());
-  return valor.toISOString().slice(0, 10);
+async function cargarResumenCierre(jornadaId) {
+  cargandoResumen.value = true;
+  try { resumenCierre.value = await obtenerResumenCierreJornada(jornadaId); } catch (error) { errorResumen.value = error.message; } finally { cargandoResumen.value = false; }
 }
 
 function enlacePublico(jornada) {
@@ -111,7 +117,7 @@ async function compartirImagen(jornada) {
 }
 
 async function guardarPremio() {
-  if (!abierta.value || premioEditado.value < 0) return;
+  if (!abierta.value || ['finalizada', 'cancelada'].includes(abierta.value.estatus) || premioEditado.value < 0) return;
   guardando.value = true;
   accionEnCurso.value = 'premio';
   try {
@@ -127,7 +133,7 @@ async function guardarPremio() {
 }
 
 async function guardarCierre() {
-  if (!abierta.value || !cierreEditado.value) return;
+  if (!abierta.value || ['finalizada', 'cancelada'].includes(abierta.value.estatus) || !cierreEditado.value) return;
   if (cierreEditado.value < hoy) {
     await alertaError(new Error('La fecha de cierre no puede ser anterior a hoy'));
     return;
@@ -135,7 +141,7 @@ async function guardarCierre() {
   guardando.value = true;
   accionEnCurso.value = 'fecha';
   try {
-    const fecha = new Date(`${cierreEditado.value}T23:59:59`).toISOString();
+    const fecha = fechaCDMXaISO(cierreEditado.value);
     await actualizarCierreJornada(abierta.value.id, fecha);
     abierta.value.fecha_cierre = fecha;
     await alertaExito('Fecha límite actualizada');
@@ -148,7 +154,7 @@ async function guardarCierre() {
 }
 
 async function cerrarRegistro() {
-  if (!abierta.value) return;
+  if (!abierta.value || ['finalizada', 'cancelada'].includes(abierta.value.estatus)) return;
   const confirmado = await confirmarAccion({ title: 'Cerrar registro ahora', text: 'Desde este momento ya no se podrán registrar nuevas quinielas.', confirmText: 'Cerrar registro', danger: true });
   if (!confirmado) return;
   guardando.value = true;
@@ -266,18 +272,21 @@ onMounted(async () => {
             <div class="rounded-xl bg-white/10 px-4 py-3"><p class="text-xs uppercase tracking-wider text-green-100">Premio</p><p class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(abierta.premio) }}</p></div>
           </div>
           <div class="mt-5 grid gap-2 sm:grid-cols-3">
-            <button @click="compartirEnlace(abierta)" class="rounded-xl bg-white px-3 py-2.5 font-semibold text-quiniela-verdeOscuro">Compartir resultados</button>
-            <button @click="compartirRegistro(abierta)" class="rounded-xl border border-white/40 px-3 py-2.5 font-semibold">Compartir quiniela</button>
-            <button @click="compartirImagen(abierta)" class="rounded-xl bg-quiniela-dorado px-3 py-2.5 font-semibold text-quiniela-grisTexto">Compartir imagen</button>
+            <template v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)">
+              <button @click="compartirEnlace(abierta)" class="rounded-xl bg-white px-3 py-2.5 font-semibold text-quiniela-verdeOscuro">Compartir resultados</button>
+              <button @click="compartirRegistro(abierta)" class="rounded-xl border border-white/40 px-3 py-2.5 font-semibold">Compartir quiniela</button>
+              <button @click="compartirImagen(abierta)" class="rounded-xl bg-quiniela-dorado px-3 py-2.5 font-semibold text-quiniela-grisTexto">Compartir imagen</button>
+            </template>
+            <p v-else class="rounded-xl bg-white/10 px-4 py-3 text-center text-sm font-semibold text-green-100 sm:col-span-3">Jornada finalizada: solo consulta</p>
           </div>
         </article>
 
-        <form @submit.prevent="guardarPremio" class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
+        <form v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)" @submit.prevent="guardarPremio" class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
           <label class="form-label flex-1">Premio de la jornada<input v-model.number="premioEditado" type="number" min="0" step="0.01" class="form-control mt-1" /></label>
           <button :disabled="guardando || premioEditado === abierta.premio" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">{{ accionEnCurso === 'premio' ? 'Guardando…' : 'Actualizar premio' }}</button>
         </form>
 
-        <form @submit.prevent="guardarCierre" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <form v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)" @submit.prevent="guardarCierre" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
             <label class="form-label flex-1">Fecha límite de registro<input v-model="cierreEditado" type="date" :min="hoy" class="form-control mt-1" /></label>
             <button :disabled="guardando || !cierreEditado" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-50">{{ accionEnCurso === 'fecha' ? 'Guardando…' : 'Guardar fecha' }}</button>
@@ -286,6 +295,30 @@ onMounted(async () => {
           </div>
           <p class="mt-2 text-xs text-gray-500">Al llegar esta fecha, el sistema bloquea automáticamente nuevas entradas y habilita los pronósticos públicos.</p>
         </form>
+
+        <section v-if="abierta.estatus === 'finalizada'" class="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 shadow-sm" aria-labelledby="resumen-cierre-titulo">
+          <p class="eyebrow text-amber-700">Resultado definitivo</p>
+          <h3 id="resumen-cierre-titulo" class="mt-1 text-xl font-bold text-quiniela-verdeOscuro">Ganadores y cupón</h3>
+          <p v-if="cargandoResumen" class="mt-3 text-sm text-gray-600">Cargando el resumen del cierre…</p>
+          <p v-else-if="errorResumen" role="alert" class="mt-3 text-sm text-red-700">{{ errorResumen }}</p>
+          <div v-else-if="resumenCierre" class="mt-4 grid gap-4 sm:grid-cols-2">
+            <div class="rounded-xl bg-white p-4">
+              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Ganador(es) del premio</p>
+              <p v-if="!resumenCierre.ganadores.length" class="mt-2 text-sm text-gray-600">No hubo entradas elegibles.</p>
+              <ul v-else class="mt-2 space-y-2 text-sm">
+                <li v-for="ganador in resumenCierre.ganadores" :key="ganador.quiniela_id" class="flex items-center justify-between gap-3"><span class="font-semibold text-quiniela-verdeOscuro">{{ ganador.username ? `@${ganador.username}` : ganador.alias || ganador.nombre_completo || 'Registro presencial' }}</span><span class="font-bold text-quiniela-verde">{{ formatoMoneda((abierta.premio ?? 0) / resumenCierre.ganadores.length) }}</span></li>
+              </ul>
+            </div>
+            <div class="rounded-xl bg-white p-4">
+              <p class="text-xs font-bold uppercase tracking-wider text-gray-500">Cupón de consolación</p>
+              <template v-if="resumenCierre.cupon">
+                <p class="mt-2 font-semibold text-quiniela-verdeOscuro">{{ resumenCierre.cupon.username ? `@${resumenCierre.cupon.username}` : resumenCierre.cupon.correo_contacto || 'Registro presencial' }}</p>
+                <p class="mt-1 text-sm text-gray-600">Código: <strong>{{ resumenCierre.cupon.codigo }}</strong></p>
+              </template>
+              <p v-else class="mt-2 text-sm text-gray-600">No se asignó cupón en esta jornada.</p>
+            </div>
+          </div>
+        </section>
 
         <div v-if="abierta.estatus !== 'finalizada' && abierta.estatus !== 'cancelada'" class="rounded-2xl border border-red-200 bg-red-50/50 p-4 shadow-sm">
           <p class="text-sm font-semibold text-red-800">Zona de peligro</p>

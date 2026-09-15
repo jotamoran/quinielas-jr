@@ -4,10 +4,11 @@ import { buscarFixtures, crearJornada } from '../services/adminService';
 import { LIGAS_DISPONIBLES } from '../utils/ligas';
 import EquipoAutocomplete from '../components/EquipoAutocomplete.vue';
 import { alertaError, alertaExito } from '@/lib/alertas';
+import { ahoraParaDatetimeInput, fechaCDMXaISO, formatearFecha, hoyParaInput } from '@/lib/fechas';
 
 const MAX_PARTIDOS = 9;
-const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-const hoyDatetime = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+const hoy = hoyParaInput();
+const hoyDatetime = ahoraParaDatetimeInput();
 const ligaPrincipal = LIGAS_DISPONIBLES.find((liga) => liga.principal);
 const ligasComplementarias = LIGAS_DISPONIBLES.filter((liga) => !liga.principal);
 const ligasSeleccionadas = ref([ligaPrincipal.id]);
@@ -126,7 +127,7 @@ async function agregarPartidoManual() {
     return;
   }
   const fixture = {
-    fixture: { id: `manual-${crypto.randomUUID()}`, date: new Date(fecha).toISOString() },
+    fixture: { id: `manual-${crypto.randomUUID()}`, date: fechaCDMXaISO(fecha.slice(0, 10), `${fecha.slice(11)}:00`) },
     league: { id: 'manual', name: liga.trim() },
     teams: { home: { name: local.name.trim(), logo: local.logo ?? null }, away: { name: visitante.name.trim(), logo: visitante.logo ?? null } },
     provider: 'manual',
@@ -146,7 +147,7 @@ async function guardarJornada() {
   cargando.value = true;
   accionEnCurso.value = 'publicar';
   try {
-    const cierreIso = new Date(`${fechaCierre.value}T23:59:59`).toISOString();
+    const cierreIso = fechaCDMXaISO(fechaCierre.value);
     await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: cierreIso, partidosSeleccionados: seleccionados.value });
     await alertaExito('Jornada publicada', 'Los 9 partidos ya están disponibles para los participantes.');
     seleccionados.value = [];
@@ -162,7 +163,7 @@ async function guardarJornada() {
 }
 
 function fechaPartido(fecha) {
-  return new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' }).format(new Date(fecha));
+  return formatearFecha(fecha, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 function irADatos() {
@@ -225,10 +226,10 @@ onMounted(detectarProximaJornada);
       <div v-for="grupo in grupos" :key="grupo.league.id">
         <div class="mb-3 flex items-end justify-between"><h2 class="text-xl font-bold text-quiniela-verdeOscuro">{{ grupo.league.name }}</h2><span class="text-sm text-gray-500">{{ grupo.fixtures.length }} partidos</span></div>
         <div class="grid gap-3 md:grid-cols-2">
-          <button v-for="fixture in grupo.fixtures" :key="fixture.fixture.id" type="button" @click="alternarSeleccion(fixture)" class="rounded-2xl border bg-white p-4 text-left shadow-sm transition" :class="estaSeleccionado(fixture) ? 'border-quiniela-verde ring-2 ring-green-100' : 'border-gray-200 hover:border-green-300'">
+          <button v-for="fixture in grupo.fixtures" :key="fixture.fixture.id" type="button" @click="alternarSeleccion(fixture)" :aria-pressed="estaSeleccionado(fixture)" class="rounded-2xl border bg-white p-4 text-left shadow-sm transition" :class="estaSeleccionado(fixture) ? 'border-quiniela-verde ring-2 ring-green-100' : 'border-gray-200 hover:border-green-300'">
             <div class="mb-4 flex justify-between text-xs text-gray-500"><span>{{ fixture.league.name }}<span v-if="fixture.provider === 'manual'"> · Manual</span></span><span>{{ fechaPartido(fixture.fixture.date) }}</span></div>
             <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-              <div class="min-w-0"><img v-if="fixture.teams.home.logo" :src="fixture.teams.home.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-semibold leading-tight">{{ fixture.teams.home.name }}</p></div>
+              <div class="min-w-0"><img v-if="fixture.teams.home.logo" :src="fixture.teams.home.logo" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-semibold leading-tight">{{ fixture.teams.home.name }}</p></div>
               <span class="text-xs font-bold text-gray-400">VS</span>
               <div class="min-w-0"><img v-if="fixture.teams.away.logo" :src="fixture.teams.away.logo" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-semibold leading-tight">{{ fixture.teams.away.name }}</p></div>
             </div>

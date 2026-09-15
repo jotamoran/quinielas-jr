@@ -15,10 +15,14 @@ const abiertaId = ref(null);
 const detalles = ref({});
 const cargandoDetalle = ref(null);
 const errorDetalle = ref({});
+const cargando = ref(false);
+const error = ref('');
 
 async function cargar() {
   if (!props.jornadaId) return;
-  filas.value = await props.obtenerRankingFn(props.jornadaId);
+  cargando.value = true;
+  error.value = '';
+  try { filas.value = await props.obtenerRankingFn(props.jornadaId); } catch (e) { error.value = e.message; filas.value = []; } finally { cargando.value = false; }
 }
 
 async function alternar(fila) {
@@ -73,7 +77,9 @@ defineExpose({ recargar: cargar });
 </script>
 
 <template>
-  <div v-if="filas.length" class="space-y-2">
+  <div v-if="cargando" class="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500" role="status">Cargando tabla de posiciones…</div>
+  <div v-else-if="error" role="alert" class="rounded-2xl border border-red-200 bg-red-50 p-5 text-center text-sm text-red-700">{{ error }}</div>
+  <div v-else-if="filas.length" class="space-y-2">
     <div v-if="resaltarExtremos" class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
       <div class="flex items-start gap-2"><span class="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-amber-300"></span><span><strong class="font-bold text-gray-700">Ganador:</strong> va(n) al frente del premio en este momento (si hay empate en el primer lugar, se reparte entre quienes empataron).</span></div>
       <div class="flex items-start gap-2"><span class="mt-0.5 h-3 w-3 shrink-0 rounded-full bg-red-400"></span><span><strong class="font-bold text-gray-700">Tarugo:</strong> hasta el momento va con menos aciertos y se llevará el cupón de consolación (si hay empate en el último lugar, no se otorga).</span></div>

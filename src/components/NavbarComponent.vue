@@ -55,13 +55,14 @@ function cerrarMenu() {
 <template>
   <nav ref="nav" class="sticky top-0 z-40 bg-quiniela-verdeOscuro px-4 py-3 text-white shadow-lg sm:px-6">
     <div class="mx-auto flex max-w-7xl items-center justify-between">
-      <router-link :to="{ name: authStore.isLoggedIn ? 'mis-quinielas' : 'llenar-quiniela' }" class="flex items-center gap-2 rounded-lg focus-visible:outline-offset-4">
+      <router-link :to="{ name: authStore.isLoggedIn ? 'mis-quinielas' : 'inicio' }" class="flex items-center gap-2 rounded-lg focus-visible:outline-offset-4">
         <img src="@assets/logo.png" alt="Quinielas JR" class="h-8 w-8 rounded-full" />
         <span class="font-bold">Quinielas JR</span>
       </router-link>
 
       <div class="hidden items-center gap-2 text-sm md:flex">
         <template v-if="authStore.isLoggedIn">
+          <router-link :to="{ name: 'inicio' }" class="nav-link">Inicio</router-link>
           <router-link :to="{ name: 'mis-quinielas' }" class="nav-link">Mis quinielas</router-link>
           <router-link :to="{ name: 'llenar-quiniela' }" class="nav-link">Jugar</router-link>
           <router-link :to="{ name: 'mi-cuenta' }" class="nav-link">Mi cuenta</router-link>
@@ -89,6 +90,7 @@ function cerrarMenu() {
     <div v-if="menuAbierto" id="menu-principal-movil" class="mx-auto mt-3 flex max-w-7xl flex-col gap-1 border-t border-white/20 pt-3 text-sm md:hidden">
       <template v-if="authStore.isLoggedIn">
         <p class="px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Mi cuenta</p>
+        <router-link :to="{ name: 'inicio' }" @click="cerrarMenu" class="mobile-nav-link">Inicio</router-link>
         <router-link :to="{ name: 'mis-quinielas' }" @click="cerrarMenu" class="mobile-nav-link">Mis quinielas</router-link>
         <router-link :to="{ name: 'llenar-quiniela' }" @click="cerrarMenu" class="mobile-nav-link">Llenar quiniela</router-link>
         <router-link :to="{ name: 'mi-cuenta' }" @click="cerrarMenu" class="mobile-nav-link">Mi cuenta</router-link>

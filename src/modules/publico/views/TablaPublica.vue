@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
@@ -10,7 +10,7 @@ import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
 const route = useRoute();
 const authStore = useAuthStore();
 const loginModalStore = useLoginModalStore();
-const jornadaId = route.params.jornadaId;
+const jornadaId = computed(() => route.params.jornadaId);
 const jornada = ref(null);
 const partidos = ref([]);
 const cargando = ref(true);
@@ -18,7 +18,7 @@ const error = ref('');
 const tablaPosiciones = ref(null);
 const actualizadoEl = ref(null);
 let intervalo;
-const bloqueada = computed(() => jornada.value && new Date(jornada.value.fecha_cierre) <= new Date());
+const bloqueada = computed(() => jornada.value && (jornada.value.estatus !== 'activa' || new Date(jornada.value.fecha_cierre) <= new Date()));
 const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => bloqueada.value || empezaronPartidos.value);
 
@@ -33,11 +33,11 @@ async function obtenerRankingPublico(jId) {
 }
 
 async function cargar() {
-  const { data: j, error: jornadaError } = await supabase.from('vista_jornada_publica').select('nombre, premio, fecha_cierre, estatus').eq('id', jornadaId).maybeSingle();
+  const { data: j, error: jornadaError } = await supabase.from('vista_jornada_publica').select('id, nombre, premio, fecha_cierre, estatus').eq('id', jornadaId.value).maybeSingle();
   if (jornadaError) throw jornadaError;
   if (!j) throw new Error('La jornada no existe o ya no está disponible.');
   jornada.value = j;
-  const { data: p, error: partidosError } = await supabase.from('partidos').select('*').eq('jornada_id', jornadaId).order('fecha_partido');
+  const { data: p, error: partidosError } = await supabase.from('partidos').select('id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial, cancelado').eq('jornada_id', jornadaId.value).order('fecha_partido');
   if (partidosError) throw partidosError;
   partidos.value = p ?? [];
 }
@@ -46,7 +46,7 @@ async function obtenerPronosticosPublicos(quinielaId) {
   const { data, error: queryError } = await supabase
     .from('vista_pronosticos_publicos')
     .select('partido_id, pronostico')
-    .eq('jornada_id', jornadaId)
+    .eq('jornada_id', jornadaId.value)
     .eq('quiniela_id', quinielaId);
   if (queryError) throw queryError;
   const porPartido = new Map((data ?? []).map((item) => [item.partido_id, item.pronostico]));
@@ -96,6 +96,7 @@ onMounted(() => {
   actualizar();
   intervalo = setInterval(actualizar, 30000);
 });
+watch(jornadaId, actualizar);
 onUnmounted(() => clearInterval(intervalo));
 </script>
 
@@ -106,7 +107,7 @@ onUnmounted(() => clearInterval(intervalo));
 
     <template v-else>
     <header class="rounded-2xl bg-quiniela-verdeOscuro p-5 text-center text-white shadow-lg sm:p-7">
-      <p class="text-xs font-bold uppercase tracking-[0.2em] text-green-200">Tabla general</p>
+      <p class="text-xs font-bold uppercase tracking-[0.2em] text-green-200">Resultados de la jornada</p>
       <h1 class="mt-1 text-3xl font-bold">{{ jornada?.nombre }}</h1>
       <div class="mx-auto mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2">
         <span class="text-sm text-green-100">Premio</span>
@@ -137,9 +138,9 @@ onUnmounted(() => clearInterval(intervalo));
           <div class="mb-1 flex items-center justify-between gap-2 text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ p.liga_nombre }}</span><span class="rounded-full px-2 py-1 font-bold" :class="p.cancelado ? 'bg-red-50 text-red-700' : p.resultado_oficial ? 'bg-green-50 text-quiniela-verde' : 'bg-gray-100'">{{ p.cancelado ? 'Cancelado' : p.resultado_oficial ? 'Finalizado' : 'Pendiente' }}</span></div>
           <p class="mb-3 text-center text-xs capitalize text-gray-400">{{ formatoFechaPartido(p.fecha_partido) }} · hora CDMX</p>
           <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-            <div class="min-w-0"><img v-if="p.logo_local" :src="p.logo_local" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_local }}</p></div>
+            <div class="min-w-0"><img v-if="p.logo_local" :src="p.logo_local" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_local }}</p></div>
             <span class="text-xs font-bold text-gray-400">VS</span>
-            <div class="min-w-0"><img v-if="p.logo_visitante" :src="p.logo_visitante" alt="" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_visitante }}</p></div>
+            <div class="min-w-0"><img v-if="p.logo_visitante" :src="p.logo_visitante" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_visitante }}</p></div>
           </div>
           <p v-if="!p.cancelado && p.resultado_oficial" class="mt-3 text-center text-sm font-semibold text-quiniela-verde">Ganador: {{ p.resultado_oficial === 'L' ? p.equipo_local : p.resultado_oficial === 'V' ? p.equipo_visitante : 'Empate' }}</p>
         </article>

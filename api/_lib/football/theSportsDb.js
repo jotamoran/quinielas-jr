@@ -36,7 +36,7 @@ function resultFromEvent(event) {
 
 async function request(endpoint) {
   const response = await fetch(`${API_BASE_URL}/${apiKey()}/${endpoint}`);
-  if (!response.ok) throw new Error(`TheSportsDB respondió ${response.status}`);
+  if (!response.ok) throw new Error(`El servicio de resultados respondió ${response.status}`);
   return response.json();
 }
 
@@ -52,7 +52,7 @@ export async function getFixtures({ league, from, to, round, season }) {
     const payload = await request(`eventsround.php?id=${encodeURIComponent(league)}&r=${encodeURIComponent(round)}&s=${encodeURIComponent(season)}`);
     const eventos = (payload.events ?? []).map(normalizeFixture);
     if (eventos.length <= 9) return eventos;
-    // Si TheSportsDB agrupa más de un torneo bajo el mismo string de temporada
+    // El servicio puede agrupar más de un torneo bajo el mismo string de temporada
     // (posible con Apertura+Clausura de Liga MX), una ronda puede traer el
     // doble de partidos. Nos quedamos con los 9 más cercanos a hoy — no
     // verificado en vivo todavía porque el Clausura no ha empezado.

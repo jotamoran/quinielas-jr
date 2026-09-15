@@ -8,6 +8,7 @@ import PasoPago from '../components/PasoPago.vue';
 import { calcularTiempoRestante, estaBloqueado } from '../utils/countdown';
 import { obtenerJornadaActiva, obtenerPartidos, crearQuiniela, guardarPredicciones, subirComprobante, notificarRegistro, aplicarCupon, obtenerDatosBancarios } from '../services/quinielasService';
 import { alertaError } from '@/lib/alertas';
+import { formatearFecha } from '@/lib/fechas';
 
 const router = useRouter();
 const route = useRoute();
@@ -25,7 +26,7 @@ const procesando = ref(false);
 const tiempoRestante = ref(null);
 let intervalo;
 
-const bloqueado = computed(() => jornada.value && estaBloqueado(jornada.value.fecha_cierre));
+const bloqueado = computed(() => Boolean(jornada.value && (jornada.value.estatus !== 'activa' || estaBloqueado(jornada.value.fecha_cierre) || tiempoRestante.value?.vencido)));
 const necesitaLogin = computed(() => !authStore.isLoggedIn);
 watch(necesitaLogin, (v) => {
   if (v && paso.value === 'pago') paso.value = 'pronosticos';
@@ -44,6 +45,7 @@ const colorContador = computed(() => ({ normal: 'bg-green-700', media: 'bg-amber
 const horasTotales = computed(() => (tiempoRestante.value?.dias ?? 0) * 24 + (tiempoRestante.value?.horas ?? 0));
 
 async function cargar() {
+  error.value = '';
   jornada.value = null;
   partidos.value = [];
   pronosticos.value = {};
@@ -105,15 +107,16 @@ watch(() => route.params.jornadaId, async () => { await cargar(); actualizarTiem
       </nav>
 
       <section v-if="paso !== 'confirmacion'" class="overflow-hidden rounded-2xl text-white shadow-lg" :class="colorContador">
-        <div class="p-4 text-center sm:p-6"><p class="text-sm font-bold uppercase tracking-[0.2em]">Cierre de quiniela</p><div v-if="tiempoRestante && !tiempoRestante.vencido" class="mt-3 flex items-start justify-center gap-3 sm:gap-6"><div><strong class="text-3xl tabular-nums sm:text-4xl">{{ String(horasTotales).padStart(2, '0') }}</strong><span class="block text-[10px] tracking-widest">HRS</span></div><span class="text-3xl">:</span><div><strong class="text-3xl tabular-nums sm:text-4xl">{{ String(tiempoRestante.minutos).padStart(2, '0') }}</strong><span class="block text-[10px] tracking-widest">MIN</span></div><span class="text-3xl">:</span><div><strong class="text-3xl tabular-nums sm:text-4xl">{{ String(tiempoRestante.segundos).padStart(2, '0') }}</strong><span class="block text-[10px] tracking-widest">SEG</span></div></div><p v-else class="mt-3 text-2xl font-bold">Cerrada</p><p class="mt-3 font-semibold">{{ jornada.nombre }}</p><p class="text-sm opacity-90">{{ new Date(jornada.fecha_cierre).toLocaleString('es-MX', { dateStyle: 'long', timeZone: 'America/Mexico_City' }) }}</p></div>
+        <div class="p-4 text-center sm:p-6"><p class="text-sm font-bold uppercase tracking-[0.2em]">Cierre de quiniela</p><div v-if="tiempoRestante && !tiempoRestante.vencido && jornada.estatus === 'activa'" class="mt-3 flex items-start justify-center gap-3 sm:gap-6"><div><strong class="text-3xl tabular-nums sm:text-4xl">{{ String(horasTotales).padStart(2, '0') }}</strong><span class="block text-[10px] tracking-widest">HRS</span></div><span class="text-3xl">:</span><div><strong class="text-3xl tabular-nums sm:text-4xl">{{ String(tiempoRestante.minutos).padStart(2, '0') }}</strong><span class="block text-[10px] tracking-widest">MIN</span></div><span class="text-3xl">:</span><div><strong class="text-3xl tabular-nums sm:text-4xl">{{ String(tiempoRestante.segundos).padStart(2, '0') }}</strong><span class="block text-[10px] tracking-widest">SEG</span></div></div><p v-else class="mt-3 text-2xl font-bold">Cerrada</p><p class="mt-3 font-semibold">{{ jornada.nombre }}</p><p class="text-sm opacity-90">{{ formatearFecha(jornada.fecha_cierre, { dateStyle: 'long', timeStyle: 'short' }) }} h CDMX</p></div>
       </section>
 
       <section v-if="paso === 'pronosticos'" class="space-y-4">
+        <div v-if="bloqueado" role="status" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center text-sm font-semibold text-amber-800">El registro ya cerró. Esta jornada solo está disponible para consulta.</div>
         <div v-if="necesitaLogin" class="rounded-2xl border border-quiniela-verde bg-green-50 p-4 text-center">
           <p class="mb-3 font-semibold text-quiniela-verdeOscuro">Regístrate o inicia sesión para llenar tu quiniela</p>
           <button type="button" @click="loginModalStore.abrir()" class="rounded-xl bg-quiniela-verde px-5 py-2.5 font-bold text-white">Iniciar sesión</button>
         </div>
-        <label class="block text-sm font-semibold text-gray-700">Nombre de tu entrada<input v-model="alias" placeholder="Ej. José #2" class="mt-1 w-full rounded-xl border-gray-300" :disabled="bloqueado || necesitaLogin" /></label>
+        <label class="block text-sm font-semibold text-gray-700">Nombre de tu entrada<input v-model="alias" placeholder="Ej. José #2" maxlength="40" class="mt-1 w-full rounded-xl border-gray-300" :disabled="bloqueado || necesitaLogin" /></label>
         <div class="grid gap-4"><TarjetaPartido v-for="partido in partidos" :key="partido.id" :partido="partido" v-model="pronosticos[partido.id]" :deshabilitado="bloqueado || necesitaLogin" /></div>
         <button :disabled="bloqueado || necesitaLogin || !completo || !alias.trim()" @click="paso = 'pago'" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white disabled:opacity-50">Continuar al pago</button>
         <p v-if="partidos.length !== 9" class="text-center text-sm text-amber-700">Esta jornada no contiene los 9 partidos requeridos.</p>

@@ -49,6 +49,27 @@ export async function listarJornadasAdmin() {
   return data ?? [];
 }
 
+export async function obtenerResumenCierreJornada(jornadaId) {
+  const [{ data: ranking, error: rankingError }, { data: cupon, error: cuponError }] = await Promise.all([
+    supabase.from('vista_ranking_jornada').select('quiniela_id, usuario_id, nombre_completo, alias, aciertos, posicion').eq('jornada_id', jornadaId).eq('posicion', 1).order('quiniela_id'),
+    supabase.from('cupones').select('codigo, usuario_id, correo_contacto, estatus').eq('jornada_origen_id', jornadaId).maybeSingle(),
+  ]);
+  if (rankingError) throw rankingError;
+  if (cuponError) throw cuponError;
+  const ids = [...new Set([...(ranking ?? []).map((fila) => fila.usuario_id), cupon?.usuario_id].filter(Boolean))];
+  let perfiles = [];
+  if (ids.length) {
+    const { data, error } = await supabase.from('perfiles').select('id, username').in('id', ids);
+    if (error) throw error;
+    perfiles = data ?? [];
+  }
+  const nombres = new Map(perfiles.map((perfil) => [perfil.id, perfil.username]));
+  return {
+    ganadores: (ranking ?? []).map((fila) => ({ ...fila, username: fila.usuario_id ? nombres.get(fila.usuario_id) : null })),
+    cupon: cupon ? { ...cupon, username: cupon.usuario_id ? nombres.get(cupon.usuario_id) : null } : null,
+  };
+}
+
 export async function actualizarPremioJornada(jornadaId, premio) {
   const { error } = await supabase.from('jornadas').update({ premio }).eq('id', jornadaId);
   if (error) throw error;

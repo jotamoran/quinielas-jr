@@ -1,7 +1,7 @@
 <script setup>
 import { nextTick, ref, onMounted } from 'vue';
 import { supabase } from '@/lib/supabase';
-import { cerrarJornada } from '../services/adminService';
+import { cerrarJornada, obtenerResumenCierreJornada } from '../services/adminService';
 import { alertaAdvertencia, alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
 const jornadas = ref([]);
@@ -9,6 +9,7 @@ const resultado = ref(null);
 const cargando = ref(false);
 const resumen = ref(null);
 const cerrandoId = ref(null);
+const cargandoJornadas = ref(true);
 
 async function cargar() {
   const { data, error } = await supabase.from('jornadas').select('id, nombre, estatus').not('estatus', 'in', '(finalizada,cancelada)');
@@ -22,6 +23,8 @@ async function cerrar(id) {
   cerrandoId.value = id;
   try {
     resultado.value = await cerrarJornada(id);
+    const resumenCierre = await obtenerResumenCierreJornada(id);
+    resultado.value = { ...resultado.value, resumenCierre };
     await cargar();
     if (resultado.value.avisos?.length) {
       await alertaAdvertencia('Jornada finalizada con avisos', 'Revisa el resumen para conocer las notificaciones que no pudieron completarse.');
@@ -39,14 +42,16 @@ async function cerrar(id) {
 }
 
 onMounted(async () => {
-  try { await cargar(); } catch (error) { await alertaError(error, 'No se pudieron cargar las jornadas'); }
+  try { await cargar(); } catch (error) { await alertaError(error, 'No se pudieron cargar las jornadas'); } finally { cargandoJornadas.value = false; }
 });
 </script>
 
 <template>
   <main class="page-shell max-w-3xl">
     <header><p class="eyebrow">Administración</p><h1 class="page-title">Cerrar jornada</h1><p class="page-description">Confirma primero los nueve resultados oficiales.</p></header>
-    <div v-for="j in jornadas" :key="j.id" class="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <p v-if="cargandoJornadas" class="rounded-2xl bg-white p-6 text-center text-sm text-gray-500" role="status">Cargando jornadas…</p>
+    <div v-else-if="!jornadas.length" class="empty-state">No hay jornadas listas para finalizar.</div>
+    <div v-else v-for="j in jornadas" :key="j.id" class="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <span>{{ j.nombre }} ({{ j.estatus }})</span>
       <button @click="cerrar(j.id)" :disabled="cargando" class="min-h-11 w-full rounded-xl bg-quiniela-dorado px-4 py-3 font-semibold text-quiniela-grisTexto disabled:opacity-60 sm:w-auto">
         {{ cerrandoId === j.id ? 'Finalizando jornada…' : 'Cerrar jornada y enviar resultados' }}
@@ -57,6 +62,10 @@ onMounted(async () => {
       <div class="mt-4 grid gap-3 sm:grid-cols-2">
         <div class="rounded-xl bg-green-50 p-4"><p class="text-sm text-gray-600">Ganadores</p><p class="text-2xl font-bold text-quiniela-verde">{{ resultado.ganadores?.length ?? 0 }}</p></div>
         <div class="rounded-xl bg-amber-50 p-4"><p class="text-sm text-gray-600">Cupón de consolación</p><p class="font-bold text-amber-800">{{ resultado.cuponGenerado ? 'Asignado' : resultado.peor ? 'Sin medio de contacto' : 'No aplica' }}</p></div>
+      </div>
+      <div v-if="resultado.resumenCierre" class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-xl bg-green-50 p-4"><p class="text-sm font-bold text-quiniela-verdeOscuro">Ganador(es)</p><ul class="mt-2 space-y-1 text-sm"><li v-for="ganador in resultado.resumenCierre.ganadores" :key="ganador.quiniela_id">{{ ganador.username ? `@${ganador.username}` : ganador.alias || ganador.nombre_completo || 'Registro presencial' }}</li></ul></div>
+        <div class="rounded-xl bg-amber-50 p-4"><p class="text-sm font-bold text-amber-800">Cupón</p><p class="mt-2 text-sm">{{ resultado.resumenCierre.cupon ? (resultado.resumenCierre.cupon.username ? `@${resultado.resumenCierre.cupon.username}` : resultado.resumenCierre.cupon.correo_contacto || 'Registro presencial') : 'No se asignó cupón.' }}</p></div>
       </div>
       <div v-if="resultado.avisos?.length" role="alert" class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
         <p class="font-bold">Revisa estos avisos</p>

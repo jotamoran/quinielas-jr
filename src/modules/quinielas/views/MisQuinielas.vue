@@ -151,6 +151,11 @@ onMounted(async () => {
     </div>
     <div v-if="!cargando && !quinielas.length" class="empty-state">Aún no has registrado una quiniela.</div>
 
+    <section v-if="jornadaActivaId && !tengoEntradaEnJornadaActiva && !bloqueada" class="flex flex-col gap-3 rounded-2xl border border-quiniela-verde bg-green-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div><p class="font-bold text-quiniela-verdeOscuro">La jornada está abierta</p><p class="text-sm text-gray-600">Todavía puedes registrar tu entrada.</p></div>
+      <router-link :to="{ name: 'llenar-quiniela', params: { jornadaId: jornadaActivaId } }" class="rounded-xl bg-quiniela-verde px-4 py-3 text-center font-bold text-white">Jugar esta jornada</router-link>
+    </section>
+
     <div v-if="jornadaActivaId && tengoEntradaEnJornadaActiva">
       <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones</h2>
       <TablaPosiciones :jornadaId="jornadaActivaId" :obtenerRankingFn="obtenerRanking" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />

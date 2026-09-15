@@ -1,6 +1,6 @@
 # Quinielas JR
 
-Plataforma de quinielas deportivas (Vue 3 + Tailwind + Vercel Functions + Supabase + TheSportsDB).
+Plataforma de quinielas deportivas (Vue 3 + Tailwind + Vercel Functions + Supabase).
 
 ## Desarrollo local
 

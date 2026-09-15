@@ -4,21 +4,21 @@
 
 /* ====== FUENTES ====== */
 @font-face {
-    font-family: 'Regular';
+    font-family: 'Inter';
     font-style: normal;
     font-weight: 400;
     src: url('./assets/fonts/Inter_24pt-Regular.ttf') format('truetype');
 }
 
 @font-face {
-    font-family: 'SemiBold';
+    font-family: 'Inter';
     font-style: normal;
     font-weight: 600;
     src: url('./assets/fonts/Inter_24pt-SemiBold.ttf') format('truetype');
 }
 
 @font-face {
-    font-family: 'Bold';
+    font-family: 'Inter';
     font-style: normal;
     font-weight: 700;
     src: url('./assets/fonts/Inter_24pt-Bold.ttf') format('truetype');
@@ -26,7 +26,7 @@
 
 /* ====== BASE ====== */
 body {
-    font-family: 'Regular', sans-serif;
+    font-family: 'Inter', sans-serif;
     color: #1a1a1a;
     min-width: 320px;
     background: #f2f2f2;
@@ -35,6 +35,8 @@ body {
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button { min-height: 44px; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(255, 184, 12, 0.55); outline-offset: 2px; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
 
 @layer components {
     .page-shell { @apply mx-auto w-full space-y-6 px-4 py-5 sm:px-6 sm:py-7 lg:px-8; }
@@ -118,9 +120,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     text-decoration: none;
 }
 
-.swal-sobre-modal {
+    .swal-sobre-modal {
     z-index: 99999 !important;
-    font-family: 'Regular', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 .swal-responsive {

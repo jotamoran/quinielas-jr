@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
     const key = process.env.SPORTSDB_API_KEY || '123';
     const response = await fetch(`https://www.thesportsdb.com/api/v1/json/${key}/searchteams.php?t=${encodeURIComponent(search)}`);
-    if (!response.ok) throw new Error(`TheSportsDB respondió ${response.status}`);
+    if (!response.ok) throw new Error(`El servicio de equipos respondió ${response.status}`);
     const payload = await response.json();
     const teams = (payload.teams ?? [])
       .filter((team) => !team.strSport || team.strSport === 'Soccer')
