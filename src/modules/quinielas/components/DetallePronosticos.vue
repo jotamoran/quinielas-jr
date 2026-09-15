@@ -31,7 +31,7 @@ function fechaPartido(fecha) {
           <p class="min-w-0 truncate font-semibold" :title="`${detalle.equipo_local} vs ${detalle.equipo_visitante}`">{{ detalle.equipo_local }} vs {{ detalle.equipo_visitante }}</p>
           <img v-if="detalle.logo_visitante" :src="detalle.logo_visitante" alt="" loading="lazy" decoding="async" class="h-5 w-5 shrink-0 object-contain" /><span v-else class="h-5 w-5 shrink-0 rounded-full bg-gray-100"></span>
         </div>
-        <p v-if="detalle.fecha_partido" class="truncate pl-5 text-[11px] capitalize text-gray-400">{{ fechaPartido(detalle.fecha_partido) }} · hora CDMX</p>
+        <p class="truncate pl-5 text-[11px] capitalize text-gray-400">{{ detalle.fecha_partido ? `${fechaPartido(detalle.fecha_partido)} · hora CDMX` : '' }}<span v-if="detalle.puntos_local != null || detalle.puntos_visitante != null" class="font-bold text-quiniela-verdeOscuro"> · {{ detalle.puntos_local ?? '—' }} - {{ detalle.puntos_visitante ?? '—' }}</span></p>
       </div>
       <span class="shrink-0 rounded-full px-2 py-1 text-xs font-bold" :class="esAcierto(detalle) ? 'bg-green-100 text-green-700' : esFallo(detalle) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'">{{ esAcierto(detalle) ? '✓ ' : esFallo(detalle) ? '✗ ' : '' }}{{ detalle.cancelado ? 'Cancelado' : etiquetaPronostico(detalle.pronostico) }}</span>
     </div>

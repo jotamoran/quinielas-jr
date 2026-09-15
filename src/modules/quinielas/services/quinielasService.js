@@ -91,7 +91,7 @@ export async function obtenerRanking(jornadaId) {
 export async function obtenerPronosticosDeQuiniela(quinielaId) {
   const { data, error } = await supabase
     .from('predicciones')
-    .select('partido_id, pronostico, partidos(equipo_local, equipo_visitante, logo_local, logo_visitante, resultado_oficial, cancelado, fecha_partido)')
+    .select('partido_id, pronostico, partidos(equipo_local, equipo_visitante, logo_local, logo_visitante, resultado_oficial, estado, puntos_local, puntos_visitante, cancelado, fecha_partido)')
     .eq('quiniela_id', quinielaId);
   if (error) throw error;
   return (data ?? [])
@@ -105,13 +105,16 @@ export async function obtenerPronosticosDeQuiniela(quinielaId) {
       logo_visitante: item.partidos?.logo_visitante,
       pronostico: item.pronostico,
       resultado_oficial: item.partidos?.resultado_oficial,
+      estado: item.partidos?.estado,
+      puntos_local: item.partidos?.puntos_local,
+      puntos_visitante: item.partidos?.puntos_visitante,
       cancelado: item.partidos?.cancelado ?? false,
       fecha_partido: item.partidos?.fecha_partido,
     }));
 }
 
 export async function obtenerQuinielaParaEditar(quinielaId) {
-  const { data, error } = await supabase.from('quinielas').select('id, jornada_id, alias, jornadas(id, nombre, fecha_cierre, estatus), predicciones(partido_id, pronostico, partidos(id, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, cancelado))').eq('id', quinielaId).single();
+  const { data, error } = await supabase.from('quinielas').select('id, jornada_id, alias, jornadas(id, nombre, fecha_cierre, estatus), predicciones(partido_id, pronostico, partidos(id, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, estado, puntos_local, puntos_visitante, cancelado))').eq('id', quinielaId).single();
   if (error) throw error;
   return data;
 }

@@ -37,7 +37,7 @@ async function cargar() {
   if (jornadaError) throw jornadaError;
   if (!j) throw new Error('La jornada no existe o ya no está disponible.');
   jornada.value = j;
-  const { data: p, error: partidosError } = await supabase.from('partidos').select('id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial, cancelado').eq('jornada_id', jornadaId.value).order('fecha_partido');
+  const { data: p, error: partidosError } = await supabase.from('partidos').select('id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial, estado, puntos_local, puntos_visitante, actualizado_el, cancelado').eq('jornada_id', jornadaId.value).order('fecha_partido');
   if (partidosError) throw partidosError;
   partidos.value = p ?? [];
 }
@@ -58,6 +58,9 @@ async function obtenerPronosticosPublicos(quinielaId) {
     logo_visitante: partido.logo_visitante,
     pronostico: porPartido.get(partido.id),
     resultado_oficial: partido.resultado_oficial,
+    estado: partido.estado,
+    puntos_local: partido.puntos_local,
+    puntos_visitante: partido.puntos_visitante,
     cancelado: partido.cancelado,
     fecha_partido: partido.fecha_partido,
   }));
@@ -135,11 +138,11 @@ onUnmounted(() => clearInterval(intervalo));
       <div><p class="eyebrow">Seguimiento</p><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">Resultados al momento</h2></div>
       <div class="grid gap-3 sm:grid-cols-2">
         <article v-for="(p, index) in partidos" :key="p.id" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div class="mb-1 flex items-center justify-between gap-2 text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ p.liga_nombre }}</span><span class="rounded-full px-2 py-1 font-bold" :class="p.cancelado ? 'bg-red-50 text-red-700' : p.resultado_oficial ? 'bg-green-50 text-quiniela-verde' : 'bg-gray-100'">{{ p.cancelado ? 'Cancelado' : p.resultado_oficial ? 'Finalizado' : 'Pendiente' }}</span></div>
+          <div class="mb-1 flex items-center justify-between gap-2 text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ p.liga_nombre }}</span><span class="rounded-full px-2 py-1 font-bold" :class="p.cancelado ? 'bg-red-50 text-red-700' : p.estado === 'en_vivo' ? 'bg-red-100 text-red-700' : p.estado === 'finalizado' || p.resultado_oficial ? 'bg-green-50 text-quiniela-verde' : 'bg-gray-100 text-gray-600'">{{ p.cancelado ? 'Cancelado' : p.estado === 'en_vivo' ? 'En vivo' : p.estado === 'finalizado' || p.resultado_oficial ? 'Finalizado' : 'Pendiente' }}</span></div>
           <p class="mb-3 text-center text-xs capitalize text-gray-400">{{ formatoFechaPartido(p.fecha_partido) }} · hora CDMX</p>
           <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
             <div class="min-w-0"><img v-if="p.logo_local" :src="p.logo_local" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_local }}</p></div>
-            <span class="text-xs font-bold text-gray-400">VS</span>
+            <span v-if="p.puntos_local != null || p.puntos_visitante != null" class="text-lg font-bold tabular-nums text-quiniela-verdeOscuro">{{ p.puntos_local ?? '—' }} - {{ p.puntos_visitante ?? '—' }}</span><span v-else class="text-xs font-bold text-gray-400">VS</span>
             <div class="min-w-0"><img v-if="p.logo_visitante" :src="p.logo_visitante" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_visitante }}</p></div>
           </div>
           <p v-if="!p.cancelado && p.resultado_oficial" class="mt-3 text-center text-sm font-semibold text-quiniela-verde">Ganador: {{ p.resultado_oficial === 'L' ? p.equipo_local : p.resultado_oficial === 'V' ? p.equipo_visitante : 'Empate' }}</p>
