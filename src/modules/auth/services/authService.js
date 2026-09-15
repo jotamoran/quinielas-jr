@@ -10,7 +10,19 @@ export async function registrar({ email, password, nombreCompleto, username }) {
 }
 
 export async function verificarCodigo({ email, codigo }) {
-  const { error } = await supabase.auth.verifyOtp({ email, token: codigo, type: 'signup' });
+  const token = String(codigo ?? '').replace(/\D/g, '');
+  if (!/^\d{6}$/.test(token)) throw new Error('El código debe tener exactamente 6 dígitos.');
+  const respuesta = await fetch('/api/auth/verificar-codigo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), codigo: token }) });
+  const datos = await respuesta.json();
+  if (!respuesta.ok) throw new Error(datos.error ?? 'No se pudo verificar el código');
+  if (datos.access_token && datos.refresh_token) {
+    const { error } = await supabase.auth.setSession({ access_token: datos.access_token, refresh_token: datos.refresh_token });
+    if (error) throw error;
+  }
+}
+
+export async function reenviarCodigo(email) {
+  const { error } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
   if (error) throw error;
 }
 

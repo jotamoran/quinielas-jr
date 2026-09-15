@@ -48,6 +48,7 @@ const tengoEntradaEnJornadaActiva = computed(() => quinielas.value.some((q) => q
 const bloqueada = computed(() => jornadaActiva.value && new Date(jornadaActiva.value.fecha_cierre) <= new Date());
 const empezaronPartidos = computed(() => partidosJornadaActiva.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => bloqueada.value || empezaronPartidos.value);
+function puedeEditar(quiniela) { return quiniela.jornadas?.estatus === 'activa' && new Date(quiniela.jornadas.fecha_cierre) > new Date(); }
 
 async function obtenerPronosticosPublicos(quinielaId) {
   const { data, error: queryError } = await supabase
@@ -111,6 +112,7 @@ onMounted(async () => {
         <p v-if="q.estatus_pago !== 'aprobado'" class="mt-2 text-xs text-amber-700">No estás participando todavía — falta confirmar tu pago.</p>
         <p class="mt-4 border-t pt-3 text-sm"><span class="text-gray-500">Aciertos:</span> <strong class="text-quiniela-verde">{{ q.aciertos }}</strong></p>
         <button type="button" @click="alternarDetalleEntrada(q)" class="mt-3 w-full rounded-lg border border-gray-200 py-2 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button>
+        <router-link v-if="puedeEditar(q)" :to="{ name: 'editar-quiniela', params: { quinielaId: q.id } }" class="mt-2 block w-full rounded-lg border border-quiniela-verde py-2 text-center text-xs font-semibold text-quiniela-verde">Editar pronósticos</router-link>
         <div v-if="abiertaEntrada === q.id" class="mt-3 border-t pt-3">
           <p v-if="cargandoEntrada === q.id" class="text-center text-sm text-gray-500">Cargando pronósticos…</p>
           <p v-else-if="errorEntrada[q.id]" class="text-center text-sm text-red-600">{{ errorEntrada[q.id] }}</p>
@@ -136,7 +138,7 @@ onMounted(async () => {
               <td class="px-4 py-2">{{ q.alias }}</td>
               <td class="px-4 py-2">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}<span v-if="q.estatus_pago !== 'aprobado'" class="ml-2 text-xs text-amber-700">(no participa todavía)</span></td>
               <td class="px-4 py-2 text-right">{{ q.aciertos }}</td>
-              <td class="px-4 py-2 text-right"><button type="button" @click="alternarDetalleEntrada(q)" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button></td>
+              <td class="px-4 py-2 text-right"><div class="flex justify-end gap-2"><button type="button" @click="alternarDetalleEntrada(q)" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button><router-link v-if="puedeEditar(q)" :to="{ name: 'editar-quiniela', params: { quinielaId: q.id } }" class="rounded-lg border border-quiniela-verde px-3 py-1.5 text-xs font-semibold text-quiniela-verde">Editar</router-link></div></td>
             </tr>
             <tr v-if="abiertaEntrada === q.id" class="border-b bg-gray-50">
               <td colspan="5" class="p-4">

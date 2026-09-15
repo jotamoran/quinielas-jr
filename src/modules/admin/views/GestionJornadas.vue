@@ -122,6 +122,10 @@ async function agregarPartidoManual() {
     await alertaError(new Error('Selecciona una fecha y hora futura.'), 'Fecha no válida');
     return;
   }
+  if (local.name.trim().toLowerCase() === visitante.name.trim().toLowerCase()) {
+    await alertaError(new Error('El equipo local y visitante deben ser distintos.'), 'Partido no válido');
+    return;
+  }
   if (completo.value) {
     await alertaError(new Error('Deselecciona uno para poder cambiarlo.'), 'Ya seleccionaste 9 partidos');
     return;
@@ -139,15 +143,36 @@ async function agregarPartidoManual() {
 }
 
 async function guardarJornada() {
-  if (!completo.value) return;
+  if (!completo.value) {
+    await alertaError(new Error(`Selecciona los ${MAX_PARTIDOS} partidos requeridos.`), 'Jornada incompleta');
+    return;
+  }
+  if (!nombreJornada.value.trim()) {
+    await alertaError(new Error('Escribe un nombre para identificar la jornada.'), 'Falta el nombre');
+    return;
+  }
+  if (!Number.isFinite(Number(costo.value)) || Number(costo.value) < 0 || !Number.isFinite(Number(premio.value)) || Number(premio.value) < 0) {
+    await alertaError(new Error('Costo y premio deben ser cantidades iguales o mayores a cero.'), 'Importes no válidos');
+    return;
+  }
   if (fechaCierre.value < hoy) {
     await alertaError(new Error('Selecciona hoy o una fecha posterior.'), 'Fecha de cierre no válida');
+    return;
+  }
+  const equipos = seleccionados.value.flatMap((partido) => [partido.teams.home.name.trim().toLowerCase(), partido.teams.away.name.trim().toLowerCase()]);
+  if (new Set(equipos).size !== equipos.length) {
+    await alertaError(new Error('Hay un equipo repetido entre los partidos seleccionados.'), 'Equipos duplicados');
     return;
   }
   cargando.value = true;
   accionEnCurso.value = 'publicar';
   try {
     const cierreIso = fechaCDMXaISO(fechaCierre.value);
+    const primerPartido = Math.min(...seleccionados.value.map((partido) => new Date(partido.fixture.date).getTime()));
+    if (new Date(cierreIso).getTime() >= primerPartido) {
+      await alertaError(new Error('El cierre debe ser anterior al inicio del primer partido.'), 'Fecha de cierre no válida');
+      return;
+    }
     await crearJornada({ nombre: nombreJornada.value, costo: costo.value, premio: premio.value, fechaCierre: cierreIso, partidosSeleccionados: seleccionados.value });
     await alertaExito('Jornada publicada', 'Los 9 partidos ya están disponibles para los participantes.');
     seleccionados.value = [];

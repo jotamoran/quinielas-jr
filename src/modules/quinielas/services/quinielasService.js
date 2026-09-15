@@ -71,7 +71,7 @@ export async function obtenerMisQuinielas() {
   const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from('quinielas')
-    .select('id, jornada_id, alias, estatus_pago, metodo_pago, monto_pagado, aciertos, creado_el, jornadas(nombre)')
+    .select('id, jornada_id, alias, estatus_pago, metodo_pago, monto_pagado, aciertos, creado_el, jornadas(nombre, fecha_cierre, estatus)')
     .eq('usuario_id', user.id)
     .order('creado_el', { ascending: false });
   if (error) throw error;
@@ -108,6 +108,19 @@ export async function obtenerPronosticosDeQuiniela(quinielaId) {
       cancelado: item.partidos?.cancelado ?? false,
       fecha_partido: item.partidos?.fecha_partido,
     }));
+}
+
+export async function obtenerQuinielaParaEditar(quinielaId) {
+  const { data, error } = await supabase.from('quinielas').select('id, jornada_id, alias, jornadas(id, nombre, fecha_cierre, estatus), predicciones(partido_id, pronostico, partidos(id, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, cancelado))').eq('id', quinielaId).single();
+  if (error) throw error;
+  return data;
+}
+
+export async function actualizarPredicciones(quinielaId, predicciones) {
+  for (const prediccion of predicciones) {
+    const { error } = await supabase.from('predicciones').update({ pronostico: prediccion.pronostico }).eq('quiniela_id', quinielaId).eq('partido_id', prediccion.partidoId);
+    if (error) throw error;
+  }
 }
 
 export async function obtenerDatosBancarios() {

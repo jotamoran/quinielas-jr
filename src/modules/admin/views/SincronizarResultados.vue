@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { supabase } from '@/lib/supabase';
 import { guardarResultadosManuales, sincronizarResultados } from '../services/adminService';
 import { alertaAdvertencia, alertaError, alertaExito } from '@/lib/alertas';
@@ -14,6 +14,7 @@ const cargando = ref(false);
 const cargandoInicial = ref(true);
 const accionEnCurso = ref('');
 const opciones = [{ value: 'L', label: 'Local' }, { value: 'E', label: 'Empate' }, { value: 'V', label: 'Visita' }];
+const cambiosPendientes = computed(() => partidos.value.filter((p) => resultados.value[p.id] && resultados.value[p.id] !== p.resultado_oficial));
 
 async function cargar() {
   const { data, error: queryError } = await supabase.from('jornadas').select('id, nombre, estatus').not('estatus', 'in', '(finalizada,cancelada)').order('creado_el', { ascending: false });
@@ -105,7 +106,8 @@ onMounted(async () => {
         </article>
       </section>
 
-      <button @click="guardarManuales" :disabled="cargando" class="sticky bottom-3 w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white shadow-lg disabled:opacity-50">{{ accionEnCurso === 'guardar' ? 'Guardando…' : 'Guardar resultados manuales' }}</button>
+      <div v-if="cambiosPendientes.length" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><p class="font-bold">Vista previa</p><p class="mt-1">Se actualizarán {{ cambiosPendientes.length }} resultado(s): {{ cambiosPendientes.map((p) => `${p.equipo_local}–${p.equipo_visitante}`).join(', ') }}.</p></div>
+      <button @click="guardarManuales" :disabled="cargando || !cambiosPendientes.length" class="sticky bottom-3 w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white shadow-lg disabled:opacity-50">{{ accionEnCurso === 'guardar' ? 'Guardando…' : 'Guardar resultados manuales' }}</button>
     </template>
   </main>
 </template>

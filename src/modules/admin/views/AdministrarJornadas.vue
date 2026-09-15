@@ -19,6 +19,7 @@ const hoy = hoyParaInput();
 const resumenCierre = ref(null);
 const cargandoResumen = ref(false);
 const errorResumen = ref('');
+const resumenAdmin = computed(() => ({ activas: jornadas.value.filter((j) => j.estatus === 'activa').length, pendientes: jornadas.value.reduce((total, j) => total + (j.partidos ?? []).filter((p) => !p.cancelado && !p.resultado_oficial).length, 0), finalizadas: jornadas.value.filter((j) => j.estatus === 'finalizada').length }));
 
 const jornadasOrdenadas = computed(() => [...jornadas.value].sort((a, b) => {
   const prioridad = { activa: 0, borrador: 1, cerrada: 2, finalizada: 3 };
@@ -250,6 +251,8 @@ onMounted(async () => {
       <h1 class="page-title">Jornadas</h1>
       <p class="page-description">Consulta partidos, administra el premio y comparte cada jornada.</p>
     </header>
+
+    <div v-if="!cargando && jornadas.length" class="grid grid-cols-3 gap-3" aria-label="Resumen de jornadas"><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Activas</p><p class="mt-1 text-2xl font-bold text-quiniela-verde">{{ resumenAdmin.activas }}</p></div><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Resultados pendientes</p><p class="mt-1 text-2xl font-bold text-amber-600">{{ resumenAdmin.pendientes }}</p></div><div class="rounded-2xl bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">Finalizadas</p><p class="mt-1 text-2xl font-bold text-gray-700">{{ resumenAdmin.finalizadas }}</p></div></div>
 
     <EsqueletoCarga v-if="cargando" :cantidad="4" />
     <div v-else-if="!jornadas.length" class="empty-state">Todavía no hay jornadas creadas.</div>
