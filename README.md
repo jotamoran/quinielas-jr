@@ -24,5 +24,6 @@ Las pruebas SQL (`supabase/tests/*.test.sql`) se corren con `psql "$(npx supabas
 
 1. Importa el repo en Vercel.
 2. Configura las variables de entorno de `.env.example` (las `VITE_*` y las privadas del servidor) en el proyecto de Vercel.
-3. Deploy — `vercel.json` ya define el rewrite SPA y las funciones de `/api`.
+3. Define `CRON_SECRET` con un valor aleatorio; Vercel lo enviará al cron que actualiza resultados cada 15 minutos.
+4. Deploy — `vercel.json` ya define el rewrite SPA, las funciones de `/api` y la tarea programada.
 

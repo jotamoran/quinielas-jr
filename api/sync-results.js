@@ -10,6 +10,10 @@ export default async function handler(req, res) {
     if (!jornadaId) return res.status(400).json({ error: 'Falta jornada_id' });
 
     const supabase = getSupabaseAdmin();
+    const { data: jornada, error: jornadaError } = await supabase.from('jornadas').select('estatus').eq('id', jornadaId).maybeSingle();
+    if (jornadaError) throw jornadaError;
+    if (!jornada) return res.status(404).json({ error: 'La jornada no existe' });
+    if (['finalizada', 'cancelada'].includes(jornada.estatus)) return res.status(409).json({ error: 'La jornada ya es de solo consulta' });
     const { data: partidos, error } = await supabase
       .from('partidos')
       .select('id, external_fixture_id')

@@ -20,10 +20,11 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { data, error } = await supabase
         .from('quinielas')
-        .select('id, usuario_id, jornada_id, alias, correo_contacto, estatus_pago, metodo_pago, monto_pagado, aciertos, creado_el, origen, jornadas(nombre, costo), perfiles!quinielas_usuario_id_fkey(nombre_completo)')
+        .select('id, usuario_id, jornada_id, alias, correo_contacto, estatus_pago, metodo_pago, monto_pagado, aciertos, creado_el, origen, jornadas(nombre, costo, estatus), perfiles!quinielas_usuario_id_fkey(nombre_completo)')
         .order('creado_el', { ascending: false });
       if (error) throw error;
-      return res.status(200).json({ quinielas: data ?? [] });
+      const visibles = (data ?? []).filter((quiniela) => !['finalizada', 'cancelada'].includes(quiniela.jornadas?.estatus));
+      return res.status(200).json({ quinielas: visibles });
     }
 
     if (req.method === 'POST') {

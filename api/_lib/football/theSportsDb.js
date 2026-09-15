@@ -1,5 +1,7 @@
 const API_BASE_URL = 'https://www.thesportsdb.com/api/v1/json';
 const FINAL_STATUSES = new Set(['FT', 'AET', 'PEN', 'Match Finished']);
+const REQUEST_TIMEOUT_MS = 8000;
+const MAX_REINTENTOS = 2;
 
 function apiKey() {
   return process.env.SPORTSDB_API_KEY || '123';
@@ -35,9 +37,21 @@ function resultFromEvent(event) {
 }
 
 async function request(endpoint) {
-  const response = await fetch(`${API_BASE_URL}/${apiKey()}/${endpoint}`);
-  if (!response.ok) throw new Error(`El servicio de resultados respondió ${response.status}`);
-  return response.json();
+  let ultimoError;
+  for (let intento = 0; intento <= MAX_REINTENTOS; intento += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${API_BASE_URL}/${apiKey()}/${endpoint}`, { signal: controller.signal });
+      if (response.ok) return await response.json();
+      ultimoError = new Error(`El servicio de resultados respondió ${response.status}`);
+      if (response.status < 500 && response.status !== 429) throw ultimoError;
+    } catch (error) {
+      ultimoError = error.name === 'AbortError' ? new Error('El servicio de resultados tardó demasiado en responder') : error;
+    } finally { clearTimeout(timeout); }
+    if (intento < MAX_REINTENTOS) await new Promise((resolve) => setTimeout(resolve, 250 * (intento + 1)));
+  }
+  throw ultimoError ?? new Error('No se pudo consultar el servicio de resultados');
 }
 
 export function seasonRangeForDate(date) {

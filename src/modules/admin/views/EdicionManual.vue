@@ -32,7 +32,7 @@ async function cargar() {
     listarQuinielasAdmin(),
     supabase.from('jornadas').select('id, nombre, fecha_cierre').eq('estatus', 'activa').gt('fecha_cierre', new Date().toISOString()).order('fecha_cierre'),
   ]);
-  quinielas.value = entries.map((item) => ({ ...item, editando: false, aliasEditado: item.alias, correoEditado: item.correo_contacto ?? '', estatusEditado: item.estatus_pago }));
+  quinielas.value = entries.filter((item) => !['finalizada', 'cancelada'].includes(item.jornadas?.estatus)).map((item) => ({ ...item, editando: false, aliasEditado: item.alias, correoEditado: item.correo_contacto ?? '', estatusEditado: item.estatus_pago }));
   if (jornadasResult.error) throw jornadasResult.error;
   jornadas.value = jornadasResult.data ?? [];
 }

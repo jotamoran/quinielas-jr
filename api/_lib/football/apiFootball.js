@@ -1,5 +1,7 @@
 const API_BASE_URL = 'https://v3.football.api-sports.io';
 const FINAL_STATUSES = new Set(['FT', 'AET', 'PEN']);
+const REQUEST_TIMEOUT_MS = 8000;
+const MAX_REINTENTOS = 2;
 
 export function normalizeFixture(item) {
   return {
@@ -29,11 +31,23 @@ async function request(path, params) {
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value);
   });
-  const response = await fetch(url, { headers: { 'x-apisports-key': apiKey } });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(`API-Football respondió ${response.status}`);
-  if (payload.errors && Object.keys(payload.errors).length) throw new Error(`API-Football: ${Object.values(payload.errors).join(', ')}`);
-  return payload.response ?? [];
+  let ultimoError;
+  for (let intento = 0; intento <= MAX_REINTENTOS; intento += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, { headers: { 'x-apisports-key': apiKey }, signal: controller.signal });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(`El servicio de resultados respondió ${response.status}`);
+      if (payload.errors && Object.keys(payload.errors).length) throw new Error(`El servicio de resultados: ${Object.values(payload.errors).join(', ')}`);
+      return payload.response ?? [];
+    } catch (error) {
+      ultimoError = error.name === 'AbortError' ? new Error('El servicio de resultados tardó demasiado en responder') : error;
+      if (intento === MAX_REINTENTOS) throw ultimoError;
+      await new Promise((resolve) => setTimeout(resolve, 250 * (intento + 1)));
+    } finally { clearTimeout(timeout); }
+  }
+  throw ultimoError;
 }
 
 export async function getFixtures(params) {
