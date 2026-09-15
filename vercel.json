@@ -9,6 +9,6 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "crons": [
-    { "path": "/api/sync-results", "schedule": "*/15 * * * *" }
+    { "path": "/api/sync-results", "schedule": "0 12 * * *" }
   ]
 }
