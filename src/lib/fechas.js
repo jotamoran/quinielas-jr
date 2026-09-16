@@ -20,9 +20,7 @@ export function hoyParaInput() {
 }
 
 export function ahoraParaDatetimeInput() {
-  const ahora = new Date();
-  const partes = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_HORARIA, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(ahora).reduce((resultado, parte) => { resultado[parte.type] = parte.value; return resultado; }, {});
-  return `${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}`;
+  return fechaHoraParaInput(new Date());
 }
 
 export function fechaCDMXaISO(fecha, hora = '23:59:59') {

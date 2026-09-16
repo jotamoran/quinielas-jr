@@ -23,12 +23,13 @@ export default async function handler(req, res) {
     if (['finalizada', 'cancelada'].includes(jornada.estatus)) return res.status(409).json({ error: 'No se puede modificar una jornada finalizada o cancelada' });
     const { data: partidos, error: partidosError } = await supabase
       .from('partidos')
-      .select('id, cancelado')
+      .select('id, cancelado, estado')
       .eq('jornada_id', jornadaId)
       .in('id', ids);
     if (partidosError) throw partidosError;
     if (partidos.length !== ids.length) return res.status(400).json({ error: 'Uno o más partidos no pertenecen a la jornada' });
     if (partidos.some((partido) => partido.cancelado)) return res.status(409).json({ error: 'No se puede capturar resultado de un partido cancelado' });
+    if (partidos.some((partido) => partido.estado === 'finalizado')) return res.status(409).json({ error: 'Ese partido ya tiene un resultado finalizado' });
 
     for (const item of resultados) {
       const { error } = await supabase

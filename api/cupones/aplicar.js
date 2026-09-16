@@ -21,9 +21,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Cupón inválido o ya utilizado' });
     }
 
-    const { data: quiniela } = await supabaseAdmin.from('quinielas').select('usuario_id').eq('id', quiniela_id).single();
+    const { data: quiniela } = await supabaseAdmin.from('quinielas').select('usuario_id, estatus_pago, jornada_id').eq('id', quiniela_id).single();
     if (!quiniela || quiniela.usuario_id !== user.id) {
       return res.status(403).json({ error: 'La quiniela no te pertenece' });
+    }
+    if (quiniela.estatus_pago === 'aprobado') {
+      return res.status(400).json({ error: 'Esta quiniela ya está aprobada' });
+    }
+
+    const { data: jornada } = await supabaseAdmin.from('jornadas').select('estatus, fecha_cierre').eq('id', quiniela.jornada_id).single();
+    if (!jornada || jornada.estatus !== 'activa' || new Date(jornada.fecha_cierre) <= new Date()) {
+      return res.status(400).json({ error: 'El registro para esta jornada ya cerró' });
     }
 
     const { error: errorAprobarQuiniela } = await supabaseAdmin.from('quinielas').update({

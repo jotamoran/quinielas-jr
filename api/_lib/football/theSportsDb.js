@@ -46,14 +46,16 @@ async function request(endpoint) {
   for (let intento = 0; intento <= MAX_REINTENTOS; intento += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let noReintentar = false;
     try {
       const response = await fetch(`${API_BASE_URL}/${key}/${endpoint}`, { signal: controller.signal });
       if (response.ok) return await response.json();
       ultimoError = new Error(`El servicio de resultados respondió ${response.status}`);
-      if (response.status < 500 && response.status !== 429) throw ultimoError;
+      noReintentar = response.status < 500 && response.status !== 429;
     } catch (error) {
       ultimoError = error.name === 'AbortError' ? new Error('El servicio de resultados tardó demasiado en responder') : error;
     } finally { clearTimeout(timeout); }
+    if (noReintentar) throw ultimoError;
     if (intento < MAX_REINTENTOS) await new Promise((resolve) => setTimeout(resolve, 250 * (intento + 1)));
   }
   throw ultimoError ?? new Error('No se pudo consultar el servicio de resultados');

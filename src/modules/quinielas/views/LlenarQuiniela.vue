@@ -112,7 +112,7 @@ async function confirmarPago({ metodo, archivo, codigoCupon }) {
       metodoPago: metodo,
       montoPagado: metodo === 'cupon' ? 0 : jornada.value.costo,
       comprobanteUrl,
-      predicciones: Object.entries(pronosticos.value).map(([partidoId, pronostico]) => ({ partidoId, pronostico })),
+      predicciones: partidosActivos.value.map((partido) => ({ partidoId: partido.id, pronostico: pronosticos.value[partido.id] })),
       codigoCupon: metodo === 'cupon' ? codigoCupon : null,
     });
     let notificacionPendiente = false;
