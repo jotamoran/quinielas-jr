@@ -74,9 +74,16 @@ async function onGuardarPassword() {
 }
 
 async function onGuardarDatosBancarios() {
+  const bancoNormalizado = banco.value.trim();
+  const clabeNormalizada = clabe.value.replace(/\s/g, '');
+  const titularNormalizado = titular.value.trim();
+  if ((bancoNormalizado || clabeNormalizada || titularNormalizado) && (!bancoNormalizado || !titularNormalizado || !/^\d{18}$/.test(clabeNormalizada))) {
+    await alertaError(new Error('Captura banco, titular y una CLABE de 18 dígitos.'), 'Datos bancarios no válidos');
+    return;
+  }
   guardandoBanco.value = true;
   try {
-    await actualizarDatosBancarios({ banco: banco.value.trim(), clabe: clabe.value.trim(), titular: titular.value.trim() });
+    await actualizarDatosBancarios({ banco: bancoNormalizado, clabe: clabeNormalizada, titular: titularNormalizado });
     await alertaExito('Datos bancarios actualizados');
   } catch (e) {
     await alertaError(e, 'No se pudieron guardar los datos bancarios');
@@ -135,7 +142,7 @@ onMounted(async () => {
       <h2 class="font-bold text-quiniela-verdeOscuro">Datos bancarios</h2>
       <p class="text-sm text-gray-500">Se le muestran a quien registre una quiniela y elija pagar por transferencia.</p>
       <label class="form-label">Banco<input v-model="banco" type="text" class="form-control min-h-11" /></label>
-      <label class="form-label">CLABE<input v-model="clabe" type="text" inputmode="numeric" maxlength="18" class="form-control min-h-11" /></label>
+      <label class="form-label">CLABE<input v-model="clabe" type="text" inputmode="numeric" maxlength="18" pattern="\d{18}" class="form-control min-h-11" /><span class="mt-1 block text-xs font-normal text-gray-500">Debe contener exactamente 18 dígitos.</span></label>
       <label class="form-label">Titular / beneficiario<input v-model="titular" type="text" class="form-control min-h-11" /></label>
       <button type="submit" :disabled="guardandoBanco" class="min-h-11 w-full rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{{ guardandoBanco ? 'Guardando…' : 'Guardar datos bancarios' }}</button>
     </form>

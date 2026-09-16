@@ -156,7 +156,7 @@ onUnmounted(() => clearInterval(intervalo));
       </div>
       <p v-if="!partidos.length" class="empty-state">Esta jornada todavía no tiene partidos.</p>
     </section>
-    <p class="text-center text-xs text-gray-500">Actualización automática cada 30 segundos<span v-if="actualizadoEl"> · Última actualización: {{ formatoActualizacion(actualizadoEl) }} h CDMX</span>.</p>
+    <p class="text-center text-xs text-gray-500">Actualización automática cada 30 segundos<span v-if="actualizadoEl"> · Última actualización: {{ formatoActualizacion(actualizadoEl) }} · CDMX</span>.</p>
     </template>
   </main>
 </template>

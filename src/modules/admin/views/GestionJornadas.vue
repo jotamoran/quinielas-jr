@@ -199,7 +199,7 @@ onMounted(detectarProximaJornada);
 </script>
 
 <template>
-  <main class="mx-auto max-w-5xl space-y-6 px-4 py-5 pb-28 sm:px-6 lg:px-8">
+  <main class="mx-auto max-w-5xl space-y-6 px-4 py-5 sm:px-6 lg:px-8">
     <header>
       <p class="text-sm font-semibold uppercase tracking-widest text-quiniela-verde">Administración</p>
       <h1 class="text-3xl font-bold text-quiniela-verdeOscuro">Nueva quiniela</h1>
@@ -278,7 +278,7 @@ onMounted(detectarProximaJornada);
       <button @click="guardarJornada" :disabled="!nombreJornada || !fechaCierre || cargando" class="mt-5 w-full rounded-xl bg-quiniela-dorado py-3 font-bold text-quiniela-grisTexto disabled:opacity-50">{{ accionEnCurso === 'publicar' ? 'Publicando…' : 'Publicar jornada' }}</button>
     </section>
 
-    <div v-if="fixtures.length" class="fixed inset-x-0 bottom-0 z-20 border-t bg-white/95 p-3 shadow-2xl backdrop-blur sm:sticky sm:rounded-2xl sm:border">
+    <div v-if="fixtures.length" class="mt-4 border-t bg-white/95 p-3 shadow-2xl backdrop-blur sm:sticky sm:bottom-3 sm:rounded-2xl sm:border">
       <div class="mx-auto flex max-w-5xl items-center gap-4"><div class="flex-1"><p class="font-bold text-quiniela-verdeOscuro">{{ seleccionados.length }} de 9 seleccionados</p><div class="mt-1 h-2 overflow-hidden rounded-full bg-gray-200"><div class="h-full bg-quiniela-verde transition-all" :style="{ width: `${seleccionados.length / 9 * 100}%` }"></div></div></div><button :disabled="!completo || cargando" @click="irADatos" class="rounded-xl bg-quiniela-verde px-5 py-3 font-semibold text-white disabled:opacity-40">Continuar</button></div>
     </div>
   </main>
