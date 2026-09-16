@@ -32,3 +32,8 @@
 \ir migrations/0023_cancelar_jornada.sql
 \ir migrations/0024_seguridad_estatus_y_rol.sql
 \ir migrations/0025_corrige_trigger_rol.sql
+\ir migrations/0026_datos_bancarios.sql
+\ir migrations/0027_bloquear_jornadas_finalizadas.sql
+\ir migrations/0028_estado_marcador_partidos.sql
+\ir migrations/0029_registro_atomico_y_restricciones.sql
+\ir migrations/0030_integridad_operativa.sql

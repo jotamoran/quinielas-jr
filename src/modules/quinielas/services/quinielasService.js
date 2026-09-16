@@ -32,9 +32,11 @@ export async function obtenerPartidos(jornadaId) {
 
 export async function subirComprobante(archivo) {
   const { data: { user } } = await supabase.auth.getUser();
-  const extension = archivo.name.split('.').pop();
+  const extensiones = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' };
+  const extension = extensiones[archivo?.type];
+  if (!user || !extension || archivo.size > 8 * 1024 * 1024) throw new Error('El comprobante debe ser una imagen o PDF de máximo 8 MB.');
   const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
-  const { error } = await supabase.storage.from('comprobantes').upload(path, archivo);
+  const { error } = await supabase.storage.from('comprobantes').upload(path, archivo, { contentType: archivo.type, upsert: false });
   if (error) throw error;
   return path;
 }
@@ -116,10 +118,11 @@ export async function registrarQuiniela({ jornadaId, alias, metodoPago, montoPag
 }
 
 export async function actualizarPredicciones(quinielaId, predicciones) {
-  for (const prediccion of predicciones) {
-    const { error } = await supabase.from('predicciones').update({ pronostico: prediccion.pronostico }).eq('quiniela_id', quinielaId).eq('partido_id', prediccion.partidoId);
-    if (error) throw error;
-  }
+  const { error } = await supabase.rpc('actualizar_predicciones_atomica', {
+    p_quiniela_id: quinielaId,
+    p_predicciones: predicciones.map(({ partidoId, pronostico }) => ({ partido_id: partidoId, pronostico })),
+  });
+  if (error) throw error;
 }
 
 export async function obtenerDatosBancarios() {

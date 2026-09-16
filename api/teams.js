@@ -31,6 +31,8 @@ export default async function handler(req, res) {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido' });
     const search = String(req.query.search ?? '').trim();
     if (search.length < 2 || search.length > 80) return res.status(400).json({ error: 'Escribe al menos 2 caracteres' });
+    const key = process.env.SPORTSDB_API_KEY?.trim();
+    if (!key) throw new Error('Falta configurar SPORTSDB_API_KEY');
 
     let desdeCache = [];
     try {
@@ -42,7 +44,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ teams: desdeCache.map((e) => ({ id: e.id_externo ?? e.nombre, name: e.nombre, logo: e.logo })) });
     }
 
-    const key = process.env.SPORTSDB_API_KEY || '123';
     const payload = await buscarEquiposExternos(search, key);
     const teams = (payload.teams ?? [])
       .filter((team) => !team.strSport || team.strSport === 'Soccer')

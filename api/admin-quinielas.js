@@ -52,27 +52,15 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Los pronósticos no son válidos' });
       }
 
-      const pagada = estatus === 'aprobado';
-      const { data: quiniela, error: quinielaError } = await supabase.from('quinielas').insert({
-        usuario_id: null,
-        jornada_id: jornadaId,
-        alias: alias.trim(),
-        correo_contacto: correoContacto,
-        estatus_pago: estatus,
-        metodo_pago: 'efectivo',
-        monto_pagado: pagada ? jornada.costo : 0,
-        revisado_por: pagada ? user.id : null,
-        revisado_el: pagada ? new Date().toISOString() : null,
-        origen: 'manual_admin',
-      }).select().single();
+      const { data: quiniela, error: quinielaError } = await supabase.rpc('registrar_quiniela_presencial_atomica', {
+        p_admin_id: user.id,
+        p_jornada_id: jornadaId,
+        p_alias: alias,
+        p_correo_contacto: correoContacto,
+        p_estatus_pago: estatus,
+        p_predicciones: predicciones,
+      });
       if (quinielaError) throw quinielaError;
-
-      const rows = predicciones.map((item) => ({ quiniela_id: quiniela.id, partido_id: item.partido_id, pronostico: item.pronostico }));
-      const { error: predictionError } = await supabase.from('predicciones').insert(rows);
-      if (predictionError) {
-        await supabase.from('quinielas').delete().eq('id', quiniela.id);
-        throw predictionError;
-      }
       return res.status(201).json({ quiniela });
     }
 

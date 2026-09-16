@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { onUnmounted, ref, watch } from 'vue';
 import { buscarEquipos } from '../services/adminService';
 
 const props = defineProps({ modelValue: { type: Object, default: null }, label: { type: String, required: true } });
@@ -7,24 +7,48 @@ const emit = defineEmits(['update:modelValue']);
 const query = ref(props.modelValue?.name ?? '');
 const options = ref([]);
 const loading = ref(false);
+const error = ref('');
 const activo = ref(-1);
 let timer;
+let busquedaId = 0;
+let seleccionando = false;
 
 watch(() => props.modelValue, (value) => { if (value?.name !== query.value) query.value = value?.name ?? ''; });
 watch(query, (value) => {
   clearTimeout(timer);
+  if (seleccionando) {
+    seleccionando = false;
+    return;
+  }
+  const id = ++busquedaId;
+  error.value = '';
   if (value !== props.modelValue?.name) emit('update:modelValue', value.trim() ? { name: value, logo: null, manual: true } : null);
-  if (value.trim().length < 2) { options.value = []; activo.value = -1; return; }
+  if (value.trim().length < 2) { options.value = []; activo.value = -1; loading.value = false; return; }
   timer = setTimeout(async () => {
     loading.value = true;
-    try { options.value = (await buscarEquipos(value.trim())).teams; activo.value = -1; } catch { options.value = []; } finally { loading.value = false; }
+    try {
+      const respuesta = await buscarEquipos(value.trim());
+      if (id !== busquedaId) return;
+      options.value = respuesta.teams;
+      activo.value = -1;
+    } catch (e) {
+      if (id !== busquedaId) return;
+      options.value = [];
+      error.value = e.message || 'No se pudo buscar el equipo.';
+    } finally {
+      if (id === busquedaId) loading.value = false;
+    }
   }, 450);
 });
 
 function select(team) {
+  const mismoTexto = query.value === team.name;
+  seleccionando = true;
+  busquedaId += 1;
   query.value = team.name;
   options.value = [];
   emit('update:modelValue', team);
+  if (mismoTexto) seleccionando = false;
 }
 
 function navegar(evento) {
@@ -34,6 +58,8 @@ function navegar(evento) {
   if (evento.key === 'Enter' && activo.value >= 0) { evento.preventDefault(); select(options.value[activo.value]); }
   if (evento.key === 'Escape') { options.value = []; activo.value = -1; }
 }
+
+onUnmounted(() => { clearTimeout(timer); busquedaId += 1; });
 </script>
 
 <template>
@@ -43,6 +69,7 @@ function navegar(evento) {
     <ul v-if="options.length" role="listbox" class="absolute z-30 mt-1 max-h-52 w-full overflow-auto rounded-xl border bg-white p-1 shadow-xl">
       <li v-for="(team, index) in options" :key="team.id" :id="`equipo-opcion-${index}`" role="option" :aria-selected="activo === index"><button type="button" @click="select(team)" class="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-green-50" :class="activo === index ? 'bg-green-50' : ''"><img v-if="team.logo" :src="team.logo" alt="" loading="lazy" decoding="async" class="h-8 w-8 object-contain" /><span>{{ team.name }}</span></button></li>
     </ul>
-    <span v-if="query.length >= 2 && modelValue?.manual && !loading && !options.length" class="mt-1 block text-xs font-normal text-gray-500">Si no aparece, conserva el nombre escrito y se guardará sin escudo.</span>
+    <span v-if="error" role="alert" class="mt-1 block text-xs font-normal text-red-700">{{ error }}</span>
+    <span v-else-if="query.length >= 2 && modelValue?.manual && !loading && !options.length" class="mt-1 block text-xs font-normal text-gray-500">Si no aparece, conserva el nombre escrito y se guardará sin escudo.</span>
   </label>
 </template>

@@ -31,7 +31,7 @@ async function guardar() {
   if (bloqueada.value || !completo.value) return;
   guardando.value = true;
   try {
-    await actualizarPredicciones(entrada.value.id, Object.entries(pronosticos.value).map(([partidoId, pronostico]) => ({ partidoId, pronostico })));
+    await actualizarPredicciones(entrada.value.id, partidos.value.filter((partido) => !partido.cancelado).map((partido) => ({ partidoId: partido.id, pronostico: pronosticos.value[partido.id] })));
     original.value = { ...pronosticos.value };
     await alertaExito('Pronósticos actualizados');
     router.push({ name: 'mis-quinielas' });

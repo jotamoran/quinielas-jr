@@ -69,7 +69,10 @@ function cerrarMenu() {
           <div v-if="authStore.isAdmin" class="relative"><button type="button" @click="adminAbierto = !adminAbierto" class="nav-link flex min-h-11 items-center gap-1" :class="esRutaAdmin ? 'bg-white/15 text-white' : ''" :aria-expanded="adminAbierto" aria-haspopup="menu">Administración <span class="text-xs" aria-hidden="true">▾</span></button><div v-if="adminAbierto" role="menu" class="absolute right-0 mt-2 w-60 rounded-xl border border-gray-100 bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-administrar-jornadas', label: 'Ver jornadas' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" role="menuitem" @click="adminAbierto = false" class="block min-h-11 rounded-lg px-3 py-2.5 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
           <button @click="salir" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Salir</button>
         </template>
-        <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
+        <template v-else>
+          <router-link :to="{ name: 'registro' }" class="rounded-lg border border-white/50 px-3 py-2 font-semibold text-white">Crear cuenta</router-link>
+          <button type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
+        </template>
       </div>
 
       <!-- Botón hamburguesa en móvil -->
@@ -105,7 +108,10 @@ function cerrarMenu() {
         </template>
         <button @click="salir(); cerrarMenu()" class="mt-2 min-h-11 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Cerrar sesión</button>
       </template>
-      <button v-else type="button" @click="loginModalStore.abrir(); cerrarMenu()" class="mt-2 min-h-11 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
+      <template v-else>
+        <router-link :to="{ name: 'registro' }" @click="cerrarMenu" class="mobile-nav-link">Crear cuenta</router-link>
+        <button type="button" @click="loginModalStore.abrir(); cerrarMenu()" class="mt-2 min-h-11 rounded-lg bg-quiniela-dorado px-3 py-2 font-semibold text-quiniela-grisTexto">Iniciar sesión</button>
+      </template>
     </div>
   </nav>
 </template>

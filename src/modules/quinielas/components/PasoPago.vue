@@ -12,7 +12,7 @@ const valido = computed(() => metodo.value !== 'transferencia' || Boolean(archiv
 function onArchivo(evento) {
   const seleccionado = evento.target.files[0] ?? null;
   errorArchivo.value = '';
-  if (seleccionado && !(seleccionado.type.startsWith('image/') || seleccionado.type === 'application/pdf')) {
+  if (seleccionado && !['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(seleccionado.type)) {
     errorArchivo.value = 'El comprobante debe ser una imagen o un archivo PDF.';
     evento.target.value = '';
     archivo.value = null;
@@ -37,7 +37,7 @@ function confirmar() { if (valido.value && !props.procesando) emit('confirmar', 
     <div v-if="metodo === 'transferencia'" class="space-y-3">
       <p v-if="datosBancarios?.clabe" class="rounded-xl bg-quiniela-grisClaro p-3 text-sm">CLABE: {{ datosBancarios.clabe }}<br />Banco: {{ datosBancarios.banco }} · Beneficiario: {{ datosBancarios.titular }}</p>
       <p v-else class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Todavía no hay datos bancarios configurados. Contacta a quien organiza la quiniela.</p>
-      <label class="block text-sm font-semibold">Comprobante<input type="file" accept="image/*,application/pdf" @change="onArchivo" class="mt-1 block w-full text-sm" /><span class="mt-1 block text-xs font-normal text-gray-500">Imagen o PDF, máximo 8 MB.</span><span v-if="archivo" class="mt-1 block text-xs font-normal text-quiniela-verde">Archivo seleccionado: {{ archivo.name }}</span><span v-if="errorArchivo" role="alert" class="mt-1 block text-xs font-normal text-red-700">{{ errorArchivo }}</span></label>
+      <label class="block text-sm font-semibold">Comprobante<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" @change="onArchivo" class="mt-1 block w-full text-sm" /><span class="mt-1 block text-xs font-normal text-gray-500">JPG, PNG, WEBP o PDF, máximo 8 MB.</span><span v-if="archivo" class="mt-1 block text-xs font-normal text-quiniela-verde">Archivo seleccionado: {{ archivo.name }}</span><span v-if="errorArchivo" role="alert" class="mt-1 block text-xs font-normal text-red-700">{{ errorArchivo }}</span></label>
     </div>
     <p v-else-if="metodo === 'efectivo'" class="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Tu quiniela quedará pendiente hasta que el administrador confirme el pago.</p>
     <label v-else class="block text-sm font-semibold">Código de cupón<input v-model="codigoCupon" class="mt-1 w-full rounded-xl border-gray-300 uppercase" /></label>

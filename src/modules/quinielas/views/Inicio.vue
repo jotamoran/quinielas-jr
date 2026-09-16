@@ -1,8 +1,12 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useAuthStore } from '@/store/auth';
+import { useLoginModalStore } from '@/store/loginModal';
 import { obtenerJornadaActiva } from '../services/quinielasService';
 
 const jornada = ref(null);
+const authStore = useAuthStore();
+const loginModalStore = useLoginModalStore();
 onMounted(async () => {
   try { jornada.value = await obtenerJornadaActiva(null, { soloAbierta: true }); } catch { jornada.value = null; }
 });
@@ -17,7 +21,9 @@ onMounted(async () => {
       <div class="mt-7 flex flex-col gap-3 sm:flex-row">
         <router-link v-if="jornada" :to="{ name: 'llenar-quiniela', params: { jornadaId: jornada.id } }" class="rounded-xl bg-quiniela-dorado px-5 py-3 text-center font-bold text-quiniela-grisTexto">Llenar quiniela</router-link>
         <router-link v-else :to="{ name: 'llenar-quiniela' }" class="rounded-xl bg-quiniela-dorado px-5 py-3 text-center font-bold text-quiniela-grisTexto">Ver jornadas disponibles</router-link>
-        <router-link :to="{ name: 'mis-quinielas' }" class="rounded-xl border border-white/40 px-5 py-3 text-center font-bold text-white">Mis quinielas</router-link>
+        <router-link v-if="!authStore.isLoggedIn" :to="{ name: 'registro' }" class="rounded-xl border border-white/40 px-5 py-3 text-center font-bold text-white">Crear cuenta</router-link>
+        <router-link v-if="authStore.isLoggedIn" :to="{ name: 'mis-quinielas' }" class="rounded-xl border border-white/40 px-5 py-3 text-center font-bold text-white">Mis quinielas</router-link>
+        <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-xl border border-white/40 px-5 py-3 text-center font-bold text-white">Iniciar sesión</button>
       </div>
     </section>
     <section class="grid gap-4 sm:grid-cols-3" aria-label="Cómo participar">

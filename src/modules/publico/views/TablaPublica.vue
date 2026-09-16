@@ -19,6 +19,7 @@ const tablaPosiciones = ref(null);
 const actualizadoEl = ref(null);
 let intervalo;
 const esCancelada = computed(() => jornada.value?.estatus === 'cancelada');
+const esDefinitiva = computed(() => jornada.value?.estatus === 'finalizada');
 const bloqueada = computed(() => jornada.value && (jornada.value.estatus !== 'activa' || new Date(jornada.value.fecha_cierre) <= new Date()));
 const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => !esCancelada.value && (bloqueada.value || empezaronPartidos.value));
@@ -122,16 +123,18 @@ onUnmounted(() => clearInterval(intervalo));
       <p class="mt-4 text-sm text-green-100">Cierre de registro: {{ formatoFecha(jornada?.fecha_cierre) }}</p>
       <span v-if="jornada?.estatus !== 'cancelada'" class="mt-2 inline-block rounded-full px-3 py-1 text-xs font-bold" :class="bloqueada ? 'bg-white/15 text-white' : 'bg-green-200 text-quiniela-verdeOscuro'">{{ bloqueada ? 'Registro cerrado' : 'Registro abierto' }}</span>
       <p v-if="jornada?.estatus === 'cancelada'" role="alert" class="mt-3 rounded-xl bg-red-500/90 px-3 py-2 text-sm font-bold text-white">Esta jornada fue cancelada.</p>
+      <span v-else class="mt-2 inline-block rounded-full px-3 py-1 text-xs font-bold" :class="esDefinitiva ? 'bg-blue-100 text-blue-900' : 'bg-amber-100 text-amber-900'">{{ esDefinitiva ? 'Resultado definitivo' : 'Resultados provisionales' }}</span>
     </header>
 
     <section class="space-y-3">
       <div><p class="eyebrow">Clasificación</p><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">Tabla de posiciones</h2></div>
       <p v-if="!esCancelada && !bloqueada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Los pronósticos de cada participante estarán disponibles cuando cierre el registro.</p>
+      <p v-if="!esCancelada && !esDefinitiva" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">La clasificación puede cambiar mientras se actualizan los partidos. El resultado será definitivo cuando el administrador finalice la jornada.</p>
       <p v-if="!esCancelada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Solo aparecen aquí las quinielas con el pago confirmado. Si registraste una entrada y no aparece en la tabla, debes completar tu pago para participar.</p>
       <div v-if="!bloqueada && jornada?.estatus !== 'cancelada'" class="flex flex-col items-start gap-2 rounded-xl border border-quiniela-verde bg-green-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-sm font-semibold text-quiniela-verdeOscuro">{{ authStore.isLoggedIn ? '¿Todavía no te registras?' : 'Inicia sesión para registrar una entrada' }}</p>
+        <p class="text-sm font-semibold text-quiniela-verdeOscuro">{{ authStore.isLoggedIn ? '¿Todavía no te registras?' : 'Crea tu cuenta o inicia sesión para registrar una entrada' }}</p>
         <router-link v-if="authStore.isLoggedIn" :to="{ name: 'llenar-quiniela', params: { jornadaId } }" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Registrar</router-link>
-        <button v-else type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Iniciar sesión</button>
+        <div v-else class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><router-link :to="{ name: 'registro' }" class="rounded-lg border border-quiniela-verde px-4 py-2 text-center text-sm font-bold text-quiniela-verde">Crear cuenta</router-link><button type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Iniciar sesión</button></div>
       </div>
       <TablaPosiciones v-if="!esCancelada" ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
       <p v-else class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">No hay clasificación ni pronósticos públicos porque esta jornada fue cancelada.</p>

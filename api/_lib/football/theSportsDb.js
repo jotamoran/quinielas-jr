@@ -1,10 +1,13 @@
 const API_BASE_URL = 'https://www.thesportsdb.com/api/v1/json';
-const FINAL_STATUSES = new Set(['FT', 'AET', 'PEN', 'Match Finished']);
+const FINAL_STATUSES = new Set(['ft', 'aet', 'pen', 'match finished', 'finished', 'complete']);
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_REINTENTOS = 2;
+const MAX_CONCURRENT_RESULTS = 4;
 
 function apiKey() {
-  return process.env.SPORTSDB_API_KEY || '123';
+  const key = process.env.SPORTSDB_API_KEY?.trim();
+  if (!key) throw new Error('Falta configurar SPORTSDB_API_KEY');
+  return key;
 }
 
 function normalizeFixture(event) {
@@ -27,7 +30,8 @@ export async function getNextRound(league) {
 }
 
 function resultFromEvent(event) {
-  if (!FINAL_STATUSES.has(event?.strStatus)) return null;
+  const status = String(event?.strStatus ?? '').trim().toLowerCase();
+  if (!FINAL_STATUSES.has(status)) return null;
   const home = Number(event.intHomeScore);
   const away = Number(event.intAwayScore);
   if (!Number.isFinite(home) || !Number.isFinite(away)) return null;
@@ -37,12 +41,13 @@ function resultFromEvent(event) {
 }
 
 async function request(endpoint) {
+  const key = apiKey();
   let ultimoError;
   for (let intento = 0; intento <= MAX_REINTENTOS; intento += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const response = await fetch(`${API_BASE_URL}/${apiKey()}/${endpoint}`, { signal: controller.signal });
+      const response = await fetch(`${API_BASE_URL}/${key}/${endpoint}`, { signal: controller.signal });
       if (response.ok) return await response.json();
       ultimoError = new Error(`El servicio de resultados respondió ${response.status}`);
       if (response.status < 500 && response.status !== 429) throw ultimoError;
@@ -83,11 +88,22 @@ export async function getFixtures({ league, from, to, round, season }) {
 }
 
 export async function getFinalResults(ids) {
+  apiKey();
   const results = new Map();
-  for (const id of ids) {
-    const payload = await request(`lookupevent.php?id=${encodeURIComponent(id)}`);
-    const event = payload.events?.[0];
-    results.set(String(id), resultFromEvent(event));
+  for (let inicio = 0; inicio < ids.length; inicio += MAX_CONCURRENT_RESULTS) {
+    const lote = ids.slice(inicio, inicio + MAX_CONCURRENT_RESULTS);
+    const respuestas = await Promise.allSettled(lote.map(async (id) => {
+      const payload = await request(`lookupevent.php?id=${encodeURIComponent(id)}`);
+      return [String(id), resultFromEvent(payload.events?.[0])];
+    }));
+    respuestas.forEach((respuesta, indice) => {
+      if (respuesta.status === 'fulfilled') {
+        const [id, resultado] = respuesta.value;
+        results.set(id, resultado);
+      } else {
+        results.set(String(lote[indice]), null);
+      }
+    });
   }
   return results;
 }
