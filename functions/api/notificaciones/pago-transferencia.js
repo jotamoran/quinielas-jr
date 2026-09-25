@@ -1,1 +1,4 @@
-import handler from '../../../api/notificaciones/pago-transferencia.js'; export { handler as onRequest };
+import handler from "../../../api/notificaciones/pago-transferencia.js";
+import { vercelAdapter } from "../../_lib/vercelAdapter.js";
+
+export const onRequest = vercelAdapter(handler);
