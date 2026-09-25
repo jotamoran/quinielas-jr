@@ -6,7 +6,7 @@ import { useLoginModalStore } from '@/store/loginModal';
 import TarjetaPartido from '../components/TarjetaPartido.vue';
 import PasoPago from '../components/PasoPago.vue';
 import { calcularTiempoRestante, estaBloqueado } from '../utils/countdown';
-import { obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela, registrarQuiniela, subirComprobante, eliminarComprobante, notificarRegistro, obtenerDatosBancarios } from '../services/quinielasService';
+import { obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela, registrarQuiniela, registrarQuinielasTransferencia, subirComprobante, eliminarComprobante, notificarRegistro, notificarPagoTransferencia, obtenerDatosBancarios } from "../services/quinielasService";
 import { alertaError, confirmarAccion } from '@/lib/alertas';
 import { formatearFecha } from '@/lib/fechas';
 
@@ -99,25 +99,44 @@ function actualizarTiempo() {
   if (jornada.value) tiempoRestante.value = calcularTiempoRestante(jornada.value.fecha_cierre);
 }
 
-async function confirmarPago({ metodo, archivo, codigoCupon }) {
+async function confirmarPago({ metodo, archivo, codigoCupon, cantidad = 1 }) {
   error.value = '';
   errorPago.value = '';
   procesando.value = true;
   let comprobanteUrl = null;
   try {
     if (metodo === 'transferencia' && archivo) comprobanteUrl = await subirComprobante(archivo);
-    const quiniela = await registrarQuiniela({
-      jornadaId: jornada.value.id,
-      alias: alias.value,
-      metodoPago: metodo,
-      montoPagado: metodo === 'cupon' ? 0 : jornada.value.costo,
-      comprobanteUrl,
-      predicciones: partidosActivos.value.map((partido) => ({ partidoId: partido.id, pronostico: pronosticos.value[partido.id] })),
-      codigoCupon: metodo === 'cupon' ? codigoCupon : null,
-    });
+    const prediccionesActuales = partidosActivos.value.map((partido) => ({ partidoId: partido.id, pronostico: pronosticos.value[partido.id] }));
+    const resultado = metodo === "transferencia"
+      ? await registrarQuinielasTransferencia({
+        jornadaId: jornada.value.id,
+        comprobanteUrl,
+        entradas: Array.from({ length: cantidad }, (_, indice) => ({
+          alias: cantidad > 1 ? `${alias.value} ${indice + 1}` : alias.value,
+          predicciones: prediccionesActuales,
+        })),
+      })
+      : await registrarQuiniela({
+        jornadaId: jornada.value.id,
+        alias: alias.value,
+        metodoPago: metodo,
+        montoPagado: metodo === "cupon" ? 0 : jornada.value.costo,
+        comprobanteUrl,
+        predicciones: prediccionesActuales,
+        codigoCupon: metodo === "cupon" ? codigoCupon : null,
+      });
     let notificacionPendiente = false;
-    try { await notificarRegistro(quiniela.id); } catch { notificacionPendiente = true; }
-    confirmacion.value = { alias: alias.value, jornada: jornada.value.nombre, notificacionPendiente };
+    try {
+      if (metodo === "transferencia") await notificarPagoTransferencia(resultado.pago_transferencia_id);
+      else await notificarRegistro({ quinielaId: resultado.id });
+    } catch { notificacionPendiente = true; }
+    confirmacion.value = {
+      alias: alias.value,
+      jornada: jornada.value.nombre,
+      cantidad: metodo === "transferencia" ? resultado.cantidad : 1,
+      montoTotal: metodo === "transferencia" ? resultado.monto_total : (metodo === "cupon" ? 0 : jornada.value.costo),
+      notificacionPendiente,
+    };
     paso.value = 'confirmacion';
   } catch (e) {
     if (comprobanteUrl) {
@@ -179,7 +198,7 @@ watch(() => route.params.jornadaId, async () => { await cargar(); actualizarTiem
       <section v-else-if="paso === 'resumen'" class="space-y-4"><button @click="paso = 'pronosticos'" class="text-sm font-semibold text-quiniela-verde">← Volver a pronósticos</button><article class="rounded-2xl bg-white p-5 shadow-sm sm:p-6"><div class="flex flex-col gap-1 border-b pb-4 sm:flex-row sm:items-end sm:justify-between"><div><p class="eyebrow">Resumen</p><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">{{ alias }}</h2><p class="text-sm text-gray-500">{{ jornada.nombre }}</p></div><span class="rounded-full bg-green-100 px-3 py-1 text-sm font-bold text-green-800">{{ partidosActivos.length }} de {{ partidosActivos.length }} seleccionados</span></div><ul class="mt-4 divide-y divide-gray-100"> <li v-for="partido in partidosActivos" :key="partido.id" class="flex items-center justify-between gap-3 py-3 text-sm"><span class="min-w-0 truncate font-semibold text-gray-700">{{ partido.equipo_local }} <span class="font-normal text-gray-400">vs</span> {{ partido.equipo_visitante }}</span><span class="shrink-0 rounded-full bg-green-50 px-2.5 py-1 font-bold text-quiniela-verde">{{ pronosticos[partido.id] === 'L' ? 'Local' : pronosticos[partido.id] === 'V' ? 'Visita' : 'Empate' }}</span></li></ul><dl class="mt-4 rounded-xl bg-gray-50 p-4 text-sm"><div class="flex justify-between gap-3"><dt class="text-gray-500">Costo</dt><dd class="font-bold">${{ Number(jornada.costo ?? 0).toLocaleString('es-MX') }}</dd></div><div class="mt-2 flex justify-between gap-3"><dt class="text-gray-500">Cierre</dt><dd class="text-right font-semibold">{{ formatearFecha(jornada.fecha_cierre, { dateStyle: 'medium', timeStyle: 'short' }) }} · CDMX</dd></div></dl></article><button @click="paso = 'pago'" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white">Continuar al pago</button></section>
       <section v-else-if="paso === 'pago'" class="space-y-3"><button @click="paso = 'resumen'" class="text-sm font-semibold text-quiniela-verde">← Volver al resumen</button><PasoPago :procesando="procesando" :datos-bancarios="datosBancarios" :error="errorPago" @confirmar="confirmarPago" /></section>
 
-      <section v-else class="rounded-2xl bg-white p-6 text-center shadow-sm sm:p-10"><div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-green-100 text-3xl">✓</div><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">¡Quiniela registrada!</h2><dl class="my-6 rounded-xl bg-gray-50 p-4 text-left"><div class="flex justify-between gap-4"><dt class="text-gray-500">Entrada</dt><dd class="font-semibold">{{ confirmacion.alias }}</dd></div><div class="mt-2 flex justify-between gap-4"><dt class="text-gray-500">Jornada</dt><dd class="font-semibold">{{ confirmacion.jornada }}</dd></div></dl><p v-if="confirmacion.notificacionPendiente" role="status" class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left text-sm text-amber-800">La entrada quedó registrada, pero no pudimos enviar el correo de confirmación.</p><button @click="router.push('/mis-quinielas')" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white">Ver mi quiniela</button><p v-if="!confirmacion.notificacionPendiente" class="mt-3 text-sm text-gray-500">También enviamos la confirmación a tu correo.</p></section>
+      <section v-else class="rounded-2xl bg-white p-6 text-center shadow-sm sm:p-10"><div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-green-100 text-3xl">✓</div><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">¡Quiniela registrada!</h2><dl class="my-6 rounded-xl bg-gray-50 p-4 text-left"><div class="flex justify-between gap-4"><dt class="text-gray-500">Entrada</dt><dd class="font-semibold">{{ confirmacion.alias }}</dd></div><div class="mt-2 flex justify-between gap-4"><dt class="text-gray-500">Jornada</dt><dd class="font-semibold">{{ confirmacion.jornada }}</dd></div><div v-if="confirmacion.cantidad > 1" class="mt-2 flex justify-between gap-4"><dt class="text-gray-500">Quinielas</dt><dd class="font-semibold">{{ confirmacion.cantidad }} · ${{ Number(confirmacion.montoTotal).toLocaleString("es-MX") }}</dd></div></dl><p v-if="confirmacion.notificacionPendiente" role="status" class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left text-sm text-amber-800">La entrada quedó registrada, pero no pudimos enviar el correo de confirmación.</p><button @click="router.push('/mis-quinielas')" class="w-full rounded-xl bg-quiniela-verde py-3 font-bold text-white">Ver mi quiniela</button><p v-if="!confirmacion.notificacionPendiente" class="mt-3 text-sm text-gray-500">También enviamos la confirmación a tu correo.</p></section>
     </template>
   </main>
 </template>

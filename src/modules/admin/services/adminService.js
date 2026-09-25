@@ -132,20 +132,33 @@ export async function crearJornada({ nombre, costo, premio, fechaCierre, partido
 export async function listarPagosPendientes() {
   const { data, error } = await supabase
     .from('quinielas')
-    .select('id, alias, monto_pagado, metodo_pago, comprobante_url, correo_contacto, creado_el, jornadas(nombre), perfiles!quinielas_usuario_id_fkey(nombre_completo, username)')
+    .select('id, alias, monto_pagado, metodo_pago, comprobante_url, correo_contacto, creado_el, pago_transferencia_id, jornadas(nombre), perfiles!quinielas_usuario_id_fkey(nombre_completo, username)')
     .eq('estatus_pago', 'pendiente')
     .order('creado_el', { ascending: true });
   if (error) throw error;
-  return data;
+  const pagos = new Map();
+  for (const quiniela of data ?? []) {
+    const llave = quiniela.pago_transferencia_id ?? quiniela.id;
+    const pago = pagos.get(llave) ?? { ...quiniela, ids: [], cantidad: 0, monto_total: 0 };
+    pago.ids.push(quiniela.id);
+    pago.cantidad += 1;
+    pago.monto_total += Number(quiniela.monto_pagado ?? 0);
+    pagos.set(llave, pago);
+  }
+  return [...pagos.values()];
 }
 
-export async function aprobarPago(quinielaId) {
-  const { error } = await supabase.from('quinielas').update({ estatus_pago: 'aprobado', revisado_el: new Date().toISOString() }).eq('id', quinielaId);
+export async function aprobarPago(quinielaId, pagoTransferenciaId = null) {
+  let consulta = supabase.from('quinielas').update({ estatus_pago: 'aprobado', revisado_el: new Date().toISOString() });
+  consulta = pagoTransferenciaId ? consulta.eq('pago_transferencia_id', pagoTransferenciaId) : consulta.eq('id', quinielaId);
+  const { error } = await consulta;
   if (error) throw error;
 }
 
-export async function rechazarPago(quinielaId) {
-  const { error } = await supabase.from('quinielas').update({ estatus_pago: 'rechazado', revisado_el: new Date().toISOString() }).eq('id', quinielaId);
+export async function rechazarPago(quinielaId, pagoTransferenciaId = null) {
+  let consulta = supabase.from('quinielas').update({ estatus_pago: 'rechazado', revisado_el: new Date().toISOString() });
+  consulta = pagoTransferenciaId ? consulta.eq('pago_transferencia_id', pagoTransferenciaId) : consulta.eq('id', quinielaId);
+  const { error } = await consulta;
   if (error) throw error;
 }
 

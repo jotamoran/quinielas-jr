@@ -33,17 +33,21 @@ async function verComprobante(path) {
   }
 }
 
-async function aprobar(id) {
-  if (!await confirmarAccion({ title: 'Marcar como pagada', confirmText: 'Confirmar pago' })) return;
-  procesando.value = `${id}:aprobar`;
-  try { await aprobarPago(id); await cargar(); await alertaExito('Pago confirmado'); } catch (error) { await alertaError(error); }
+function clavePago(pago) { return pago.pago_transferencia_id ?? pago.id; }
+
+async function aprobar(pago) {
+  const plural = pago.cantidad > 1;
+  if (!await confirmarAccion({ title: plural ? `Marcar ${pago.cantidad} quinielas como pagadas` : 'Marcar como pagada', confirmText: 'Confirmar pago' })) return;
+  procesando.value = `${clavePago(pago)}:aprobar`;
+  try { await aprobarPago(pago.id, pago.pago_transferencia_id); await cargar(); await alertaExito(plural ? 'Pagos confirmados' : 'Pago confirmado'); } catch (error) { await alertaError(error); }
   finally { procesando.value = ''; }
 }
 
-async function rechazar(id) {
-  if (!await confirmarAccion({ title: 'Cancelar quiniela', text: 'La entrada dejará de participar.', confirmText: 'Cancelar quiniela', danger: true })) return;
-  procesando.value = `${id}:rechazar`;
-  try { await rechazarPago(id); await cargar(); await alertaExito('Quiniela cancelada'); } catch (error) { await alertaError(error); }
+async function rechazar(pago) {
+  const plural = pago.cantidad > 1;
+  if (!await confirmarAccion({ title: plural ? `Rechazar pago de ${pago.cantidad} quinielas` : 'Cancelar quiniela', text: plural ? 'Todas las entradas de este pago dejarán de participar.' : 'La entrada dejará de participar.', confirmText: plural ? 'Rechazar pagos' : 'Cancelar quiniela', danger: true })) return;
+  procesando.value = `${clavePago(pago)}:rechazar`;
+  try { await rechazarPago(pago.id, pago.pago_transferencia_id); await cargar(); await alertaExito(plural ? 'Pagos rechazados' : 'Quiniela cancelada'); } catch (error) { await alertaError(error); }
   finally { procesando.value = ''; }
 }
 
@@ -69,13 +73,13 @@ onMounted(async () => {
       <div v-for="q in pagosFiltrados" :key="q.id" class="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p class="font-semibold">{{ q.perfiles?.nombre_completo }} <span v-if="q.perfiles?.username" class="font-normal text-gray-500">(@{{ q.perfiles.username }})</span> — {{ q.jornadas?.nombre }}</p>
-          <p class="text-sm text-gray-600">{{ q.alias }} · {{ q.metodo_pago }} · ${{ q.monto_pagado ?? '—' }}<span v-if="q.creado_el"> · Registrado {{ new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeZone: 'America/Mexico_City' }).format(new Date(q.creado_el)) }}</span><span v-if="q.correo_contacto"> · {{ q.correo_contacto }}</span></p>
+          <p class="text-sm text-gray-600">{{ q.cantidad > 1 ? `${q.cantidad} quinielas · $${q.monto_total}` : `${q.alias} · ${q.metodo_pago} · $${q.monto_pagado ?? "—"}` }}<span v-if="q.creado_el"> · Registrado {{ new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeZone: "America/Mexico_City" }).format(new Date(q.creado_el)) }}</span><span v-if="q.correo_contacto"> · {{ q.correo_contacto }}</span></p>
         </div>
         <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
           <button v-if="q.comprobante_url" @click="verComprobante(q.comprobante_url)" class="rounded-lg border px-3 py-2 text-sm font-semibold text-quiniela-verde">Comprobante</button>
           <button v-if="q.metodo_pago === 'efectivo'" @click="marcarEfectivo(q.id, q.monto_pagado)" :disabled="!!procesando" class="rounded-lg bg-quiniela-dorado px-3 py-2 text-sm font-semibold text-quiniela-grisTexto disabled:opacity-60">{{ procesando === `${q.id}:efectivo` ? 'Confirmando…' : 'Pago efectivo' }}</button>
-          <button @click="aprobar(q.id)" :disabled="!!procesando" class="rounded-lg bg-quiniela-verdeAcento px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{{ procesando === `${q.id}:aprobar` ? 'Guardando…' : 'Marcar pagada' }}</button>
-          <button @click="rechazar(q.id)" :disabled="!!procesando" class="rounded-lg bg-quiniela-error px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{{ procesando === `${q.id}:rechazar` ? 'Rechazando…' : 'Rechazar pago' }}</button>
+          <button @click="aprobar(q)" :disabled="!!procesando" class="rounded-lg bg-quiniela-verdeAcento px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{{ procesando === `${clavePago(q)}:aprobar` ? "Guardando…" : q.cantidad > 1 ? `Aprobar ${q.cantidad}` : "Marcar pagada" }}</button>
+          <button @click="rechazar(q)" :disabled="!!procesando" class="rounded-lg bg-quiniela-error px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{{ procesando === `${clavePago(q)}:rechazar` ? "Rechazando…" : q.cantidad > 1 ? `Rechazar ${q.cantidad}` : "Rechazar pago" }}</button>
         </div>
       </div>
     </template>

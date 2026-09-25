@@ -37,3 +37,5 @@
 \ir migrations/0028_estado_marcador_partidos.sql
 \ir migrations/0029_registro_atomico_y_restricciones.sql
 \ir migrations/0030_integridad_operativa.sql
+\ir migrations/0031_consolida_validacion_predicciones.sql
+\ir migrations/0032_pagos_transferencia_agrupados.sql

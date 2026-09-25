@@ -1,11 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/auth/iniciar-sesion", "destination": "/api/auth?action=iniciar-sesion" },
-    { "source": "/api/auth/username-disponible", "destination": "/api/auth?action=username-disponible" },
-    { "source": "/api/auth/verificar-codigo", "destination": "/api/auth?action=verificar-codigo" },
-    { "source": "/api/cancelar-jornada", "destination": "/api/jornada?action=cancelar" },
-    { "source": "/api/cerrar-jornada", "destination": "/api/jornada?action=cerrar" },
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/api/retired" }
   ]
 }

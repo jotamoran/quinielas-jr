@@ -47,8 +47,15 @@ export async function eliminarComprobante(path) {
   if (error) throw error;
 }
 
-export async function notificarRegistro(quinielaId) {
-  return llamarApi('notificaciones/registro', { quiniela_id: quinielaId });
+export async function notificarRegistro({ quinielaId = null, pagoTransferenciaId = null }) {
+  return llamarApi('notificaciones/registro', {
+    quiniela_id: quinielaId,
+    pago_transferencia_id: pagoTransferenciaId,
+  });
+}
+
+export async function notificarPagoTransferencia(pagoTransferenciaId) {
+  return llamarApi('notificaciones/pago-transferencia', { pago_transferencia_id: pagoTransferenciaId });
 }
 
 export async function obtenerMisQuinielas() {
@@ -112,6 +119,19 @@ export async function registrarQuiniela({ jornadaId, alias, metodoPago, montoPag
     p_comprobante_url: comprobanteUrl,
     p_predicciones: predicciones.map(({ partidoId, pronostico }) => ({ partido_id: partidoId, pronostico })),
     p_codigo_cupon: codigoCupon,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function registrarQuinielasTransferencia({ jornadaId, entradas, comprobanteUrl }) {
+  const { data, error } = await supabase.rpc('registrar_quinielas_transferencia_atomica', {
+    p_jornada_id: jornadaId,
+    p_quinielas: entradas.map(({ alias, predicciones }) => ({
+      alias,
+      predicciones: predicciones.map(({ partidoId, pronostico }) => ({ partido_id: partidoId, pronostico })),
+    })),
+    p_comprobante_url: comprobanteUrl,
   });
   if (error) throw error;
   return data;

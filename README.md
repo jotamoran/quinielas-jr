@@ -30,7 +30,7 @@ En Cloudflare Pages deben mantenerse como secretos de Production las variables p
 
 El workflow requiere en GitHub Actions las variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_APP_TITLE` y `VITE_ADMIN_ALIAS_EMAIL`, además de los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`.
 
-`vercel.json` se conserva temporalmente como respaldo, pero `quinielasjr.vercel.app` ya no debe compartirse como URL pública.
+`quinielasjr.vercel.app` está retirado y responde con HTTP 410. La única URL operativa es Cloudflare Pages.
 
 ## PWA
 
