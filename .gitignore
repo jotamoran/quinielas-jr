@@ -152,3 +152,6 @@ docs/
 
 # Vercel CLI local project link
 .vercel/
+
+# Wrangler CLI local cache
+.wrangler/
