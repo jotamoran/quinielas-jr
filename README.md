@@ -1,6 +1,6 @@
 # Quinielas JR
 
-Plataforma de quinielas deportivas (Vue 3 + Tailwind + Vercel Functions + Supabase).
+Plataforma de quinielas deportivas (Vue 3 + Tailwind + Cloudflare Pages Functions + Supabase).
 
 ## Desarrollo local
 
@@ -20,11 +20,17 @@ Plataforma de quinielas deportivas (Vue 3 + Tailwind + Vercel Functions + Supaba
 `npm run test` corre las pruebas unitarias (countdown, balance, reparto de premios).
 Las pruebas SQL (`supabase/tests/*.test.sql`) se corren con `psql "$(npx supabase status -o json | jq -r .DB_URL)" -f supabase/tests/<archivo>.sql` tras cada `db reset`.
 
-## Despliegue en Vercel
+## Despliegue en Cloudflare Pages
 
-1. Importa el repo en Vercel.
-2. Configura las variables de entorno de `.env.example` (las `VITE_*` y las privadas del servidor) en el proyecto de Vercel.
-3. Deploy — `vercel.json` define el rewrite SPA y las funciones de `/api`. Los resultados se sincronizan desde el servicio externo; el administrador puede ejecutar una actualización manual desde la sección Resultados como respaldo.
+La URL pública oficial es [quinielas-jr.pages.dev](https://quinielas-jr.pages.dev).
+
+Cada push a `main` ejecuta las pruebas, compila la aplicación y publica el resultado mediante GitHub Actions.
+
+En Cloudflare Pages deben mantenerse como secretos de Production las variables privadas del servidor: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SPORTSDB_API_KEY`, `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL` y `BREVO_API_KEY`.
+
+El workflow requiere en GitHub Actions las variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_APP_TITLE` y `VITE_ADMIN_ALIAS_EMAIL`, además de los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`.
+
+`vercel.json` se conserva temporalmente como respaldo, pero `quinielasjr.vercel.app` ya no debe compartirse como URL pública.
 
 ## PWA
 
