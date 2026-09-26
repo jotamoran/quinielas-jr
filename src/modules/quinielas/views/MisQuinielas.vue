@@ -1,8 +1,8 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { supabase } from '@/lib/supabase';
-import { obtenerMisQuinielas, obtenerRanking, obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela } from '../services/quinielasService';
+import { obtenerMisQuinielas, obtenerRankingPublico, obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela } from '../services/quinielasService';
 import { calcularResumenBalance } from '../utils/balance';
 import TablaPosiciones from '../components/TablaPosiciones.vue';
 import DetallePronosticos from '../components/DetallePronosticos.vue';
@@ -18,7 +18,9 @@ const detallesEntrada = ref({});
 const cargandoEntrada = ref(null);
 const errorEntrada = ref({});
 const cargando = ref(true);
+const aciertosMostrados = ref({});
 const router = useRouter();
+let intervalo;
 
 async function alternarDetalleEntrada(quiniela) {
   if (abiertaEntrada.value === quiniela.id) {
@@ -26,7 +28,11 @@ async function alternarDetalleEntrada(quiniela) {
     return;
   }
   abiertaEntrada.value = quiniela.id;
-  if (detallesEntrada.value[quiniela.id]) return;
+  await cargarDetalleEntrada(quiniela);
+}
+
+async function cargarDetalleEntrada(quiniela, forzar = false) {
+  if (!quiniela || (detallesEntrada.value[quiniela.id] && !forzar)) return;
   cargandoEntrada.value = quiniela.id;
   delete errorEntrada.value[quiniela.id];
   try {
@@ -43,6 +49,16 @@ async function cargar() {
   resumen.value = calcularResumenBalance(quinielas.value);
   jornadaActiva.value = await obtenerJornadaActiva();
   partidosJornadaActiva.value = jornadaActiva.value ? await obtenerPartidos(jornadaActiva.value.id) : [];
+  const ids = quinielas.value.filter((quiniela) => quiniela.estatus_pago === 'aprobado').map((quiniela) => quiniela.id);
+  if (!ids.length) {
+    aciertosMostrados.value = {};
+    return;
+  }
+  const { data, error } = await supabase.from('vista_ranking_publica').select('quiniela_id, aciertos').in('quiniela_id', ids);
+  if (error) throw error;
+  aciertosMostrados.value = Object.fromEntries((data ?? []).map((fila) => [fila.quiniela_id, fila.aciertos]));
+  const entradaAbierta = quinielas.value.find((quiniela) => quiniela.id === abiertaEntrada.value);
+  if (entradaAbierta) await cargarDetalleEntrada(entradaAbierta, true);
 }
 
 const jornadaActivaId = computed(() => jornadaActiva.value?.id ?? null);
@@ -50,6 +66,7 @@ const tengoEntradaEnJornadaActiva = computed(() => quinielas.value.some((q) => q
 const bloqueada = computed(() => jornadaActiva.value && new Date(jornadaActiva.value.fecha_cierre) <= new Date());
 const empezaronPartidos = computed(() => partidosJornadaActiva.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => bloqueada.value || empezaronPartidos.value);
+function aciertosPara(quiniela) { return aciertosMostrados.value[quiniela.id] ?? quiniela.aciertos; }
 function puedeEditar(quiniela) { return quiniela.jornadas?.estatus === 'activa' && new Date(quiniela.jornadas.fecha_cierre) > new Date(); }
 function puedeDuplicar(quiniela) { return jornadaActivaId.value && quiniela.jornada_id === jornadaActivaId.value && !bloqueada.value && quiniela.jornadas?.estatus === 'activa'; }
 function duplicar(quiniela) { router.push({ name: 'llenar-quiniela', params: { jornadaId: jornadaActivaId.value }, query: { duplicar: quiniela.id } }); }
@@ -72,6 +89,9 @@ async function obtenerPronosticosPublicos(quinielaId) {
     logo_visitante: partido.logo_visitante,
     pronostico: porPartido.get(partido.id),
     resultado_oficial: partido.resultado_oficial,
+    estado: partido.estado,
+    puntos_local: partido.puntos_local,
+    puntos_visitante: partido.puntos_visitante,
     cancelado: partido.cancelado,
     fecha_partido: partido.fecha_partido,
   }));
@@ -80,7 +100,9 @@ async function obtenerPronosticosPublicos(quinielaId) {
 onMounted(async () => {
   try { await cargar(); } catch (error) { await alertaError(error, 'No se pudieron cargar tus quinielas'); }
   finally { cargando.value = false; }
+  intervalo = setInterval(() => cargar().catch(() => {}), 30000);
 });
+onUnmounted(() => clearInterval(intervalo));
 </script>
 
 <template>
@@ -116,7 +138,7 @@ onMounted(async () => {
       <article v-for="q in quinielas" :key="q.id" class="rounded-2xl bg-white p-4 shadow-sm">
         <div class="flex items-start justify-between gap-3"><div><p class="font-bold text-quiniela-verdeOscuro">{{ q.alias }}</p><p class="text-sm text-gray-500">{{ q.jornadas?.nombre }}</p></div><div class="flex flex-wrap justify-end gap-1"><span class="rounded-full px-2 py-1 text-xs font-bold" :class="q.estatus_pago === 'aprobado' ? 'bg-green-100 text-green-800' : q.estatus_pago === 'rechazado' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}</span><span v-if="q.jornadas?.estatus" class="rounded-full px-2 py-1 text-xs font-bold" :class="claseJornada(q.jornadas.estatus)">{{ etiquetaJornada(q.jornadas.estatus) }}</span></div></div>
         <p v-if="q.estatus_pago !== 'aprobado'" class="mt-2 text-xs text-amber-700">No estás participando todavía — falta confirmar tu pago.</p>
-        <p class="mt-4 border-t pt-3 text-sm"><span class="text-gray-500">Aciertos:</span> <strong class="text-quiniela-verde">{{ q.aciertos }}</strong></p>
+        <p class="mt-4 border-t pt-3 text-sm"><span class="text-gray-500">Aciertos:</span> <strong class="text-quiniela-verde">{{ aciertosPara(q) }}</strong></p>
         <button type="button" @click="alternarDetalleEntrada(q)" class="mt-3 w-full rounded-lg border border-gray-200 py-2 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button>
         <router-link v-if="puedeEditar(q)" :to="{ name: 'editar-quiniela', params: { quinielaId: q.id } }" class="mt-2 block w-full rounded-lg border border-quiniela-verde py-2 text-center text-xs font-semibold text-quiniela-verde">Editar pronósticos</router-link>
         <button v-if="puedeDuplicar(q)" type="button" @click="duplicar(q)" class="mt-2 w-full rounded-lg bg-green-50 py-2 text-xs font-semibold text-quiniela-verde">Duplicar entrada</button>
@@ -144,7 +166,7 @@ onMounted(async () => {
               <td class="px-4 py-2"><span>{{ q.jornadas?.nombre }}</span><span v-if="q.jornadas?.estatus" class="ml-2 rounded-full px-2 py-0.5 text-xs font-bold" :class="claseJornada(q.jornadas.estatus)">{{ etiquetaJornada(q.jornadas.estatus) }}</span></td>
               <td class="px-4 py-2">{{ q.alias }}</td>
               <td class="px-4 py-2">{{ q.estatus_pago === 'aprobado' ? 'Pagada' : q.estatus_pago === 'rechazado' ? 'Cancelada' : 'Pendiente' }}<span v-if="q.estatus_pago !== 'aprobado'" class="ml-2 text-xs text-amber-700">(no participa todavía)</span></td>
-              <td class="px-4 py-2 text-right">{{ q.aciertos }}</td>
+              <td class="px-4 py-2 text-right">{{ aciertosPara(q) }}</td>
               <td class="px-4 py-2 text-right"><div class="flex justify-end gap-2"><button type="button" @click="alternarDetalleEntrada(q)" class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-quiniela-verde">{{ abiertaEntrada === q.id ? 'Ocultar' : 'Ver pronósticos' }}</button><router-link v-if="puedeEditar(q)" :to="{ name: 'editar-quiniela', params: { quinielaId: q.id } }" class="rounded-lg border border-quiniela-verde px-3 py-1.5 text-xs font-semibold text-quiniela-verde">Editar</router-link><button v-if="puedeDuplicar(q)" type="button" @click="duplicar(q)" class="rounded-lg bg-green-50 px-3 py-1.5 text-xs font-semibold text-quiniela-verde">Duplicar</button></div></td>
             </tr>
             <tr v-if="abiertaEntrada === q.id" class="border-b bg-gray-50">
@@ -166,8 +188,8 @@ onMounted(async () => {
     </section>
 
     <div v-if="jornadaActivaId && tengoEntradaEnJornadaActiva">
-      <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones</h2>
-      <TablaPosiciones :jornadaId="jornadaActivaId" :obtenerRankingFn="obtenerRanking" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
+      <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones en vivo</h2>
+      <TablaPosiciones :jornadaId="jornadaActivaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
     </div>
   </main>
 </template>

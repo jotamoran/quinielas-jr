@@ -79,6 +79,16 @@ export async function obtenerRanking(jornadaId) {
   return data;
 }
 
+export async function obtenerRankingPublico(jornadaId) {
+  const { data, error } = await supabase
+    .from('vista_ranking_publica')
+    .select('*')
+    .eq('jornada_id', jornadaId)
+    .order('posicion');
+  if (error) throw error;
+  return data;
+}
+
 export async function obtenerPronosticosDeQuiniela(quinielaId) {
   const { data, error } = await supabase
     .from('predicciones')

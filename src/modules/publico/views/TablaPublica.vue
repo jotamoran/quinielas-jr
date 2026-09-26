@@ -23,7 +23,6 @@ const esDefinitiva = computed(() => jornada.value?.estatus === 'finalizada');
 const bloqueada = computed(() => jornada.value && (jornada.value.estatus !== 'activa' || new Date(jornada.value.fecha_cierre) <= new Date()));
 const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => !esCancelada.value && (bloqueada.value || empezaronPartidos.value));
-const etiquetaAciertos = computed(() => esDefinitiva.value ? 'aciertos' : 'aciertos provisionales');
 
 async function obtenerRankingPublico(jId) {
   const { data, error } = await supabase
@@ -137,7 +136,7 @@ onUnmounted(() => clearInterval(intervalo));
         <router-link v-if="authStore.isLoggedIn" :to="{ name: 'llenar-quiniela', params: { jornadaId } }" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Registrar</router-link>
         <div v-else class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><router-link :to="{ name: 'registro' }" class="rounded-lg border border-quiniela-verde px-4 py-2 text-center text-sm font-bold text-quiniela-verde">Crear cuenta</router-link><button type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Iniciar sesión</button></div>
       </div>
-      <TablaPosiciones v-if="!esCancelada" ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" :etiquetaAciertos="etiquetaAciertos" />
+      <TablaPosiciones v-if="!esCancelada" ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
       <p v-else class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">No hay clasificación ni pronósticos públicos porque esta jornada fue cancelada.</p>
     </section>
 

@@ -19,6 +19,7 @@ const ahora = ahoraParaDatetimeInput();
 const resumenCierre = ref(null);
 const cargandoResumen = ref(false);
 const errorResumen = ref('');
+const opcionesResultadosAbiertas = ref(false);
 const resumenAdmin = computed(() => ({ activas: jornadas.value.filter((j) => j.estatus === 'activa').length, pendientes: jornadas.value.reduce((total, j) => total + (j.partidos ?? []).filter((p) => !p.cancelado && !p.resultado_oficial).length, 0), finalizadas: jornadas.value.filter((j) => j.estatus === 'finalizada').length }));
 
 const jornadasOrdenadas = computed(() => [...jornadas.value].sort((a, b) => {
@@ -66,6 +67,11 @@ function enlacePublico(jornada) {
 
 function enlaceRegistro(jornada) {
   return new URL(router.resolve({ name: 'llenar-quiniela', params: { jornadaId: jornada.id } }).href, window.location.origin).href;
+}
+
+function abrirTablaPublica(jornada) {
+  opcionesResultadosAbiertas.value = false;
+  window.open(enlacePublico(jornada), '_blank', 'noopener,noreferrer');
 }
 
 async function compartirRegistro(jornada) {
@@ -289,7 +295,13 @@ onMounted(async () => {
           </div>
           <div class="mt-5 grid gap-2 sm:grid-cols-3">
             <template v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)">
-              <button @click="compartirEnlace(abierta)" class="rounded-xl bg-white px-3 py-2.5 font-semibold text-quiniela-verdeOscuro">Compartir resultados</button>
+              <div class="relative">
+                <button type="button" @click="opcionesResultadosAbiertas = !opcionesResultadosAbiertas" class="w-full rounded-xl bg-white px-3 py-2.5 font-semibold text-quiniela-verdeOscuro" :aria-expanded="opcionesResultadosAbiertas">Resultados {{ opcionesResultadosAbiertas ? '▴' : '▾' }}</button>
+                <div v-if="opcionesResultadosAbiertas" class="absolute left-0 z-10 mt-2 grid w-full min-w-52 gap-1 rounded-xl border border-gray-200 bg-white p-1.5 text-left text-sm shadow-xl">
+                  <button type="button" @click="compartirEnlace(abierta); opcionesResultadosAbiertas = false" class="rounded-lg px-3 py-2 text-left font-semibold text-quiniela-verdeOscuro hover:bg-green-50">Compartir resultados</button>
+                  <button type="button" @click="abrirTablaPublica(abierta)" class="rounded-lg px-3 py-2 text-left font-semibold text-quiniela-verdeOscuro hover:bg-green-50">Abrir tabla pública</button>
+                </div>
+              </div>
               <button @click="compartirRegistro(abierta)" class="rounded-xl border border-white/40 px-3 py-2.5 font-semibold">Compartir quiniela</button>
               <button @click="compartirImagen(abierta)" class="rounded-xl bg-quiniela-dorado px-3 py-2.5 font-semibold text-quiniela-grisTexto">Compartir imagen</button>
             </template>
