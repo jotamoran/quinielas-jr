@@ -39,3 +39,4 @@
 \ir migrations/0030_integridad_operativa.sql
 \ir migrations/0031_consolida_validacion_predicciones.sql
 \ir migrations/0032_pagos_transferencia_agrupados.sql
+\ir migrations/0033_ranking_publico_en_vivo.sql

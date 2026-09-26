@@ -8,6 +8,7 @@ const props = defineProps({
   obtenerPronosticosFn: { type: Function, default: null },
   bloqueada: { type: Boolean, default: false },
   resaltarExtremos: { type: Boolean, default: false },
+  etiquetaAciertos: { type: String, default: 'aciertos' },
 });
 
 const filas = ref([]);
@@ -89,11 +90,11 @@ defineExpose({ recargar: cargar });
         <span class="grid h-10 w-10 place-items-center rounded-full font-bold" :class="fila.posicion <= 3 ? 'bg-quiniela-dorado text-quiniela-grisTexto' : 'bg-green-50 text-quiniela-verde'">{{ fila.posicion }}</span>
         <div class="min-w-0">
           <p class="truncate font-bold text-quiniela-verdeOscuro">{{ nombreParticipante(fila) }}</p>
-          <p class="text-xs text-gray-500 sm:hidden">{{ fila.aciertos }} aciertos</p>
+          <p class="text-xs text-gray-500 sm:hidden">{{ fila.aciertos }} {{ etiquetaAciertos }}</p>
           <span v-if="esLider(fila)" class="mt-1 inline-block rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-900">Ganador</span>
           <span v-else-if="esPorTarugo(fila)" class="mt-1 inline-block rounded-full bg-red-400 px-2 py-0.5 text-[10px] font-bold text-white">Tarugo</span>
         </div>
-        <strong class="hidden text-right text-quiniela-verde sm:block">{{ fila.aciertos }} aciertos</strong>
+        <strong class="hidden text-right text-quiniela-verde sm:block">{{ fila.aciertos }} {{ etiquetaAciertos }}</strong>
         <button v-if="bloqueada && obtenerPronosticosFn" type="button" @click="alternar(fila)" class="rounded-lg border border-gray-200 px-2.5 py-2 text-xs font-semibold text-quiniela-verde hover:bg-green-50" :aria-expanded="abiertaId === fila.quiniela_id">
           {{ abiertaId === fila.quiniela_id ? 'Ocultar' : 'Pronósticos' }}
         </button>
