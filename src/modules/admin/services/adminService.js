@@ -151,6 +151,7 @@ export async function listarPagosPendientes() {
 export async function aprobarPago(quinielaId, pagoTransferenciaId = null) {
   let consulta = supabase.from('quinielas').update({ estatus_pago: 'aprobado', revisado_el: new Date().toISOString() });
   consulta = pagoTransferenciaId ? consulta.eq('pago_transferencia_id', pagoTransferenciaId) : consulta.eq('id', quinielaId);
+  consulta = consulta.eq('estatus_pago', 'pendiente');
   const { error } = await consulta;
   if (error) throw error;
 }
@@ -158,6 +159,7 @@ export async function aprobarPago(quinielaId, pagoTransferenciaId = null) {
 export async function rechazarPago(quinielaId, pagoTransferenciaId = null) {
   let consulta = supabase.from('quinielas').update({ estatus_pago: 'rechazado', revisado_el: new Date().toISOString() });
   consulta = pagoTransferenciaId ? consulta.eq('pago_transferencia_id', pagoTransferenciaId) : consulta.eq('id', quinielaId);
+  consulta = consulta.eq('estatus_pago', 'pendiente');
   const { error } = await consulta;
   if (error) throw error;
 }
