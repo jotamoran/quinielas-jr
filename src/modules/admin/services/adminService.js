@@ -32,6 +32,13 @@ export async function listarQuinielasAdmin() {
   return llamarApi('admin-quinielas');
 }
 
+export async function reenviarAvisosPago(pagoTransferenciaId) {
+  return llamarApi('notificaciones/pago-transferencia', {
+    method: 'POST',
+    body: JSON.stringify({ pago_transferencia_id: pagoTransferenciaId }),
+  });
+}
+
 export async function crearQuinielaAdmin(payload) {
   return llamarApi('admin-quinielas', { method: 'POST', body: JSON.stringify(payload) });
 }

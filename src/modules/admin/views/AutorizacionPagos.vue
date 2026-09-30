@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
-import { listarPagosPendientes, aprobarPago, rechazarPago, registrarPagoEfectivo, obtenerComprobanteUrl } from '../services/adminService';
+import { listarPagosPendientes, aprobarPago, rechazarPago, registrarPagoEfectivo, obtenerComprobanteUrl, reenviarAvisosPago } from '../services/adminService';
 import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
 
@@ -34,6 +34,18 @@ async function verComprobante(path) {
 }
 
 function clavePago(pago) { return pago.pago_transferencia_id ?? pago.id; }
+
+async function reenviarAvisos(pago) {
+  procesando.value = `${clavePago(pago)}:avisos`;
+  try {
+    await reenviarAvisosPago(pago.pago_transferencia_id);
+    await alertaExito('Avisos completados');
+  } catch (error) {
+    await alertaError(error);
+  } finally {
+    procesando.value = '';
+  }
+}
 
 async function aprobar(pago) {
   const plural = pago.cantidad > 1;
@@ -77,6 +89,7 @@ onMounted(async () => {
         </div>
         <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
           <button v-if="q.comprobante_url" @click="verComprobante(q.comprobante_url)" class="rounded-lg border px-3 py-2 text-sm font-semibold text-quiniela-verde">Comprobante</button>
+          <button v-if="q.pago_transferencia_id" @click="reenviarAvisos(q)" :disabled="!!procesando" class="rounded-lg border px-3 py-2 text-sm font-semibold text-quiniela-verde disabled:opacity-60">{{ procesando === `${clavePago(q)}:avisos` ? 'Enviando…' : 'Reintentar avisos' }}</button>
           <button v-if="q.metodo_pago === 'efectivo'" @click="marcarEfectivo(q.id, q.monto_pagado)" :disabled="!!procesando" class="rounded-lg bg-quiniela-dorado px-3 py-2 text-sm font-semibold text-quiniela-grisTexto disabled:opacity-60">{{ procesando === `${q.id}:efectivo` ? 'Confirmando…' : 'Pago efectivo' }}</button>
           <button @click="aprobar(q)" :disabled="!!procesando" class="rounded-lg bg-quiniela-verdeAcento px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{{ procesando === `${clavePago(q)}:aprobar` ? "Guardando…" : q.cantidad > 1 ? `Aprobar ${q.cantidad}` : "Marcar pagada" }}</button>
           <button @click="rechazar(q)" :disabled="!!procesando" class="rounded-lg bg-quiniela-error px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{{ procesando === `${clavePago(q)}:rechazar` ? "Rechazando…" : q.cantidad > 1 ? `Rechazar ${q.cantidad}` : "Rechazar pago" }}</button>

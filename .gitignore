@@ -155,3 +155,9 @@ docs/
 
 # Wrangler CLI local cache
 .wrangler/
+
+# Pruebas y migraciones locales
+/test/
+/tests/
+/supabase/tests/
+/supabase/migrations/
