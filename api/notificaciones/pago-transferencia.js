@@ -1,6 +1,7 @@
 import { requireUser, ErrorHttp } from '../_lib/auth.js';
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js';
-import { enviarCorreo, escaparHtml } from '../_lib/email.js';
+import { escaparHtml } from '../_lib/email.js';
+import { enviarAvisoTransferencia } from '../_lib/avisoTransferencia.js';
 
 export default async function handler(req, res) {
   try {
@@ -29,39 +30,35 @@ export default async function handler(req, res) {
       .order('creado_el');
     if (quinielasError || !quinielas?.length) return res.status(409).json({ error: 'El pago ya no tiene quinielas pendientes' });
 
-    const { data: pagoReservado, error: reservaError } = await supabaseAdmin
-      .from('pagos_transferencia')
-      .update({ notificado_el: new Date().toISOString() })
-      .eq('id', pago.id)
-      .is('notificado_el', null)
-      .select('id')
-      .maybeSingle();
-    if (reservaError) throw reservaError;
-    if (!pagoReservado) return res.status(200).json({ status: 'ok', ya_notificado: true });
-
-    const { data: cuenta } = await supabaseAdmin.auth.admin.getUserById(pago.usuario_id);
+    let avisosPendientes = false;
+    const { data: cuenta, error: cuentaError } = await supabaseAdmin.auth.admin.getUserById(pago.usuario_id);
+    if (cuentaError) throw cuentaError;
     const { data: datosUsuario } = await supabaseAdmin.from('perfiles').select('nombre_completo, username').eq('id', pago.usuario_id).maybeSingle();
     const nombreUsuario = datosUsuario?.nombre_completo || datosUsuario?.username || cuenta?.user?.email || 'Un usuario';
     const entradas = quinielas.map((quiniela) => escaparHtml(quiniela.alias ?? 'Entrada')).join(', ');
     if (cuenta?.user?.email) {
       try {
-        await enviarCorreo({
+        const enviado = await enviarAvisoTransferencia(supabaseAdmin, pago.id, `usuario:${pago.usuario_id}`, {
           to: cuenta.user.email,
           subject: `Quinielas registradas: ${pago.jornadas?.nombre ?? ""}`,
           heading: "¡Tus quinielas quedaron registradas!",
           bodyHtml: `<p>Jornada: <b>${escaparHtml(pago.jornadas?.nombre)}</b></p><p>Registraste <b>${quinielas.length} ${quinielas.length === 1 ? "quiniela" : "quinielas"}</b> mediante transferencia.</p><p>Monto: <b>$${Number(pago.monto_total).toFixed(2)}</b></p><p>Tu pago quedará pendiente hasta que sea validado.</p>`,
         });
+        if (!enviado) avisosPendientes = true;
       } catch (error) {
+        avisosPendientes = true;
         console.error(`notificaciones/pago-transferencia: falló el aviso al usuario ${pago.usuario_id}`, error.message);
       }
     }
-    const { data: admins } = await supabaseAdmin.from('perfiles').select('id').eq('rol', 'admin');
+    const { data: admins, error: adminsError } = await supabaseAdmin.from('perfiles').select('id').eq('rol', 'admin');
+    if (adminsError) throw adminsError;
 
     for (const admin of admins ?? []) {
       try {
-        const { data: cuentaAdmin } = await supabaseAdmin.auth.admin.getUserById(admin.id);
+        const { data: cuentaAdmin, error: cuentaAdminError } = await supabaseAdmin.auth.admin.getUserById(admin.id);
+        if (cuentaAdminError) throw cuentaAdminError;
         if (!cuentaAdmin?.user?.email) continue;
-        await enviarCorreo({
+        const enviado = await enviarAvisoTransferencia(supabaseAdmin, pago.id, `admin:${admin.id}`, {
           to: cuentaAdmin.user.email,
           subject: `Validar transferencia: ${pago.jornadas?.nombre ?? 'Quinielas JR'}`,
           heading: '💳 Transferencia por validar',
@@ -71,11 +68,21 @@ export default async function handler(req, res) {
             <p>Monto total: <b>$${Number(pago.monto_total).toFixed(2)}</b></p>
             <p><b>Entra a Administración → Pagos pendientes para revisar el comprobante y validar el pago.</b></p>`,
         });
+        if (!enviado) avisosPendientes = true;
       } catch (error) {
+        avisosPendientes = true;
         console.error(`notificaciones/pago-transferencia: falló el aviso al admin ${admin.id}`, error.message);
       }
     }
 
+    if (avisosPendientes) {
+      return res.status(503).json({ error: 'Quedaron avisos pendientes. Puedes reintentar sin reenviar los que ya se enviaron.' });
+    }
+    const { error: notificadoError } = await supabaseAdmin.from('pagos_transferencia')
+      .update({ notificado_el: new Date().toISOString() })
+      .eq('id', pago.id)
+      .is('notificado_el', null);
+    if (notificadoError) throw notificadoError;
     return res.status(200).json({ status: 'ok' });
   } catch (error) {
     const status = error instanceof ErrorHttp ? error.status : 500;
