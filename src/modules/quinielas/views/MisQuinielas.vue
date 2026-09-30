@@ -19,6 +19,7 @@ const cargandoEntrada = ref(null);
 const errorEntrada = ref({});
 const cargando = ref(true);
 const aciertosMostrados = ref({});
+const tablaPosicionesRef = ref(null);
 const router = useRouter();
 let intervalo;
 
@@ -52,6 +53,7 @@ async function cargar() {
   const ids = quinielas.value.filter((quiniela) => quiniela.estatus_pago === 'aprobado').map((quiniela) => quiniela.id);
   if (!ids.length) {
     aciertosMostrados.value = {};
+    await tablaPosicionesRef.value?.recargar();
     return;
   }
   const { data, error } = await supabase.from('vista_ranking_publica').select('quiniela_id, aciertos').in('quiniela_id', ids);
@@ -59,6 +61,7 @@ async function cargar() {
   aciertosMostrados.value = Object.fromEntries((data ?? []).map((fila) => [fila.quiniela_id, fila.aciertos]));
   const entradaAbierta = quinielas.value.find((quiniela) => quiniela.id === abiertaEntrada.value);
   if (entradaAbierta) await cargarDetalleEntrada(entradaAbierta, true);
+  await tablaPosicionesRef.value?.recargar();
 }
 
 const jornadaActivaId = computed(() => jornadaActiva.value?.id ?? null);
@@ -189,7 +192,7 @@ onUnmounted(() => clearInterval(intervalo));
 
     <div v-if="jornadaActivaId && tengoEntradaEnJornadaActiva">
       <h2 class="font-semibold text-quiniela-verde mb-2">Tabla de posiciones en vivo</h2>
-      <TablaPosiciones :jornadaId="jornadaActivaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
+      <TablaPosiciones ref="tablaPosicionesRef" :jornadaId="jornadaActivaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
     </div>
   </main>
 </template>
