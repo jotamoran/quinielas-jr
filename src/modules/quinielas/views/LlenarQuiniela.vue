@@ -6,7 +6,7 @@ import { useLoginModalStore } from '@/store/loginModal';
 import TarjetaPartido from '../components/TarjetaPartido.vue';
 import PasoPago from '../components/PasoPago.vue';
 import { calcularTiempoRestante, estaBloqueado } from '../utils/countdown';
-import { obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela, registrarQuiniela, registrarQuinielasTransferencia, subirComprobante, eliminarComprobante, notificarRegistro, notificarPagoTransferencia, obtenerDatosBancarios } from "../services/quinielasService";
+import { contarMisEntradasEnJornada, obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela, registrarQuiniela, registrarQuinielasTransferencia, subirComprobante, eliminarComprobante, notificarRegistro, notificarPagoTransferencia, obtenerDatosBancarios } from "../services/quinielasService";
 import { alertaError, confirmarAccion } from '@/lib/alertas';
 import { formatearFecha } from '@/lib/fechas';
 
@@ -18,7 +18,12 @@ const jornada = ref(null);
 const partidos = ref([]);
 const pronosticos = ref({});
 const datosBancarios = ref(null);
-const alias = ref('Entrada 1');
+const alias = ref('');
+const entradasPrevias = ref(0);
+const aliasPorDefecto = computed(() => `${authStore.perfil?.username ?? 'Entrada'} ${entradasPrevias.value + 1}`);
+watch(aliasPorDefecto, (nuevo, anterior) => {
+  if (!alias.value || alias.value === anterior) alias.value = nuevo;
+}, { immediate: true });
 const paso = ref('pronosticos');
 const confirmacion = ref(null);
 const error = ref('');
@@ -47,7 +52,7 @@ const colorContador = computed(() => ({ normal: 'bg-green-700', media: 'bg-amber
 const horasTotales = computed(() => (tiempoRestante.value?.dias ?? 0) * 24 + (tiempoRestante.value?.horas ?? 0));
 const faltantes = computed(() => partidosActivos.value.filter((partido) => !pronosticos.value[partido.id]).length);
 const progreso = computed(() => partidosActivos.value.length ? Math.round(((partidosActivos.value.length - faltantes.value) / partidosActivos.value.length) * 100) : 0);
-const hayCambiosPendientes = computed(() => paso.value !== 'confirmacion' && (Object.values(pronosticos.value).some(Boolean) || alias.value.trim() !== 'Entrada 1'));
+const hayCambiosPendientes = computed(() => paso.value !== 'confirmacion' && (Object.values(pronosticos.value).some(Boolean) || alias.value.trim() !== aliasPorDefecto.value));
 
 async function confirmarSalida() {
   if (!hayCambiosPendientes.value || procesando.value) return true;
@@ -58,6 +63,17 @@ function advertirAntesDeSalir(evento) {
   if (!hayCambiosPendientes.value || procesando.value) return;
   evento.preventDefault();
   evento.returnValue = '';
+}
+
+async function actualizarEntradasPrevias() {
+  if (!authStore.isLoggedIn || !jornada.value) return;
+  entradasPrevias.value = await contarMisEntradasEnJornada(jornada.value.id).catch(() => 0);
+}
+watch(() => authStore.isLoggedIn, actualizarEntradasPrevias);
+
+function aliasDeEntrada(indice, cantidad) {
+  if (alias.value === aliasPorDefecto.value) return `${authStore.perfil?.username ?? 'Entrada'} ${entradasPrevias.value + 1 + indice}`;
+  return cantidad > 1 ? `${alias.value} ${indice + 1}` : alias.value;
 }
 
 async function cargar() {
@@ -71,12 +87,12 @@ async function cargar() {
     jornada.value = await obtenerJornadaActiva(route.params.jornadaId ?? null, { soloAbierta: !route.params.jornadaId });
     if (jornada.value) {
       partidos.value = await obtenerPartidos(jornada.value.id);
+      await actualizarEntradasPrevias();
       if (route.query.duplicar) {
         try {
           const anterior = await obtenerPronosticosDeQuiniela(route.query.duplicar);
           const porPartido = new Map(anterior.map((item) => [item.partido_id, item.pronostico]));
           partidos.value.forEach((partido) => { if (porPartido.has(partido.id)) pronosticos.value[partido.id] = porPartido.get(partido.id); });
-          alias.value = 'Entrada copia';
         } catch {
           // La entrada original puede pertenecer a una jornada distinta.
         }
@@ -112,7 +128,7 @@ async function confirmarPago({ metodo, archivo, codigoCupon, cantidad = 1 }) {
         jornadaId: jornada.value.id,
         comprobanteUrl,
         entradas: Array.from({ length: cantidad }, (_, indice) => ({
-          alias: cantidad > 1 ? `${alias.value} ${indice + 1}` : alias.value,
+          alias: aliasDeEntrada(indice, cantidad),
           predicciones: prediccionesActuales,
         })),
       })

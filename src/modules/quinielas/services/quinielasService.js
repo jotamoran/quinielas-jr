@@ -89,6 +89,26 @@ export async function obtenerRankingPublico(jornadaId) {
   return data;
 }
 
+export async function contarMisEntradasEnJornada(jornadaId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { count, error } = await supabase
+    .from('quinielas')
+    .select('id', { count: 'exact', head: true })
+    .eq('usuario_id', user.id)
+    .eq('jornada_id', jornadaId);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function obtenerUsuariosDeEntradas(jornadaId) {
+  const { data, error } = await supabase
+    .from('quinielas')
+    .select('id, perfiles!quinielas_usuario_id_fkey(username)')
+    .eq('jornada_id', jornadaId);
+  if (error) throw error;
+  return new Map((data ?? []).map((fila) => [fila.id, fila.perfiles?.username]));
+}
+
 export async function obtenerPronosticosDeQuiniela(quinielaId) {
   const { data, error } = await supabase
     .from('predicciones')

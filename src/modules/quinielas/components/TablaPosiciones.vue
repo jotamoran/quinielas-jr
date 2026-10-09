@@ -97,7 +97,7 @@ defineExpose({ recargar: cargar });
       <div class="grid grid-cols-[42px_1fr_auto] items-center gap-3 p-3.5 sm:grid-cols-[56px_1fr_110px_auto] sm:px-5">
         <span class="grid h-10 w-10 place-items-center rounded-full font-bold" :class="fila.posicion <= 3 ? 'bg-quiniela-dorado text-quiniela-grisTexto' : 'bg-green-50 text-quiniela-verde'">{{ fila.posicion }}</span>
         <div class="min-w-0">
-          <p class="truncate font-bold text-quiniela-verdeOscuro">{{ nombreParticipante(fila) }}</p>
+          <p class="truncate font-bold text-quiniela-verdeOscuro">{{ nombreParticipante(fila) }}<span v-if="fila.usuario" class="font-normal text-gray-500"> ({{ fila.usuario }})</span></p>
           <p class="text-xs text-gray-500 sm:hidden">{{ fila.aciertos }} aciertos</p>
           <span v-if="esLider(fila)" class="mt-1 inline-block rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-bold text-amber-900">Ganador</span>
           <span v-else-if="esPorTarugo(fila)" class="mt-1 inline-block rounded-full bg-red-400 px-2 py-0.5 text-[10px] font-bold text-white">Tarugo</span>

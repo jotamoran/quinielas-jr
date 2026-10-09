@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth';
 import { useLoginModalStore } from '@/store/loginModal';
 import TablaPosiciones from '@/modules/quinielas/components/TablaPosiciones.vue';
 import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
+import { obtenerUsuariosDeEntradas } from '@/modules/quinielas/services/quinielasService';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -23,6 +24,7 @@ const esDefinitiva = computed(() => jornada.value?.estatus === 'finalizada');
 const bloqueada = computed(() => jornada.value && (jornada.value.estatus !== 'activa' || new Date(jornada.value.fecha_cierre) <= new Date()));
 const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => !esCancelada.value && (bloqueada.value || empezaronPartidos.value));
+const puedeVerPronosticos = computed(() => bloqueada.value || authStore.isAdmin);
 
 async function obtenerRankingPublico(jId) {
   const { data, error } = await supabase
@@ -31,7 +33,9 @@ async function obtenerRankingPublico(jId) {
     .eq('jornada_id', jId)
     .order('posicion');
   if (error) throw error;
-  return data;
+  if (!authStore.isAdmin) return data;
+  const usuarios = await obtenerUsuariosDeEntradas(jId);
+  return data.map((fila) => ({ ...fila, usuario: usuarios.get(fila.quiniela_id) }));
 }
 
 async function cargar() {
@@ -45,11 +49,10 @@ async function cargar() {
 }
 
 async function obtenerPronosticosPublicos(quinielaId) {
-  const { data, error: queryError } = await supabase
-    .from('vista_pronosticos_publicos')
-    .select('partido_id, pronostico')
-    .eq('jornada_id', jornadaId.value)
-    .eq('quiniela_id', quinielaId);
+  const consulta = authStore.isAdmin
+    ? supabase.from('predicciones').select('partido_id, pronostico').eq('quiniela_id', quinielaId)
+    : supabase.from('vista_pronosticos_publicos').select('partido_id, pronostico').eq('jornada_id', jornadaId.value).eq('quiniela_id', quinielaId);
+  const { data, error: queryError } = await consulta;
   if (queryError) throw queryError;
   const porPartido = new Map((data ?? []).map((item) => [item.partido_id, item.pronostico]));
   return partidos.value.map((partido) => ({
@@ -101,7 +104,7 @@ onMounted(() => {
   actualizar();
   intervalo = setInterval(actualizar, 30000);
 });
-watch(jornadaId, actualizar);
+watch([jornadaId, () => authStore.isAdmin], actualizar);
 onUnmounted(() => clearInterval(intervalo));
 </script>
 
@@ -128,7 +131,8 @@ onUnmounted(() => clearInterval(intervalo));
 
     <section class="space-y-3">
       <div><p class="eyebrow">Clasificación</p><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">{{ esDefinitiva ? 'Tabla de posiciones' : 'Tabla de posiciones en vivo' }}</h2></div>
-      <p v-if="!esCancelada && !bloqueada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Los pronósticos de cada participante estarán disponibles cuando cierre el registro.</p>
+      <p v-if="!esCancelada && !bloqueada && authStore.isAdmin" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">Como administrador puedes ver los pronósticos de cada participante antes del cierre; el público los verá hasta que cierre el registro.</p>
+      <p v-else-if="!esCancelada && !bloqueada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Los pronósticos de cada participante estarán disponibles cuando cierre el registro.</p>
       <p v-if="!esCancelada && !esDefinitiva" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">Los aciertos y posiciones son provisionales: cambian con el marcador de los partidos en vivo. Los resultados oficiales solo se confirman al finalizar cada partido.</p>
       <p v-if="!esCancelada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Solo aparecen aquí las quinielas con el pago confirmado. Si registraste una entrada y no aparece en la tabla, debes completar tu pago para participar.</p>
       <div v-if="!bloqueada && jornada?.estatus !== 'cancelada'" class="flex flex-col items-start gap-2 rounded-xl border border-quiniela-verde bg-green-50 p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -136,7 +140,7 @@ onUnmounted(() => clearInterval(intervalo));
         <router-link v-if="authStore.isLoggedIn" :to="{ name: 'llenar-quiniela', params: { jornadaId } }" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Registrar</router-link>
         <div v-else class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><router-link :to="{ name: 'registro' }" class="rounded-lg border border-quiniela-verde px-4 py-2 text-center text-sm font-bold text-quiniela-verde">Crear cuenta</router-link><button type="button" @click="loginModalStore.abrir()" class="rounded-lg bg-quiniela-verde px-4 py-2 text-sm font-bold text-white">Iniciar sesión</button></div>
       </div>
-      <TablaPosiciones v-if="!esCancelada" ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="bloqueada" :resaltarExtremos="mostrarDestacados" />
+      <TablaPosiciones v-if="!esCancelada" ref="tablaPosiciones" :jornadaId="jornadaId" :obtenerRankingFn="obtenerRankingPublico" :obtenerPronosticosFn="obtenerPronosticosPublicos" :bloqueada="puedeVerPronosticos":resaltarExtremos="mostrarDestacados" />
       <p v-else class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">No hay clasificación ni pronósticos públicos porque esta jornada fue cancelada.</p>
     </section>
 
