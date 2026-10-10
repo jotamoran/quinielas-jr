@@ -2,6 +2,8 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { supabase } from '@/lib/supabase';
 import TarjetaPartido from '@/modules/quinielas/components/TarjetaPartido.vue';
+import DetallePronosticos from '@/modules/quinielas/components/DetallePronosticos.vue';
+import { obtenerPronosticosDeQuiniela } from '@/modules/quinielas/services/quinielasService';
 import { actualizarQuinielaAdmin, crearQuinielaAdmin, listarQuinielasAdmin } from '../services/adminService';
 import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
@@ -32,7 +34,7 @@ async function cargar() {
     listarQuinielasAdmin(),
     supabase.from('jornadas').select('id, nombre, fecha_cierre').eq('estatus', 'activa').gt('fecha_cierre', new Date().toISOString()).order('fecha_cierre'),
   ]);
-  quinielas.value = entries.filter((item) => !['finalizada', 'cancelada'].includes(item.jornadas?.estatus)).map((item) => ({ ...item, editando: false, aliasEditado: item.alias, correoEditado: item.correo_contacto ?? '', estatusEditado: item.estatus_pago }));
+  quinielas.value = entries.filter((item) => !['finalizada', 'cancelada'].includes(item.jornadas?.estatus)).map((item) => ({ ...item, verPronosticos: false, detalle: null, cargandoDetalle: false, errorDetalle: '', editando: false, aliasEditado: item.alias, correoEditado: item.correo_contacto ?? '', estatusEditado: item.estatus_pago }));
   if (jornadasResult.error) throw jornadasResult.error;
   jornadas.value = jornadasResult.data ?? [];
 }
@@ -84,6 +86,20 @@ async function guardar(item) {
   }
 }
 
+async function alternarPronosticos(item) {
+  item.verPronosticos = !item.verPronosticos;
+  if (!item.verPronosticos || item.detalle || item.cargandoDetalle) return;
+  item.cargandoDetalle = true;
+  item.errorDetalle = '';
+  try {
+    item.detalle = await obtenerPronosticosDeQuiniela(item.id);
+  } catch (error) {
+    item.errorDetalle = error.message;
+  } finally {
+    item.cargandoDetalle = false;
+  }
+}
+
 function etiquetaEstatus(value) { return estados.find((item) => item.value === value)?.label ?? value; }
 function statusClass(value) { return ({ pendiente: 'bg-amber-100 text-amber-800', aprobado: 'bg-green-100 text-green-800', rechazado: 'bg-red-100 text-red-800' })[value]; }
 
@@ -102,6 +118,12 @@ onMounted(async () => { try { await cargar(); } catch (error) { await alertaErro
         <article v-for="item in filtradas" :key="item.id" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="mb-3 flex items-start justify-between gap-3"><div><span class="mb-2 inline-flex rounded-full px-2.5 py-1 text-xs font-bold" :class="statusClass(item.estatus_pago)">{{ etiquetaEstatus(item.estatus_pago) }}</span><h2 class="font-bold text-quiniela-verdeOscuro">{{ item.alias }}</h2><p class="text-sm text-gray-500">{{ item.jornadas?.nombre }}</p></div><span class="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">{{ item.origen === 'manual_admin' ? 'Presencial' : 'Web' }}</span></div>
           <dl class="grid grid-cols-2 gap-2 border-y py-3 text-sm"><div><dt class="text-gray-500">Participante</dt><dd class="font-semibold">{{ item.perfiles?.nombre_completo ?? 'Sin cuenta' }}</dd></div><div><dt class="text-gray-500">Aciertos</dt><dd class="font-semibold">{{ item.aciertos }}</dd></div><div v-if="item.correo_contacto" class="col-span-2"><dt class="text-gray-500">Correo de contacto</dt><dd class="font-semibold">{{ item.correo_contacto }}</dd></div></dl>
+          <button @click="alternarPronosticos(item)" :aria-expanded="item.verPronosticos" class="mt-3 w-full rounded-xl border border-gray-300 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">{{ item.verPronosticos ? 'Ocultar pronósticos' : 'Ver pronósticos' }}</button>
+          <div v-if="item.verPronosticos" class="mt-3 rounded-xl bg-gray-50 p-3">
+            <p v-if="item.cargandoDetalle" role="status" class="text-center text-sm text-gray-500">Cargando pronósticos…</p>
+            <p v-else-if="item.errorDetalle" role="alert" class="text-center text-sm text-red-600">{{ item.errorDetalle }}</p>
+            <DetallePronosticos v-else-if="item.detalle" :items="item.detalle" />
+          </div>
           <div v-if="item.editando" class="mt-4 space-y-3"><input v-model="item.aliasEditado" class="w-full rounded-xl border-gray-300" placeholder="Nombre de la entrada" /><input v-model="item.correoEditado" type="email" class="w-full rounded-xl border-gray-300" placeholder="Correo de contacto (opcional)" /><select v-model="item.estatusEditado" class="w-full rounded-xl border-gray-300"><option v-for="estadoItem in estados" :key="estadoItem.value" :value="estadoItem.value">{{ estadoItem.label }}</option></select><div class="grid grid-cols-2 gap-2"><button @click="item.editando = false" :disabled="procesandoId === item.id" class="rounded-xl border py-2 font-semibold text-gray-600 disabled:opacity-50">Cancelar</button><button @click="guardar(item)" :disabled="procesandoId === item.id" class="rounded-xl bg-quiniela-verde py-2 font-semibold text-white disabled:opacity-50">{{ procesandoId === item.id ? 'Guardando…' : 'Guardar' }}</button></div></div>
           <button v-else @click="item.editando = true" class="mt-4 w-full rounded-xl border border-quiniela-verde py-2 font-semibold text-quiniela-verde">Editar entrada y estatus</button>
         </article>
