@@ -59,6 +59,24 @@ export async function listarJornadasAdmin() {
   return (data ?? []).map((jornada) => ({ ...jornada, premio: premioPorJornada.get(jornada.id) ?? null }));
 }
 
+export async function obtenerDatosParaResultados(jornadaId) {
+  const [{ data: partidos, error: errorPartidos }, { data: quinielas, error: errorQuinielas }] = await Promise.all([
+    supabase.from('partidos').select('id, equipo_local, equipo_visitante, fecha_partido, estado, resultado_oficial, cancelado').eq('jornada_id', jornadaId),
+    supabase.from('quinielas')
+      .select('id, alias, creado_el, perfiles!quinielas_usuario_id_fkey(nombre_completo), predicciones(partido_id, pronostico)')
+      .eq('jornada_id', jornadaId)
+      .eq('estatus_pago', 'aprobado')
+      .order('creado_el', { ascending: true }),
+  ]);
+  if (errorPartidos) throw errorPartidos;
+  if (errorQuinielas) throw errorQuinielas;
+  const entradas = (quinielas ?? []).map((quiniela) => ({
+    nombre: quiniela.alias || quiniela.perfiles?.nombre_completo || 'Entrada',
+    predicciones: quiniela.predicciones ?? [],
+  }));
+  return { partidos: partidos ?? [], entradas };
+}
+
 export async function obtenerResumenCierreJornada(jornadaId) {
   const [{ data: ranking, error: rankingError }, { data: cupon, error: cuponError }] = await Promise.all([
     supabase.from('vista_ranking_admin').select('quiniela_id, usuario_id, nombre_completo, alias, aciertos, posicion').eq('jornada_id', jornadaId).eq('posicion', 1).order('quiniela_id'),

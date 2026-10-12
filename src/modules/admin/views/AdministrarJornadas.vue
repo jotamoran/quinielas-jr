@@ -2,8 +2,10 @@
 import { mensajeVisible } from '@/lib/errores';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin, obtenerResumenCierreJornada } from '../services/adminService';
+import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin, obtenerDatosParaResultados, obtenerResumenCierreJornada } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
+import { generarImagenResultados } from '../utils/imagenResultados';
+import { calcularTablaResultados } from '../utils/tablaResultados';
 import { alertaAdvertencia, alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
 import { ahoraParaDatetimeInput, fechaCDMXaISO, fechaHoraParaInput, formatearFecha } from '@/lib/fechas';
@@ -21,6 +23,8 @@ const resumenCierre = ref(null);
 const cargandoResumen = ref(false);
 const errorResumen = ref('');
 const opcionesResultadosAbiertas = ref(false);
+const generandoResultados = ref(false);
+const registroCerrado = computed(() => Boolean(abierta.value) && (abierta.value.estatus === 'finalizada' || new Date(abierta.value.fecha_cierre) <= new Date()));
 const resumenAdmin = computed(() => ({ activas: jornadas.value.filter((j) => j.estatus === 'activa').length, pendientes: jornadas.value.reduce((total, j) => total + (j.partidos ?? []).filter((p) => !p.cancelado && !p.resultado_oficial).length, 0), finalizadas: jornadas.value.filter((j) => j.estatus === 'finalizada').length }));
 
 const jornadasOrdenadas = computed(() => [...jornadas.value].sort((a, b) => {
@@ -119,24 +123,50 @@ async function compartirEnlace(jornada) {
   }
 }
 
+async function compartirBlobImagen(blob, nombreArchivo, jornada, texto) {
+  const archivo = new File([blob], nombreArchivo, { type: 'image/png' });
+  if (navigator.share && navigator.canShare?.({ files: [archivo] })) {
+    await navigator.share({ title: jornada.nombre, text: texto, files: [archivo] });
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = nombreArchivo;
+  enlace.click();
+  URL.revokeObjectURL(url);
+  await alertaExito('Imagen descargada', 'Ya está lista para compartir.');
+}
+
+function nombreArchivo(jornada, sufijo = '') {
+  return `${jornada.nombre.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'jornada'}${sufijo}.png`;
+}
+
 async function compartirImagen(jornada) {
   try {
     const blob = await generarImagenJornada(jornada);
-    const nombre = `${jornada.nombre.toLowerCase().replace(/[^a-z0-9]+/gi, '-') || 'jornada'}.png`;
-    const archivo = new File([blob], nombre, { type: 'image/png' });
-    if (navigator.share && navigator.canShare?.({ files: [archivo] })) {
-      await navigator.share({ title: jornada.nombre, text: `Pronósticos de ${jornada.nombre}`, files: [archivo] });
-      return;
-    }
-    const url = URL.createObjectURL(blob);
-    const enlace = document.createElement('a');
-    enlace.href = url;
-    enlace.download = nombre;
-    enlace.click();
-    URL.revokeObjectURL(url);
-    await alertaExito('Imagen descargada', 'Ya está lista para compartir.');
+    await compartirBlobImagen(blob, nombreArchivo(jornada), jornada, `Pronósticos de ${jornada.nombre}`);
   } catch (error) {
     if (error.name !== 'AbortError') await alertaError(error, 'No se pudo generar la imagen');
+  }
+}
+
+async function compartirResultadosImagen(jornada) {
+  if (generandoResultados.value) return;
+  generandoResultados.value = true;
+  try {
+    const { partidos, entradas } = await obtenerDatosParaResultados(jornada.id);
+    if (!entradas.length) {
+      await alertaAdvertencia('Sin entradas', 'Todavía no hay entradas aprobadas para mostrar.');
+      return;
+    }
+    const tabla = calcularTablaResultados({ partidos, entradas, estatus: jornada.estatus });
+    const blob = await generarImagenResultados({ jornada, tabla, premio: jornada.premio });
+    await compartirBlobImagen(blob, nombreArchivo(jornada, '-resultados'), jornada, `Resultados de ${jornada.nombre}`);
+  } catch (error) {
+    if (error.name !== 'AbortError') await alertaError(error, 'No se pudo generar la imagen de resultados');
+  } finally {
+    generandoResultados.value = false;
   }
 }
 
@@ -311,19 +341,20 @@ onMounted(async () => {
             <div><span class="inline-flex rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold">{{ etiquetaEstatus(abierta.estatus) }}</span><h2 class="mt-2 text-2xl font-bold">{{ abierta.nombre }}</h2><p class="mt-1 text-sm text-green-100">Cierre: {{ formatoFecha(abierta.fecha_cierre) }}</p></div>
             <div class="rounded-xl bg-white/10 px-4 py-3"><p class="text-xs uppercase tracking-wider text-green-100">Premio</p><p class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(abierta.premio) }}</p></div>
           </div>
-          <div class="mt-5 grid gap-2 sm:grid-cols-3">
+          <div class="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <template v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)">
               <div class="relative">
                 <button type="button" @click="opcionesResultadosAbiertas = !opcionesResultadosAbiertas" class="w-full rounded-xl bg-white px-3 py-2.5 font-semibold text-quiniela-verdeOscuro" :aria-expanded="opcionesResultadosAbiertas">Resultados {{ opcionesResultadosAbiertas ? '▴' : '▾' }}</button>
                 <div v-if="opcionesResultadosAbiertas" class="absolute left-0 z-10 mt-2 grid w-full min-w-52 gap-1 rounded-xl border border-gray-200 bg-white p-1.5 text-left text-sm shadow-xl">
-                  <button type="button" @click="compartirEnlace(abierta); opcionesResultadosAbiertas = false" class="rounded-lg px-3 py-2 text-left font-semibold text-quiniela-verdeOscuro hover:bg-green-50">Compartir resultados</button>
+                  <button type="button" @click="compartirEnlace(abierta); opcionesResultadosAbiertas = false" class="rounded-lg px-3 py-2 text-left font-semibold text-quiniela-verdeOscuro hover:bg-green-50">Compartir enlace de la tabla</button>
                   <button type="button" @click="abrirTablaPublica(abierta)" class="rounded-lg px-3 py-2 text-left font-semibold text-quiniela-verdeOscuro hover:bg-green-50">Abrir tabla pública</button>
                 </div>
               </div>
               <button @click="compartirRegistro(abierta)" class="rounded-xl border border-white/40 px-3 py-2.5 font-semibold">Compartir quiniela</button>
               <button @click="compartirImagen(abierta)" class="rounded-xl bg-quiniela-dorado px-3 py-2.5 font-semibold text-quiniela-grisTexto">Compartir imagen</button>
             </template>
-            <p v-else class="rounded-xl bg-white/10 px-4 py-3 text-center text-sm font-semibold text-green-100 sm:col-span-3">Jornada finalizada: solo consulta</p>
+            <p v-else class="rounded-xl bg-white/10 px-4 py-3 text-center text-sm font-semibold text-green-100" :class="abierta.estatus === 'cancelada' ? 'sm:col-span-2 lg:col-span-4' : 'sm:col-span-1 lg:col-span-3'">{{ abierta.estatus === 'cancelada' ? 'Jornada cancelada: solo consulta' : 'Jornada finalizada: solo consulta' }}</p>
+            <button v-if="abierta.estatus !== 'cancelada'" type="button" @click="compartirResultadosImagen(abierta)" :disabled="!registroCerrado || generandoResultados" :title="registroCerrado ? '' : 'Disponible cuando cierre el registro: antes los pronósticos no son públicos'" class="rounded-xl border border-white bg-white px-3 py-2.5 font-semibold text-quiniela-verdeOscuro disabled:cursor-not-allowed disabled:opacity-50">{{ generandoResultados ? 'Generando…' : 'Compartir resultados' }}</button>
           </div>
         </article>
 
