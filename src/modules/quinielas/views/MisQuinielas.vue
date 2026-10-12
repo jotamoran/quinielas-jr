@@ -1,6 +1,6 @@
 <script setup>
 import { mensajeVisible } from '@/lib/errores';
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { supabase } from '@/lib/supabase';
 import { obtenerMisQuinielas, obtenerRankingPublico, obtenerJornadaActiva, obtenerPartidos, obtenerPronosticosDeQuiniela } from '../services/quinielasService';
@@ -9,6 +9,7 @@ import TablaPosiciones from '../components/TablaPosiciones.vue';
 import DetallePronosticos from '../components/DetallePronosticos.vue';
 import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
 import { alertaError } from '@/lib/alertas';
+import { usarRefrescoPeriodico } from '@/lib/refrescoPeriodico';
 
 const quinielas = ref([]);
 const resumen = ref(null);
@@ -22,7 +23,6 @@ const cargando = ref(true);
 const aciertosMostrados = ref({});
 const tablaPosicionesRef = ref(null);
 const router = useRouter();
-let intervalo;
 
 async function alternarDetalleEntrada(quiniela) {
   if (abiertaEntrada.value === quiniela.id) {
@@ -106,9 +106,8 @@ async function obtenerPronosticosPublicos(quinielaId) {
 onMounted(async () => {
   try { await cargar(); } catch (error) { await alertaError(error, 'No se pudieron cargar tus quinielas'); }
   finally { cargando.value = false; }
-  intervalo = setInterval(() => cargar().catch(() => {}), 30000);
 });
-onUnmounted(() => clearInterval(intervalo));
+usarRefrescoPeriodico(cargar);
 </script>
 
 <template>

@@ -1,6 +1,7 @@
 <script setup>
 import { mensajeVisible } from '@/lib/errores';
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
+import { usarRefrescoPeriodico } from '@/lib/refrescoPeriodico';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
@@ -19,7 +20,6 @@ const cargando = ref(true);
 const error = ref('');
 const tablaPosiciones = ref(null);
 const actualizadoEl = ref(null);
-let intervalo;
 const esCancelada = computed(() => jornada.value?.estatus === 'cancelada');
 const esDefinitiva = computed(() => jornada.value?.estatus === 'finalizada');
 const bloqueada = computed(() => jornada.value && (jornada.value.estatus !== 'activa' || new Date(jornada.value.fecha_cierre) <= new Date()));
@@ -123,25 +123,23 @@ function formatoActualizacion(fecha) {
   return fecha?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Mexico_City' }) ?? '';
 }
 
-async function actualizar() {
+// En un refresco silencioso, si falla la consulta se conserva lo que ya se veía en vez de mostrar un error.
+async function actualizar({ silencioso = false } = {}) {
   try {
     await cargar();
     await tablaPosiciones.value?.recargar();
     actualizadoEl.value = new Date();
     error.value = '';
   } catch (e) {
-    error.value = mensajeVisible(e);
+    if (!silencioso || !jornada.value) error.value = mensajeVisible(e);
   } finally {
     cargando.value = false;
   }
 }
 
-onMounted(() => {
-  actualizar();
-  intervalo = setInterval(actualizar, 30000);
-});
-watch([jornadaId, () => authStore.isAdmin], actualizar);
-onUnmounted(() => clearInterval(intervalo));
+onMounted(() => actualizar());
+usarRefrescoPeriodico(() => actualizar({ silencioso: true }));
+watch([jornadaId, () => authStore.isAdmin], () => actualizar());
 </script>
 
 <template>
@@ -200,7 +198,7 @@ onUnmounted(() => clearInterval(intervalo));
       </div>
       <p v-if="!partidos.length" class="empty-state">Esta jornada todavía no tiene partidos.</p>
     </section>
-    <p class="text-center text-xs text-gray-500">Actualización automática cada 30 segundos<span v-if="actualizadoEl"> · Última actualización: {{ formatoActualizacion(actualizadoEl) }} · CDMX</span>.</p>
+    <p class="text-center text-xs text-gray-500">Actualización automática cada 2 minutos<span v-if="actualizadoEl"> · Última actualización: {{ formatoActualizacion(actualizadoEl) }} · CDMX</span>.</p>
     </template>
   </main>
 </template>

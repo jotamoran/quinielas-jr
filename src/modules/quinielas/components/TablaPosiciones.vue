@@ -19,15 +19,23 @@ const errorDetalle = ref({});
 const cargando = ref(false);
 const error = ref('');
 
-async function cargar() {
+// En un refresco silencioso la lista no se reemplaza por "Cargando" y, si falla, se conserva lo que ya se veía.
+async function cargar({ silencioso = false } = {}) {
   if (!props.jornadaId) return;
-  cargando.value = true;
-  error.value = '';
+  if (!silencioso) {
+    cargando.value = true;
+    error.value = '';
+  }
   try {
     filas.value = await props.obtenerRankingFn(props.jornadaId);
+    error.value = '';
     const filaAbierta = filas.value.find((fila) => fila.quiniela_id === abiertaId.value);
     if (filaAbierta) await cargarDetalle(filaAbierta, true);
-  } catch (e) { error.value = mensajeVisible(e); filas.value = []; } finally { cargando.value = false; }
+  } catch (e) {
+    if (!silencioso) { error.value = mensajeVisible(e); filas.value = []; }
+  } finally {
+    if (!silencioso) cargando.value = false;
+  }
 }
 
 async function cargarDetalle(fila, forzar = false) {
@@ -80,10 +88,10 @@ function esPorTarugo(fila) {
   return props.resaltarExtremos && claveGanaPorTarugo.value !== null && clavePara(fila) === claveGanaPorTarugo.value;
 }
 
-onMounted(cargar);
-watch(() => props.jornadaId, cargar);
+onMounted(() => cargar());
+watch(() => props.jornadaId, () => cargar());
 
-defineExpose({ recargar: cargar });
+defineExpose({ recargar: () => cargar({ silencioso: true }) });
 </script>
 
 <template>
