@@ -1,4 +1,5 @@
 <script setup>
+import EnlacesLegales from '@/components/EnlacesLegales.vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { iniciarSesion, traducirErrorAuth } from '../services/authService';
@@ -37,6 +38,7 @@ async function onSubmit() {
         <router-link :to="{ name: 'registro' }" class="auth-link">Crear cuenta</router-link>
         <router-link :to="{ name: 'recuperar-password' }" class="auth-link font-normal">Olvidé mi contraseña</router-link>
       </div>
+      <EnlacesLegales />
     </form>
   </div>
 </template>

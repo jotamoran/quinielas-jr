@@ -5,6 +5,7 @@ import { registrar, usernameDisponible, traducirErrorAuth } from '../services/au
 import { alertaError } from '@/lib/alertas';
 import CampoPassword from '@/components/CampoPassword.vue';
 import { LEGAL } from '@/config/legal';
+import EnlacesLegales from '@/components/EnlacesLegales.vue';
 
 const nombreCompleto = ref('');
 const email = ref('');
@@ -68,6 +69,7 @@ async function onSubmit() {
         {{ cargando ? 'Creando...' : 'Registrarme' }}
       </button>
       <p class="text-center text-sm text-gray-600">¿Ya tienes cuenta? <router-link :to="{ name: 'login' }" class="auth-link">Inicia sesión</router-link></p>
+      <EnlacesLegales />
     </form>
   </div>
 </template>

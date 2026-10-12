@@ -21,7 +21,7 @@ import { LEGAL } from '@/config/legal';
     <ol>
       <li>En cada jornada debes elegir <strong>L, E o V para todos los partidos</strong>. No se acepta una entrada con pronósticos incompletos.</li>
       <li>Puedes registrar varias entradas en la misma jornada. Cada una lleva un nombre (hasta 40 caracteres) y se paga por separado. Si no le pones nombre, se usa tu nombre de usuario seguido de un número.</li>
-      <li>Los nombres de las entradas se muestran en la tabla pública. No pueden ser ofensivos, engañosos ni incluir datos personales de otras personas; el Organizador puede cambiarlos.</li>
+      <li>Los nombres de las entradas se muestran en la tabla pública. No pueden ser ofensivos, difamatorios ni engañosos, ni vulnerar derechos de propiedad intelectual de terceros, ni incluir datos personales de otras personas; el Organizador puede cambiarlos.</li>
       <li>Si el Organizador registra una entrada por ti de forma presencial, se aplican las mismas reglas.</li>
     </ol>
 

@@ -31,7 +31,7 @@ import { LEGAL } from '@/config/legal';
       <li>Crear varias cuentas o usar la cuenta de otra persona para obtener ventajas.</li>
       <li>Subir comprobantes de pago falsos, alterados o que no correspondan al pago de la entrada.</li>
       <li>Usar programas automáticos, intentar acceder a información de otros participantes o vulnerar la seguridad del sitio.</li>
-      <li>Ponerle a una entrada nombres ofensivos, engañosos o que incluyan datos personales de terceros.</li>
+      <li>Ponerle a una entrada nombres ofensivos, difamatorios o engañosos, que vulneren derechos de propiedad intelectual de terceros (como marcas ajenas) o que incluyan datos personales de otras personas.</li>
       <li>Ponerse de acuerdo con otras personas para alterar resultados o premios.</li>
     </ul>
     <p>Si incumples estas reglas, el Organizador puede anular tus entradas, retener premios no entregados, suspender o eliminar tu cuenta, sin perjuicio de otras acciones que procedan.</p>
