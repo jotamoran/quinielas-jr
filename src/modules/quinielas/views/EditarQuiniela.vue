@@ -1,9 +1,10 @@
 <script setup>
+import { mensajeVisible } from '@/lib/errores';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { onBeforeRouteLeave } from 'vue-router';
 import TarjetaPartido from '../components/TarjetaPartido.vue';
-import { actualizarPredicciones, obtenerQuinielaParaEditar } from '../services/quinielasService';
+import { actualizarPredicciones, obtenerPartidos, obtenerQuinielaParaEditar } from '../services/quinielasService';
 import { alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 
 const route = useRoute();
@@ -14,17 +15,20 @@ const cargando = ref(true);
 const guardando = ref(false);
 const error = ref('');
 const original = ref({});
-const bloqueada = computed(() => !entrada.value || entrada.value.jornadas?.estatus !== 'activa' || new Date(entrada.value.jornadas.fecha_cierre) <= new Date());
-const partidos = computed(() => (entrada.value?.predicciones ?? []).map((item) => ({ ...item.partidos, id: item.partido_id })));
+const partidos = ref([]);
+const ahora = ref(Date.now());
+let reloj;
+const bloqueada = computed(() => !entrada.value || entrada.value.jornadas?.estatus !== 'activa' || new Date(entrada.value.jornadas.fecha_cierre).getTime() <= ahora.value);
 const completo = computed(() => partidos.value.filter((partido) => !partido.cancelado).every((partido) => pronosticos.value[partido.id]));
 const tieneCambios = computed(() => JSON.stringify(pronosticos.value) !== JSON.stringify(original.value));
 
 async function cargar() {
   try {
     entrada.value = await obtenerQuinielaParaEditar(route.params.quinielaId);
+    partidos.value = await obtenerPartidos(entrada.value.jornada_id);
     for (const item of entrada.value.predicciones ?? []) pronosticos.value[item.partido_id] = item.pronostico;
     original.value = { ...pronosticos.value };
-  } catch (e) { error.value = e.message; } finally { cargando.value = false; }
+  } catch (e) { error.value = mensajeVisible(e); } finally { cargando.value = false; }
 }
 
 async function guardar() {
@@ -51,8 +55,14 @@ async function volver() {
   }
   router.back();
 }
-onMounted(() => window.addEventListener('beforeunload', advertirSalida));
-onUnmounted(() => window.removeEventListener('beforeunload', advertirSalida));
+onMounted(() => {
+  window.addEventListener('beforeunload', advertirSalida);
+  reloj = setInterval(() => { ahora.value = Date.now(); }, 15000);
+});
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', advertirSalida);
+  clearInterval(reloj);
+});
 </script>
 
 <template>

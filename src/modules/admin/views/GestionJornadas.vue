@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { buscarFixtures, crearJornada } from '../services/adminService';
 import { LIGAS_DISPONIBLES } from '../utils/ligas';
 import EquipoAutocomplete from '../components/EquipoAutocomplete.vue';
-import { alertaError, alertaExito } from '@/lib/alertas';
+import { alertaAdvertencia, alertaError, alertaExito } from '@/lib/alertas';
 import { ahoraParaDatetimeInput, fechaCDMXaISO, formatearFecha, hoyParaInput } from '@/lib/fechas';
 
 const MAX_PARTIDOS = 9;
@@ -70,8 +70,9 @@ async function buscarPorJornada() {
   cargando.value = true;
   accionEnCurso.value = 'buscar-jornada';
   try {
-    const { fixtures: encontrados } = await buscarFixtures({ leagues: [ligaPrincipal.id], numeroJornada: numeroJornada.value });
+    const { fixtures: encontrados, advertencia } = await buscarFixtures({ leagues: [ligaPrincipal.id], numeroJornada: numeroJornada.value });
     fixtures.value = encontrados;
+    if (advertencia) await alertaAdvertencia('Verifica los partidos', advertencia);
     if (encontrados.length) {
       const fechas = encontrados.map((f) => f.fixture.date.slice(0, 10)).sort();
       desde.value = fechas[0];

@@ -1,4 +1,5 @@
 <script setup>
+import { mensajeVisible } from '@/lib/errores';
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '@/lib/supabase';
@@ -94,7 +95,7 @@ async function actualizar() {
     actualizadoEl.value = new Date();
     error.value = '';
   } catch (e) {
-    error.value = e.message;
+    error.value = mensajeVisible(e);
   } finally {
     cargando.value = false;
   }

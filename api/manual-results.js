@@ -1,7 +1,8 @@
-import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { requireAdmin, responderError } from './_lib/auth.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 
 const RESULTADOS_VALIDOS = new Set(['L', 'E', 'V']);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   try {
@@ -9,42 +10,25 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
 
     const { jornada_id: jornadaId, resultados } = req.body ?? {};
-    if (!jornadaId || !Array.isArray(resultados) || !resultados.length || resultados.length > 9) {
+    if (!jornadaId || !UUID.test(jornadaId) || !Array.isArray(resultados) || !resultados.length || resultados.length > 9) {
       return res.status(400).json({ error: 'Debes indicar la jornada y al menos un resultado' });
     }
-    if (resultados.some((item) => !item.partido_id || !RESULTADOS_VALIDOS.has(item.resultado))) {
+    if (resultados.some((item) => !UUID.test(item?.partido_id ?? '') || !RESULTADOS_VALIDOS.has(item.resultado))) {
       return res.status(400).json({ error: 'Los resultados enviados no son válidos' });
     }
-
-    const ids = [...new Set(resultados.map((item) => item.partido_id))];
-    const supabase = getSupabaseAdmin();
-    const { data: jornada, error: jornadaError } = await supabase.from('jornadas').select('estatus').eq('id', jornadaId).single();
-    if (jornadaError) throw jornadaError;
-    if (['finalizada', 'cancelada'].includes(jornada.estatus)) return res.status(409).json({ error: 'No se puede modificar una jornada finalizada o cancelada' });
-    const { data: partidos, error: partidosError } = await supabase
-      .from('partidos')
-      .select('id, cancelado, estado')
-      .eq('jornada_id', jornadaId)
-      .in('id', ids);
-    if (partidosError) throw partidosError;
-    if (partidos.length !== ids.length) return res.status(400).json({ error: 'Uno o más partidos no pertenecen a la jornada' });
-    if (partidos.some((partido) => partido.cancelado)) return res.status(409).json({ error: 'No se puede capturar resultado de un partido cancelado' });
-    if (partidos.some((partido) => partido.estado === 'finalizado')) return res.status(409).json({ error: 'Ese partido ya tiene un resultado finalizado' });
-
-    for (const item of resultados) {
-      const { error } = await supabase
-        .from('partidos')
-        .update({ resultado_oficial: item.resultado, estado: 'finalizado', actualizado_el: new Date().toISOString() })
-        .eq('id', item.partido_id)
-        .eq('jornada_id', jornadaId);
-      if (error) throw error;
+    if (new Set(resultados.map((item) => item.partido_id)).size !== resultados.length) {
+      return res.status(400).json({ error: 'Hay partidos repetidos en los resultados' });
     }
 
-    const { error: rpcError } = await supabase.rpc('calcular_puntos', { p_jornada_id: jornadaId });
-    if (rpcError) throw rpcError;
-    return res.status(200).json({ status: 'ok', actualizados: resultados.length });
+    const supabase = getSupabaseAdmin();
+    const { data: actualizados, error } = await supabase.rpc('aplicar_resultados_partidos', {
+      p_jornada_id: jornadaId,
+      p_resultados: resultados.map(({ partido_id, resultado }) => ({ partido_id, resultado })),
+      p_solo_pendientes: true,
+    });
+    if (error) throw error;
+    return res.status(200).json({ status: 'ok', actualizados });
   } catch (error) {
-    const status = error instanceof ErrorHttp ? error.status : 500;
-    return res.status(status).json({ error: error.message });
+    return responderError(res, error, 'api/manual-results');
   }
 }

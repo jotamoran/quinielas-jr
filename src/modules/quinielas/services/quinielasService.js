@@ -13,7 +13,7 @@ async function llamarApi(ruta, body) {
 }
 
 export async function obtenerJornadaActiva(jornadaId = null, { soloAbierta = false } = {}) {
-  let consulta = supabase.from('jornadas').select('*').eq('estatus', 'activa');
+  let consulta = supabase.from('jornadas').select('id, nombre, costo, fecha_cierre, estatus, creado_el').eq('estatus', 'activa');
   if (jornadaId) consulta = consulta.eq('id', jornadaId);
   else {
     if (soloAbierta) consulta = consulta.gt('fecha_cierre', new Date().toISOString());
@@ -130,8 +130,9 @@ export async function obtenerQuinielaParaEditar(quinielaId) {
   return data;
 }
 
-export async function registrarQuiniela({ jornadaId, alias, metodoPago, montoPagado, comprobanteUrl, predicciones, codigoCupon = null }) {
-  const { data, error } = await supabase.rpc('registrar_quiniela_atomica', {
+export async function registrarQuiniela({ claveSolicitud, jornadaId, alias, metodoPago, montoPagado, comprobanteUrl, predicciones, codigoCupon = null }) {
+  const { data, error } = await supabase.rpc('registrar_quiniela_idempotente', {
+    p_clave: claveSolicitud,
     p_jornada_id: jornadaId,
     p_alias: alias,
     p_metodo_pago: metodoPago,
@@ -144,8 +145,9 @@ export async function registrarQuiniela({ jornadaId, alias, metodoPago, montoPag
   return data;
 }
 
-export async function registrarQuinielasTransferencia({ jornadaId, entradas, comprobanteUrl }) {
-  const { data, error } = await supabase.rpc('registrar_quinielas_transferencia_atomica', {
+export async function registrarQuinielasTransferencia({ claveSolicitud, jornadaId, entradas, comprobanteUrl }) {
+  const { data, error } = await supabase.rpc('registrar_quinielas_transferencia_idempotente', {
+    p_clave: claveSolicitud,
     p_jornada_id: jornadaId,
     p_quinielas: entradas.map(({ alias, predicciones }) => ({
       alias,

@@ -1,3 +1,5 @@
+import { ErrorHttp } from '../auth.js';
+
 const API_BASE_URL = 'https://www.thesportsdb.com/api/v1/json';
 const FINAL_STATUSES = new Set(['ft', 'aet', 'pen', 'match finished', 'finished', 'complete']);
 const REQUEST_TIMEOUT_MS = 8000;
@@ -55,15 +57,15 @@ async function request(endpoint) {
     try {
       const response = await fetch(`${API_BASE_URL}/${key}/${endpoint}`, { signal: controller.signal });
       if (response.ok) return await response.json();
-      ultimoError = new Error(`El servicio de resultados respondió ${response.status}`);
+      ultimoError = new ErrorHttp(502, `El servicio de resultados respondió ${response.status}`);
       noReintentar = response.status < 500 && response.status !== 429;
     } catch (error) {
-      ultimoError = error.name === 'AbortError' ? new Error('El servicio de resultados tardó demasiado en responder') : error;
+      ultimoError = new ErrorHttp(502, error.name === 'AbortError' ? 'El servicio de resultados tardó demasiado en responder' : 'No se pudo consultar el servicio de resultados');
     } finally { clearTimeout(timeout); }
     if (noReintentar) throw ultimoError;
     if (intento < MAX_REINTENTOS) await new Promise((resolve) => setTimeout(resolve, 250 * (intento + 1)));
   }
-  throw ultimoError ?? new Error('No se pudo consultar el servicio de resultados');
+  throw ultimoError ?? new ErrorHttp(502, 'No se pudo consultar el servicio de resultados');
 }
 
 export function seasonRangeForDate(date) {
@@ -80,13 +82,14 @@ export async function getFixtures({ league, from, to, round, season }) {
     if (eventos.length <= 9) return eventos;
     // El servicio puede agrupar más de un torneo bajo el mismo string de temporada
     // (posible con Apertura+Clausura de Liga MX), una ronda puede traer el
-    // doble de partidos. Nos quedamos con los 9 más cercanos a hoy — no
-    // verificado en vivo todavía porque el Clausura no ha empezado.
+    // doble de partidos. Nos quedamos con los 9 más cercanos a hoy y marcamos el
+    // resultado como ambiguo para que el admin verifique la selección.
     const hoy = Date.now();
-    return eventos
+    const seleccion = eventos
       .sort((a, b) => Math.abs(new Date(a.fixture.date) - hoy) - Math.abs(new Date(b.fixture.date) - hoy))
       .slice(0, 9)
       .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
+    return Object.assign(seleccion, { ambiguo: true, totalEncontrados: eventos.length });
   }
   const payload = await request(`eventsnextleague.php?id=${encodeURIComponent(league)}`);
   return (payload.events ?? [])
@@ -97,6 +100,7 @@ export async function getFixtures({ league, from, to, round, season }) {
 export async function getFinalResults(ids) {
   apiKey();
   const results = new Map();
+  results.fallidos = [];
   for (let inicio = 0; inicio < ids.length; inicio += MAX_CONCURRENT_RESULTS) {
     const lote = ids.slice(inicio, inicio + MAX_CONCURRENT_RESULTS);
     const respuestas = await Promise.allSettled(lote.map(async (id) => {
@@ -108,7 +112,7 @@ export async function getFinalResults(ids) {
         const [id, resultado] = respuesta.value;
         results.set(id, resultado);
       } else {
-        results.set(String(lote[indice]), null);
+        results.fallidos.push(String(lote[indice]));
       }
     });
   }

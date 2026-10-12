@@ -1,4 +1,4 @@
-import { requireUser, ErrorHttp } from '../_lib/auth.js';
+import { requireUser, responderError } from '../_lib/auth.js';
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js';
 import { escaparHtml } from '../_lib/email.js';
 import { enviarAvisoTransferencia } from '../_lib/avisoTransferencia.js';
@@ -85,7 +85,6 @@ export default async function handler(req, res) {
     if (notificadoError) throw notificadoError;
     return res.status(200).json({ status: 'ok' });
   } catch (error) {
-    const status = error instanceof ErrorHttp ? error.status : 500;
-    return res.status(status).json({ error: error.message });
+    return responderError(res, error, 'notificaciones/pago-transferencia');
   }
 }

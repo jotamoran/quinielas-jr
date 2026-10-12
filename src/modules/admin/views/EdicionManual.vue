@@ -1,4 +1,5 @@
 <script setup>
+import { mensajeVisible } from '@/lib/errores';
 import { computed, onMounted, ref, watch } from 'vue';
 import { supabase } from '@/lib/supabase';
 import TarjetaPartido from '@/modules/quinielas/components/TarjetaPartido.vue';
@@ -94,7 +95,7 @@ async function alternarPronosticos(item) {
   try {
     item.detalle = await obtenerPronosticosDeQuiniela(item.id);
   } catch (error) {
-    item.errorDetalle = error.message;
+    item.errorDetalle = mensajeVisible(error);
   } finally {
     item.cargandoDetalle = false;
   }

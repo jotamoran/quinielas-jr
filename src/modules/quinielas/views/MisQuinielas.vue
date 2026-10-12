@@ -1,4 +1,5 @@
 <script setup>
+import { mensajeVisible } from '@/lib/errores';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { supabase } from '@/lib/supabase';
@@ -39,7 +40,7 @@ async function cargarDetalleEntrada(quiniela, forzar = false) {
   try {
     detallesEntrada.value[quiniela.id] = await obtenerPronosticosDeQuiniela(quiniela.id);
   } catch (error) {
-    errorEntrada.value[quiniela.id] = error.message;
+    errorEntrada.value[quiniela.id] = mensajeVisible(error);
   } finally {
     cargandoEntrada.value = null;
   }
@@ -56,9 +57,11 @@ async function cargar() {
     await tablaPosicionesRef.value?.recargar();
     return;
   }
-  const { data, error } = await supabase.from('vista_ranking_publica').select('quiniela_id, aciertos').in('quiniela_id', ids);
+  const { data, error } = await supabase.from('vista_ranking_publica').select('quiniela_id, aciertos, posicion').in('quiniela_id', ids);
   if (error) throw error;
   aciertosMostrados.value = Object.fromEntries((data ?? []).map((fila) => [fila.quiniela_id, fila.aciertos]));
+  const posiciones = Object.fromEntries((data ?? []).map((fila) => [fila.quiniela_id, Number(fila.posicion)]));
+  resumen.value = calcularResumenBalance(quinielas.value.map((quiniela) => ({ ...quiniela, posicion: posiciones[quiniela.id] })));
   const entradaAbierta = quinielas.value.find((quiniela) => quiniela.id === abiertaEntrada.value);
   if (entradaAbierta) await cargarDetalleEntrada(entradaAbierta, true);
   await tablaPosicionesRef.value?.recargar();

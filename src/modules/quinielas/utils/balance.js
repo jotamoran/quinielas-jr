@@ -11,7 +11,7 @@ export function calcularResumenBalance(quinielas) {
 
   return {
     totalGastado,
-    jornadasJugadas: aprobadas.length,
+    jornadasJugadas: new Set(aprobadas.map((q) => q.jornada_id)).size,
     aciertosTotales,
     aciertosPromedio: Math.round((aciertosTotales / aprobadas.length) * 100) / 100,
     mejorPosicion: posiciones.length ? Math.min(...posiciones) : null,

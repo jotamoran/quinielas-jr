@@ -1,4 +1,5 @@
 import Swal from 'sweetalert2';
+import { mensajeVisible } from './errores';
 
 const base = {
   confirmButtonColor: '#0f5132',
@@ -16,7 +17,7 @@ export function alertaExito(title, text = '') {
 }
 
 export function alertaError(error, title = 'No se pudo completar') {
-  return Swal.fire({ ...base, icon: 'error', title, text: error?.message ?? String(error) });
+  return Swal.fire({ ...base, icon: 'error', title, text: mensajeVisible(error) });
 }
 
 export function alertaAdvertencia(title, text = '') {

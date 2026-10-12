@@ -1,4 +1,5 @@
 <script setup>
+import { mensajeVisible } from '@/lib/errores';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin, obtenerResumenCierreJornada } from '../services/adminService';
@@ -48,6 +49,7 @@ function claseEstatus(estatus) {
 }
 
 function abrir(jornada) {
+  if (guardando.value) return;
   abierta.value = jornada;
   premioEditado.value = Number(jornada.premio ?? 0);
   cierreEditado.value = fechaHoraParaInput(jornada.fecha_cierre);
@@ -58,7 +60,14 @@ function abrir(jornada) {
 
 async function cargarResumenCierre(jornadaId) {
   cargandoResumen.value = true;
-  try { resumenCierre.value = await obtenerResumenCierreJornada(jornadaId); } catch (error) { errorResumen.value = error.message; } finally { cargandoResumen.value = false; }
+  try {
+    const resumen = await obtenerResumenCierreJornada(jornadaId);
+    if (abierta.value?.id === jornadaId) resumenCierre.value = resumen;
+  } catch (error) {
+    if (abierta.value?.id === jornadaId) errorResumen.value = mensajeVisible(error);
+  } finally {
+    if (abierta.value?.id === jornadaId) cargandoResumen.value = false;
+  }
 }
 
 function enlacePublico(jornada) {
@@ -133,11 +142,13 @@ async function compartirImagen(jornada) {
 
 async function guardarPremio() {
   if (!abierta.value || ['finalizada', 'cancelada'].includes(abierta.value.estatus) || premioEditado.value < 0) return;
+  const objetivo = abierta.value;
+  const premio = premioEditado.value;
   guardando.value = true;
   accionEnCurso.value = 'premio';
   try {
-    await actualizarPremioJornada(abierta.value.id, premioEditado.value);
-    abierta.value.premio = premioEditado.value;
+    await actualizarPremioJornada(objetivo.id, premio);
+    objetivo.premio = premio;
     await alertaExito('Premio actualizado');
   } catch (error) {
     await alertaError(error, 'No se pudo actualizar el premio');
@@ -159,11 +170,12 @@ async function guardarCierre() {
     await alertaError(new Error('El cierre debe quedar al menos cinco minutos antes del primer partido.'), 'Fecha de cierre no válida');
     return;
   }
+  const objetivo = abierta.value;
   guardando.value = true;
   accionEnCurso.value = 'fecha';
   try {
-    await actualizarCierreJornada(abierta.value.id, fecha);
-    abierta.value.fecha_cierre = fecha;
+    await actualizarCierreJornada(objetivo.id, fecha);
+    objetivo.fecha_cierre = fecha;
     await alertaExito('Fecha límite actualizada');
   } catch (error) {
     await alertaError(error, 'No se pudo actualizar el cierre');
@@ -177,13 +189,14 @@ async function cerrarRegistro() {
   if (!abierta.value || ['finalizada', 'cancelada'].includes(abierta.value.estatus)) return;
   const confirmado = await confirmarAccion({ title: 'Cerrar registro ahora', text: 'Desde este momento ya no se podrán registrar nuevas quinielas.', confirmText: 'Cerrar registro', danger: true });
   if (!confirmado) return;
+  const objetivo = abierta.value;
   guardando.value = true;
   accionEnCurso.value = 'cierre';
   try {
     const fecha = new Date().toISOString();
-    await actualizarCierreJornada(abierta.value.id, fecha);
-    abierta.value.fecha_cierre = fecha;
-    cierreEditado.value = fechaHoraParaInput(fecha);
+    await actualizarCierreJornada(objetivo.id, fecha);
+    objetivo.fecha_cierre = fecha;
+    if (abierta.value === objetivo) cierreEditado.value = fechaHoraParaInput(fecha);
     await alertaExito('Registro cerrado');
   } catch (error) {
     await alertaError(error, 'No se pudo cerrar el registro');
@@ -202,15 +215,20 @@ async function cancelarJornadaCompleta() {
     danger: true,
   });
   if (!confirmado) return;
+  const objetivo = abierta.value;
   guardando.value = true;
   accionEnCurso.value = 'cancelar-jornada';
   try {
-    const resultado = await cancelarJornada(abierta.value.id);
-    abierta.value.estatus = 'cancelada';
-    const jornadaEnLista = jornadas.value.find((j) => j.id === abierta.value.id);
+    let resultado = await cancelarJornada(objetivo.id);
+    objetivo.estatus = 'cancelada';
+    const jornadaEnLista = jornadas.value.find((j) => j.id === objetivo.id);
     if (jornadaEnLista) jornadaEnLista.estatus = 'cancelada';
     if (resultado.avisos?.length) {
-      await alertaAdvertencia('Jornada cancelada con avisos', resultado.avisos.join(' '));
+      const reintentar = await confirmarAccion({ title: 'Jornada cancelada con avisos', text: `${resultado.avisos.join(' ')} ¿Reintentar ahora los avisos pendientes?`, confirmText: 'Reintentar avisos' });
+      if (reintentar) resultado = await cancelarJornada(objetivo.id, { reenviarAvisos: true });
+    }
+    if (resultado.avisos?.length) {
+      await alertaAdvertencia('Quedan avisos pendientes', resultado.avisos.join(' '));
     } else {
       await alertaExito('Jornada cancelada', 'Los participantes fueron notificados correctamente.');
     }

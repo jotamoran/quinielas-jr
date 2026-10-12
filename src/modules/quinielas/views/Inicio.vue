@@ -5,10 +5,11 @@ import { useLoginModalStore } from '@/store/loginModal';
 import { obtenerJornadaActiva } from '../services/quinielasService';
 
 const jornada = ref(null);
+const errorCarga = ref(false);
 const authStore = useAuthStore();
 const loginModalStore = useLoginModalStore();
 onMounted(async () => {
-  try { jornada.value = await obtenerJornadaActiva(null, { soloAbierta: true }); } catch { jornada.value = null; }
+  try { jornada.value = await obtenerJornadaActiva(null, { soloAbierta: true }); } catch { jornada.value = null; errorCarga.value = true; }
 });
 </script>
 
@@ -18,6 +19,7 @@ onMounted(async () => {
       <p class="eyebrow text-green-200">Quinielas JR</p>
       <h1 class="mt-2 max-w-2xl text-3xl font-bold leading-tight sm:text-5xl">Participa, suma puntos y sigue la jornada en vivo.</h1>
       <p class="mt-4 max-w-xl text-base leading-relaxed text-green-100 sm:text-lg">Registra tus pronósticos, consulta tu posición y revisa los resultados conforme avanza cada partido.</p>
+      <p v-if="errorCarga" role="alert" class="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">No pudimos consultar la jornada ahora. Inténtalo de nuevo en unos minutos.</p>
       <div class="mt-7 flex flex-col gap-3 sm:flex-row">
         <router-link v-if="jornada" :to="{ name: 'llenar-quiniela', params: { jornadaId: jornada.id } }" class="rounded-xl bg-quiniela-dorado px-5 py-3 text-center font-bold text-quiniela-grisTexto">Llenar quiniela</router-link>
         <router-link v-else :to="{ name: 'llenar-quiniela' }" class="rounded-xl bg-quiniela-dorado px-5 py-3 text-center font-bold text-quiniela-grisTexto">Ver jornadas disponibles</router-link>

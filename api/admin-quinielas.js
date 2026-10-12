@@ -1,4 +1,4 @@
-import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { requireAdmin, ErrorHttp, responderError } from './_lib/auth.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 
 const ESTATUS = new Set(['pendiente', 'aprobado', 'rechazado']);
@@ -86,7 +86,6 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Método no permitido' });
   } catch (error) {
-    const status = error instanceof ErrorHttp ? error.status : 500;
-    return res.status(status).json({ error: error.message });
+    return responderError(res, error, 'api/admin-quinielas');
   }
 }

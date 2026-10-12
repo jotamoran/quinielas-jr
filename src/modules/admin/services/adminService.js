@@ -50,10 +50,13 @@ export async function actualizarQuinielaAdmin(payload) {
 export async function listarJornadasAdmin() {
   const { data, error } = await supabase
     .from('jornadas')
-    .select('id, nombre, costo, premio, fecha_cierre, estatus, creado_el, partidos(id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial, estado, puntos_local, puntos_visitante, actualizado_el, cancelado)')
+    .select('id, nombre, costo, fecha_cierre, estatus, creado_el, partidos(id, liga_nombre, equipo_local, equipo_visitante, logo_local, logo_visitante, fecha_partido, resultado_oficial, estado, puntos_local, puntos_visitante, actualizado_el, cancelado)')
     .order('creado_el', { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  const { data: premios, error: errorPremios } = await supabase.from('vista_premios_admin').select('jornada_id, premio');
+  if (errorPremios) throw errorPremios;
+  const premioPorJornada = new Map((premios ?? []).map((fila) => [fila.jornada_id, fila.premio]));
+  return (data ?? []).map((jornada) => ({ ...jornada, premio: premioPorJornada.get(jornada.id) ?? null }));
 }
 
 export async function obtenerResumenCierreJornada(jornadaId) {
@@ -107,7 +110,7 @@ export async function crearJornada({ nombre, costo, premio, fechaCierre, partido
   const { data: jornada, error } = await supabase
     .from('jornadas')
     .insert({ nombre, costo, premio, fecha_cierre: fechaCierre, estatus: 'borrador' })
-    .select()
+    .select('id, nombre, costo, fecha_cierre, estatus, creado_el')
     .single();
   if (error) throw error;
 
@@ -197,8 +200,8 @@ export async function guardarResultadosManuales(jornadaId, resultados) {
   });
 }
 
-export async function cerrarJornada(jornadaId) {
-  return llamarApi('cerrar-jornada', { method: 'POST', body: JSON.stringify({ jornada_id: jornadaId }) });
+export async function cerrarJornada(jornadaId, { reenviarAvisos = false } = {}) {
+  return llamarApi('cerrar-jornada', { method: 'POST', body: JSON.stringify({ jornada_id: jornadaId, reenviar_avisos: reenviarAvisos }) });
 }
 
 export async function editarQuinielaManual(quinielaId, cambios) {
@@ -211,6 +214,6 @@ export async function actualizarDatosBancarios({ banco, clabe, titular }) {
   if (error) throw error;
 }
 
-export async function cancelarJornada(jornadaId) {
-  return llamarApi('cancelar-jornada', { method: 'POST', body: JSON.stringify({ jornada_id: jornadaId }) });
+export async function cancelarJornada(jornadaId, { reenviarAvisos = false } = {}) {
+  return llamarApi('cancelar-jornada', { method: 'POST', body: JSON.stringify({ jornada_id: jornadaId, reenviar_avisos: reenviarAvisos }) });
 }

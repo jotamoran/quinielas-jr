@@ -33,5 +33,9 @@ const layout = computed(() => {
 <template>
   <component :is="layout" />
   <LoginModal />
+  <div v-if="authStore.errorPerfil" role="alert" class="fixed left-1/2 top-3 z-[60] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800 shadow-xl">
+    <span>No pudimos cargar tu perfil.</span>
+    <button type="button" @click="authStore.cargarPerfil()" class="rounded-lg border border-red-400 bg-white px-3 py-1.5 text-red-800">Reintentar</button>
+  </div>
   <div v-if="!enLinea" role="status" aria-live="polite" class="fixed bottom-4 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-900 shadow-xl">Sin conexión. Las acciones de registro, pago y pronósticos requieren internet.</div>
 </template>

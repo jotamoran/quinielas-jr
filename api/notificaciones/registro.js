@@ -1,28 +1,14 @@
-import { requireUser, ErrorHttp } from '../_lib/auth.js';
+import { requireUser, responderError } from '../_lib/auth.js';
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js';
-import { enviarCorreo, escaparHtml } from '../_lib/email.js';
+import { escaparHtml } from '../_lib/email.js';
+import { enviarAvisoUnico } from '../_lib/avisoUnico.js';
 
-async function notificarAdmin(supabaseAdmin, { alias, metodoPago, estatusPago, jornadaNombre }) {
-  const { data: admins } = await supabaseAdmin.from('perfiles').select('id').eq('rol', 'admin');
-  for (const admin of admins ?? []) {
-    try {
-      const { data: cuenta } = await supabaseAdmin.auth.admin.getUserById(admin.id);
-      const correoAdmin = cuenta?.user?.email;
-      if (!correoAdmin) continue;
-      await enviarCorreo({
-        to: correoAdmin,
-        subject: `Nueva quiniela registrada: ${jornadaNombre}`,
-        heading: '📋 Nueva quiniela registrada',
-        bodyHtml: `<p>Alguien acaba de registrar una quiniela.</p>
-          <p>Jornada: <b>${escaparHtml(jornadaNombre)}</b></p>
-          <p>Entrada: ${escaparHtml(alias ?? 'Entrada')}</p>
-          <p>Método de pago: ${metodoPago}</p>
-          <p>Estatus: ${estatusPago}</p>`,
-      });
-    } catch (error) {
-      console.error(`notificaciones/registro: falló el aviso al admin ${admin.id}`, error.message);
-    }
-  }
+async function correoDelDueno(supabaseAdmin, quiniela, user) {
+  if (!quiniela.usuario_id) return quiniela.correo_contacto ?? null;
+  if (quiniela.usuario_id === user.id) return user.email;
+  const { data: cuenta, error } = await supabaseAdmin.auth.admin.getUserById(quiniela.usuario_id);
+  if (error) throw error;
+  return cuenta?.user?.email ?? null;
 }
 
 export default async function handler(req, res) {
@@ -30,13 +16,13 @@ export default async function handler(req, res) {
     const { user, perfil } = await requireUser(req);
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
 
-    const { quiniela_id } = req.body;
+    const { quiniela_id } = req.body ?? {};
     if (!quiniela_id) return res.status(400).json({ error: 'Falta quiniela_id' });
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data: quiniela } = await supabaseAdmin
       .from('quinielas')
-      .select('usuario_id, alias, metodo_pago, monto_pagado, estatus_pago, jornada_id, jornadas(nombre)')
+      .select('usuario_id, alias, metodo_pago, monto_pagado, estatus_pago, jornada_id, correo_contacto, jornadas(nombre)')
       .eq('id', quiniela_id)
       .single();
 
@@ -47,33 +33,59 @@ export default async function handler(req, res) {
     const avisoEfectivo = quiniela.metodo_pago === 'efectivo'
       ? '<p><b>Importante:</b> tu quiniela queda pendiente hasta confirmar tu pago en efectivo. Si no se paga, no estarás participando en el sorteo.</p>'
       : '';
+    let avisosPendientes = false;
 
-    await enviarCorreo({
-      to: user.email,
-      subject: `Quiniela registrada: ${quiniela.jornadas?.nombre ?? ''}`,
-      heading: '¡Tu quiniela quedó registrada!',
-      bodyHtml: `<p>Jornada: <b>${escaparHtml(quiniela.jornadas?.nombre)}</b></p>
+    const correoUsuario = await correoDelDueno(supabaseAdmin, quiniela, user);
+    if (correoUsuario) {
+      try {
+        const enviado = await enviarAvisoUnico(supabaseAdmin, `registro:${quiniela_id}:usuario`, {
+          to: correoUsuario,
+          subject: `Quiniela registrada: ${quiniela.jornadas?.nombre ?? ''}`,
+          heading: '¡Tu quiniela quedó registrada!',
+          bodyHtml: `<p>Jornada: <b>${escaparHtml(quiniela.jornadas?.nombre)}</b></p>
         <p>Entrada: ${escaparHtml(quiniela.alias ?? 'Entrada')}</p>
         <p>Método de pago: ${quiniela.metodo_pago}</p>
         <p>Monto: $${Number(quiniela.monto_pagado ?? 0).toFixed(2)}</p>
         <p>Estatus: ${quiniela.estatus_pago}</p>
         ${avisoEfectivo}`,
-    });
-
-    try {
-      await notificarAdmin(supabaseAdmin, {
-        alias: quiniela.alias,
-        metodoPago: quiniela.metodo_pago,
-        estatusPago: quiniela.estatus_pago,
-        jornadaNombre: quiniela.jornadas?.nombre ?? '',
-      });
-    } catch (avisoError) {
-      console.error('notificaciones/registro: falló el aviso al admin', avisoError.message);
+        });
+        if (!enviado) avisosPendientes = true;
+      } catch (error) {
+        avisosPendientes = true;
+        console.error(`notificaciones/registro: falló el aviso al usuario de la entrada ${quiniela_id}`, error.message);
+      }
     }
 
+    const { data: admins, error: adminsError } = await supabaseAdmin.from('perfiles').select('id').eq('rol', 'admin');
+    if (adminsError) throw adminsError;
+    for (const admin of admins ?? []) {
+      try {
+        const { data: cuenta, error: cuentaError } = await supabaseAdmin.auth.admin.getUserById(admin.id);
+        if (cuentaError) throw cuentaError;
+        const correoAdmin = cuenta?.user?.email;
+        if (!correoAdmin) continue;
+        const enviado = await enviarAvisoUnico(supabaseAdmin, `registro:${quiniela_id}:admin:${admin.id}`, {
+          to: correoAdmin,
+          subject: `Nueva quiniela registrada: ${quiniela.jornadas?.nombre ?? ''}`,
+          heading: '📋 Nueva quiniela registrada',
+          bodyHtml: `<p>Alguien acaba de registrar una quiniela.</p>
+          <p>Jornada: <b>${escaparHtml(quiniela.jornadas?.nombre)}</b></p>
+          <p>Entrada: ${escaparHtml(quiniela.alias ?? 'Entrada')}</p>
+          <p>Método de pago: ${quiniela.metodo_pago}</p>
+          <p>Estatus: ${quiniela.estatus_pago}</p>`,
+        });
+        if (!enviado) avisosPendientes = true;
+      } catch (error) {
+        avisosPendientes = true;
+        console.error(`notificaciones/registro: falló el aviso al admin ${admin.id}`, error.message);
+      }
+    }
+
+    if (avisosPendientes) {
+      return res.status(503).json({ error: 'Quedaron avisos pendientes. Puedes reintentar sin reenviar los que ya se enviaron.' });
+    }
     return res.status(200).json({ status: 'ok' });
   } catch (e) {
-    const status = e instanceof ErrorHttp ? e.status : 500;
-    return res.status(status).json({ error: e.message });
+    return responderError(res, e, 'notificaciones/registro');
   }
 }

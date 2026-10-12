@@ -7,6 +7,16 @@ export class ErrorHttp extends Error {
   }
 }
 
+const CODIGO_REGLA_DE_NEGOCIO = 'P0001';
+
+// Solo se muestran al usuario los errores propios (ErrorHttp y RAISE de nuestras funciones SQL); el resto se registra.
+export function responderError(res, error, contexto = 'api') {
+  if (error instanceof ErrorHttp) return res.status(error.status).json({ error: error.message });
+  if (error?.code === CODIGO_REGLA_DE_NEGOCIO && error.message) return res.status(409).json({ error: error.message });
+  console.error(`${contexto}: error inesperado`, error);
+  return res.status(500).json({ error: 'Ocurrió un error inesperado. Inténtalo de nuevo.' });
+}
+
 export async function requireUser(req) {
   const encabezado = req.headers['authorization'] || '';
   const token = encabezado.replace('Bearer ', '');

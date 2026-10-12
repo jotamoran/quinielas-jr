@@ -6,6 +6,7 @@ export const useAuthStore = defineStore('auth', {
     session: null,
     user: null,
     perfil: null,
+    errorPerfil: false,
     listo: false,
   }),
 
@@ -20,12 +21,13 @@ export const useAuthStore = defineStore('auth', {
         this.perfil = null;
         return;
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('perfiles')
         .select('id, nombre_completo, username, rol')
         .eq('id', this.user.id)
-        .single();
-      this.perfil = data ?? null;
+        .maybeSingle();
+      this.errorPerfil = Boolean(error);
+      this.perfil = error ? null : (data ?? null);
     },
 
     async init() {

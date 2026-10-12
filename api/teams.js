@@ -1,4 +1,4 @@
-import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { requireAdmin, responderError } from './_lib/auth.js';
 import { buscarEnCache, guardarEnCache } from './_lib/football/equiposCache.js';
 
 const REQUEST_TIMEOUT_MS = 8000;
@@ -53,7 +53,6 @@ export default async function handler(req, res) {
     await guardarEnCache(teams);
     return res.status(200).json({ teams });
   } catch (error) {
-    const status = error instanceof ErrorHttp ? error.status : 500;
-    return res.status(status).json({ error: error.message });
+    return responderError(res, error, 'api/teams');
   }
 }

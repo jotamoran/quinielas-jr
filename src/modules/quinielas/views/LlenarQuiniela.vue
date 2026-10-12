@@ -1,4 +1,5 @@
 <script setup>
+import { mensajeVisible } from '@/lib/errores';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/auth';
@@ -18,6 +19,7 @@ const jornada = ref(null);
 const partidos = ref([]);
 const pronosticos = ref({});
 const datosBancarios = ref(null);
+let claveSolicitud = crypto.randomUUID();
 const alias = ref('');
 const entradasPrevias = ref(0);
 const aliasPorDefecto = computed(() => `${authStore.perfil?.username ?? 'Entrada'} ${entradasPrevias.value + 1}`);
@@ -110,7 +112,7 @@ async function cargar() {
       }
     }
   } catch (e) {
-    error.value = e.message;
+    error.value = mensajeVisible(e);
     cargandoJornada.value = false;
     return;
   }
@@ -123,6 +125,7 @@ function actualizarTiempo() {
 }
 
 async function confirmarPago({ metodo, archivo, codigoCupon, cantidad = 1 }) {
+  if (procesando.value) return;
   error.value = '';
   errorPago.value = '';
   procesando.value = true;
@@ -132,6 +135,7 @@ async function confirmarPago({ metodo, archivo, codigoCupon, cantidad = 1 }) {
     const prediccionesActuales = partidosActivos.value.map((partido) => ({ partidoId: partido.id, pronostico: pronosticos.value[partido.id] }));
     const resultado = metodo === "transferencia"
       ? await registrarQuinielasTransferencia({
+        claveSolicitud,
         jornadaId: jornada.value.id,
         comprobanteUrl,
         entradas: Array.from({ length: cantidad }, (_, indice) => ({
@@ -140,6 +144,7 @@ async function confirmarPago({ metodo, archivo, codigoCupon, cantidad = 1 }) {
         })),
       })
       : await registrarQuiniela({
+        claveSolicitud,
         jornadaId: jornada.value.id,
         alias: alias.value,
         metodoPago: metodo,
@@ -160,14 +165,16 @@ async function confirmarPago({ metodo, archivo, codigoCupon, cantidad = 1 }) {
       montoTotal: metodo === "transferencia" ? resultado.monto_total : (metodo === "cupon" ? 0 : jornada.value.costo),
       notificacionPendiente,
     };
+    claveSolicitud = crypto.randomUUID();
     paso.value = 'confirmacion';
   } catch (e) {
-    if (comprobanteUrl) {
+    // Solo se borra el comprobante si el servidor rechazó el registro; ante un corte de red puede haberse guardado.
+    if (comprobanteUrl && e?.code) {
       try { await eliminarComprobante(comprobanteUrl); } catch { }
     }
     errorPago.value = e.message?.toLowerCase().includes('comprobante') || e.message?.toLowerCase().includes('storage')
       ? 'No se pudo cargar el comprobante. Verifica que sea una imagen o PDF de máximo 8 MB e inténtalo de nuevo.'
-      : e.message || 'No se pudo confirmar el pago. Revisa los datos e inténtalo de nuevo.';
+      : mensajeVisible(e) || 'No se pudo confirmar el pago. Revisa los datos e inténtalo de nuevo.';
     await alertaError(e, 'No se pudo registrar la quiniela');
   } finally {
     procesando.value = false;

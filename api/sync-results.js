@@ -1,4 +1,4 @@
-import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { requireAdmin, ErrorHttp, responderError } from './_lib/auth.js';
 import { findFinalResults, FOOTBALL_PROVIDER } from './_lib/football/provider.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 
@@ -11,26 +11,33 @@ async function sincronizarJornada(supabase, jornadaId) {
     .not('external_fixture_id', 'is', null)
     .eq('cancelado', false);
   if (error) throw error;
-  if (!partidos?.length) return { revisados: 0, actualizados: 0 };
+  if (!partidos?.length) return { revisados: 0, actualizados: 0, fallidos: 0 };
+
   const results = await findFinalResults(partidos.map((partido) => partido.external_fixture_id));
-  let actualizados = 0;
+  const fallidos = results.fallidos ?? [];
+  if (fallidos.length === partidos.length) {
+    throw new ErrorHttp(502, 'No se pudo consultar el servicio de resultados. Inténtalo de nuevo en unos minutos.');
+  }
+
+  const cambios = [];
   for (const partido of partidos) {
     const resultado = results.get(String(partido.external_fixture_id));
     if (!resultado) continue;
     if (resultado === partido.resultado_oficial && partido.estado === 'finalizado') continue;
-    const { error: updateError } = await supabase.from('partidos').update({
-      resultado_oficial: resultado,
-      estado: 'finalizado',
-      actualizado_el: new Date().toISOString(),
-    }).eq('id', partido.id);
-    if (updateError) throw updateError;
-    actualizados += 1;
+    cambios.push({ partido_id: partido.id, resultado });
   }
-  if (actualizados) {
-    const { error: rpcError } = await supabase.rpc('calcular_puntos', { p_jornada_id: jornadaId });
+
+  let actualizados = 0;
+  if (cambios.length) {
+    const { data, error: rpcError } = await supabase.rpc('aplicar_resultados_partidos', {
+      p_jornada_id: jornadaId,
+      p_resultados: cambios,
+      p_solo_pendientes: false,
+    });
     if (rpcError) throw rpcError;
+    actualizados = data ?? 0;
   }
-  return { revisados: partidos.length, actualizados };
+  return { revisados: partidos.length, actualizados, fallidos: fallidos.length };
 }
 
 export default async function handler(req, res) {
@@ -45,9 +52,8 @@ export default async function handler(req, res) {
     if (!jornada) return res.status(404).json({ error: 'La jornada no existe' });
     if (['finalizada', 'cancelada'].includes(jornada.estatus)) return res.status(409).json({ error: 'La jornada ya es de solo consulta' });
     const resultado = await sincronizarJornada(supabase, jornadaId);
-    return res.status(200).json({ status: 'ok', ...resultado });
+    return res.status(200).json({ status: resultado.fallidos ? 'parcial' : 'ok', ...resultado });
   } catch (error) {
-    const status = error instanceof ErrorHttp ? error.status : 500;
-    return res.status(status).json({ error: error.message });
+    return responderError(res, error, 'api/sync-results');
   }
 }

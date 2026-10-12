@@ -1,4 +1,4 @@
-import { ErrorHttp } from '../auth.js';
+import { ErrorHttp, responderError } from '../auth.js';
 
 export default async function handler(req, res) {
   try {
@@ -17,6 +17,6 @@ export default async function handler(req, res) {
     if (!respuesta.ok) return res.status(400).json({ error: datos.msg || datos.message || 'El código no es válido o ya expiró.' });
     return res.status(200).json({ access_token: datos.access_token, refresh_token: datos.refresh_token });
   } catch (error) {
-    return res.status(error instanceof ErrorHttp ? error.status : 500).json({ error: error.message || 'No se pudo verificar el código' });
+    return responderError(res, error, 'verificar-codigo');
   }
 }

@@ -1,4 +1,4 @@
-import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { requireAdmin, ErrorHttp, responderError } from './_lib/auth.js';
 import { findFixtures, findNextRound, seasonForDate, seasonRangeForDate } from './_lib/football/provider.js';
 import { LIGAS } from './_lib/ligas.js';
 import { guardarEnCache } from './_lib/football/equiposCache.js';
@@ -36,7 +36,10 @@ export default async function handler(req, res) {
       const results = fixtures.map((fixture) => ({ ...fixture, league: { ...fixture.league, name: LIGAS[league].name } }));
       results.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
       await guardarEnCache(results.flatMap((f) => [f.teams.home, f.teams.away]));
-      return res.status(200).json({ fixtures: results });
+      const advertencia = fixtures.ambiguo
+        ? `El servicio devolvió ${fixtures.totalEncontrados} partidos para esta jornada (puede mezclar torneos). Se muestran los 9 más cercanos a hoy: verifica que sean los correctos antes de continuar.`
+        : undefined;
+      return res.status(200).json({ fixtures: results, advertencia });
     }
 
     const { from, to } = req.query;
@@ -62,7 +65,6 @@ export default async function handler(req, res) {
     await guardarEnCache(results.flatMap((f) => [f.teams.home, f.teams.away]));
     return res.status(200).json({ fixtures: results });
   } catch (error) {
-    const status = error instanceof ErrorHttp ? error.status : 500;
-    return res.status(status).json({ error: error.message });
+    return responderError(res, error, 'api/fixtures');
   }
 }

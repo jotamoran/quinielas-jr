@@ -1,4 +1,5 @@
 <script setup>
+import { mensajeVisible } from '@/lib/errores';
 import { computed, ref, onMounted, watch } from 'vue';
 import DetallePronosticos from './DetallePronosticos.vue';
 
@@ -26,7 +27,7 @@ async function cargar() {
     filas.value = await props.obtenerRankingFn(props.jornadaId);
     const filaAbierta = filas.value.find((fila) => fila.quiniela_id === abiertaId.value);
     if (filaAbierta) await cargarDetalle(filaAbierta, true);
-  } catch (e) { error.value = e.message; filas.value = []; } finally { cargando.value = false; }
+  } catch (e) { error.value = mensajeVisible(e); filas.value = []; } finally { cargando.value = false; }
 }
 
 async function cargarDetalle(fila, forzar = false) {
@@ -37,7 +38,7 @@ async function cargarDetalle(fila, forzar = false) {
   try {
     detalles.value[fila.quiniela_id] = await props.obtenerPronosticosFn(fila.quiniela_id);
   } catch (error) {
-    errorDetalle.value[fila.quiniela_id] = error.message;
+    errorDetalle.value[fila.quiniela_id] = mensajeVisible(error);
   } finally {
     cargandoDetalle.value = null;
   }

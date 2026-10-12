@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '../supabaseAdmin.js';
+import { responderError } from '../auth.js';
 
 const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
 
@@ -13,6 +14,6 @@ export default async function handler(req, res) {
     if (error) throw error;
     return res.status(200).json({ disponible: !data });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error, 'username-disponible');
   }
 }

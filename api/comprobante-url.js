@@ -1,4 +1,4 @@
-import { requireAdmin, ErrorHttp } from './_lib/auth.js';
+import { requireAdmin, responderError } from './_lib/auth.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 
 export default async function handler(req, res) {
@@ -17,7 +17,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ url: data.signedUrl });
   } catch (e) {
-    const status = e instanceof ErrorHttp ? e.status : 500;
-    return res.status(status).json({ error: e.message });
+    return responderError(res, e, 'api/comprobante-url');
   }
 }

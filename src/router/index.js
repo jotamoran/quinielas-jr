@@ -11,6 +11,7 @@ const routes = [
   ...quinielasRoutes,
   ...adminRoutes,
   ...publicoRoutes,
+  { path: '/:pathMatch(.*)*', name: 'no-encontrada', component: () => import('@/views/NoEncontrada.vue') },
 ];
 
 const router = createRouter({

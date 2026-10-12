@@ -39,7 +39,11 @@ async function sincronizar() {
   try {
     const response = await sincronizarResultados(jornadaSeleccionada.value.id);
     await abrirJornada(jornadaSeleccionada.value);
-    await alertaExito('Resultados sincronizados', `${response.actualizados} resultado(s) actualizado(s) automáticamente.`);
+    if (response.status === 'parcial') {
+      await alertaAdvertencia('Sincronización parcial', `${response.actualizados} resultado(s) actualizado(s), pero no se pudo consultar ${response.fallidos} partido(s). Vuelve a intentarlo en unos minutos.`);
+    } else {
+      await alertaExito('Resultados sincronizados', `${response.actualizados} resultado(s) actualizado(s) automáticamente.`);
+    }
   } catch (e) {
     await alertaError(e, 'No se pudieron sincronizar los resultados');
   } finally {

@@ -22,7 +22,7 @@ async function cerrar(id) {
   cargando.value = true;
   cerrandoId.value = id;
   try {
-    resultado.value = await cerrarJornada(id);
+    resultado.value = { ...await cerrarJornada(id), jornadaId: id };
     const resumenCierre = await obtenerResumenCierreJornada(id);
     resultado.value = { ...resultado.value, resumenCierre };
     await cargar();
@@ -38,6 +38,22 @@ async function cerrar(id) {
   } finally {
     cargando.value = false;
     cerrandoId.value = null;
+  }
+}
+
+async function reintentarAvisos() {
+  const id = resultado.value?.jornadaId;
+  if (!id) return;
+  cargando.value = true;
+  try {
+    const respuesta = await cerrarJornada(id, { reenviarAvisos: true });
+    resultado.value = { ...resultado.value, avisos: respuesta.avisos };
+    if (respuesta.avisos?.length) await alertaAdvertencia('Quedan avisos pendientes', 'Algunos correos siguen sin poder enviarse; puedes volver a intentarlo.');
+    else await alertaExito('Avisos enviados', 'Ya se enviaron todos los correos pendientes.');
+  } catch (error) {
+    await alertaError(error, 'No se pudieron reenviar los avisos');
+  } finally {
+    cargando.value = false;
   }
 }
 
@@ -70,6 +86,7 @@ onMounted(async () => {
       <div v-if="resultado.avisos?.length" role="alert" class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
         <p class="font-bold">Revisa estos avisos</p>
         <ul class="mt-2 list-disc space-y-1 pl-5"><li v-for="aviso in resultado.avisos" :key="aviso">{{ aviso }}</li></ul>
+        <button @click="reintentarAvisos" :disabled="cargando" class="mt-3 min-h-11 w-full rounded-xl border border-amber-400 bg-white px-4 py-2 font-semibold text-amber-800 disabled:opacity-60 sm:w-auto">Reintentar avisos pendientes</button>
       </div>
     </section>
   </main>
