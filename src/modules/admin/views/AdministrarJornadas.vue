@@ -2,10 +2,9 @@
 import { mensajeVisible } from '@/lib/errores';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin, obtenerDatosParaResultados, obtenerResumenCierreJornada } from '../services/adminService';
+import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin, obtenerResumenCierreJornada } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
-import { generarImagenResultados } from '../utils/imagenResultados';
-import { calcularTablaResultados } from '../utils/tablaResultados';
+import { compartirBlobImagen, compartirResultadosJornada, nombreArchivo } from '../utils/compartirResultados';
 import { alertaAdvertencia, alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
 import EsqueletoCarga from '@/components/EsqueletoCarga.vue';
 import { ahoraParaDatetimeInput, fechaCDMXaISO, fechaHoraParaInput, formatearFecha } from '@/lib/fechas';
@@ -123,25 +122,6 @@ async function compartirEnlace(jornada) {
   }
 }
 
-async function compartirBlobImagen(blob, nombreArchivo, jornada, texto) {
-  const archivo = new File([blob], nombreArchivo, { type: 'image/png' });
-  if (navigator.share && navigator.canShare?.({ files: [archivo] })) {
-    await navigator.share({ title: jornada.nombre, text: texto, files: [archivo] });
-    return;
-  }
-  const url = URL.createObjectURL(blob);
-  const enlace = document.createElement('a');
-  enlace.href = url;
-  enlace.download = nombreArchivo;
-  enlace.click();
-  URL.revokeObjectURL(url);
-  await alertaExito('Imagen descargada', 'Ya está lista para compartir.');
-}
-
-function nombreArchivo(jornada, sufijo = '') {
-  return `${jornada.nombre.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'jornada'}${sufijo}.png`;
-}
-
 async function compartirImagen(jornada) {
   try {
     const blob = await generarImagenJornada(jornada);
@@ -154,20 +134,7 @@ async function compartirImagen(jornada) {
 async function compartirResultadosImagen(jornada) {
   if (generandoResultados.value) return;
   generandoResultados.value = true;
-  try {
-    const { partidos, entradas } = await obtenerDatosParaResultados(jornada.id);
-    if (!entradas.length) {
-      await alertaAdvertencia('Sin entradas', 'Todavía no hay entradas aprobadas para mostrar.');
-      return;
-    }
-    const tabla = calcularTablaResultados({ partidos, entradas, estatus: jornada.estatus });
-    const blob = await generarImagenResultados({ jornada, tabla, premio: jornada.premio });
-    await compartirBlobImagen(blob, nombreArchivo(jornada, '-resultados'), jornada, `Resultados de ${jornada.nombre}`);
-  } catch (error) {
-    if (error.name !== 'AbortError') await alertaError(error, 'No se pudo generar la imagen de resultados');
-  } finally {
-    generandoResultados.value = false;
-  }
+  try { await compartirResultadosJornada(jornada); } finally { generandoResultados.value = false; }
 }
 
 async function guardarPremio() {

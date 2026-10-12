@@ -26,6 +26,9 @@ const bloqueada = computed(() => jornada.value && (jornada.value.estatus !== 'ac
 const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => !esCancelada.value && (bloqueada.value || empezaronPartidos.value));
 const puedeVerPronosticos = computed(() => bloqueada.value || authStore.isAdmin);
+const generandoResultados = ref(false);
+const cerrandoJornada = ref(false);
+const puedeCerrar = computed(() => authStore.isAdmin && jornada.value && !['finalizada', 'cancelada'].includes(jornada.value.estatus));
 
 async function obtenerRankingPublico(jId) {
   const { data, error } = await supabase
@@ -70,6 +73,38 @@ async function obtenerPronosticosPublicos(quinielaId) {
     cancelado: partido.cancelado,
     fecha_partido: partido.fecha_partido,
   }));
+}
+
+// Las herramientas de administración se cargan solo cuando el admin las usa.
+async function compartirResultados() {
+  if (generandoResultados.value) return;
+  generandoResultados.value = true;
+  try {
+    const { compartirResultadosJornada } = await import('@/modules/admin/utils/compartirResultados.js');
+    await compartirResultadosJornada(jornada.value);
+  } finally {
+    generandoResultados.value = false;
+  }
+}
+
+async function cerrarJornadaDesdeTabla() {
+  if (cerrandoJornada.value) return;
+  const [{ alertaAdvertencia, alertaError, alertaExito, confirmarAccion }, { cerrarJornada }] = await Promise.all([
+    import('@/lib/alertas'),
+    import('@/modules/admin/services/adminService'),
+  ]);
+  if (!await confirmarAccion({ title: 'Finalizar jornada', text: 'Se calcularán ganadores y se enviarán resultados. Esta acción no se puede editar después.', confirmText: 'Finalizar', danger: true })) return;
+  cerrandoJornada.value = true;
+  try {
+    const resultado = await cerrarJornada(jornada.value.id);
+    await actualizar();
+    if (resultado.avisos?.length) await alertaAdvertencia('Jornada finalizada con avisos', 'Algunos correos no pudieron enviarse; puedes reintentarlos en Administración → Cerrar jornada.');
+    else await alertaExito('Jornada finalizada', 'Ganadores y cupón quedaron registrados.');
+  } catch (e) {
+    await alertaError(e);
+  } finally {
+    cerrandoJornada.value = false;
+  }
 }
 
 function formatoMoneda(valor) {
@@ -128,6 +163,10 @@ onUnmounted(() => clearInterval(intervalo));
       <span v-if="jornada?.estatus !== 'cancelada'" class="mt-2 inline-block rounded-full px-3 py-1 text-xs font-bold" :class="bloqueada ? 'bg-white/15 text-white' : 'bg-green-200 text-quiniela-verdeOscuro'">{{ bloqueada ? 'Registro cerrado' : 'Registro abierto' }}</span>
       <p v-if="jornada?.estatus === 'cancelada'" role="alert" class="mt-3 rounded-xl bg-red-500/90 px-3 py-2 text-sm font-bold text-white">Esta jornada fue cancelada.</p>
       <span v-else class="mt-2 inline-block rounded-full px-3 py-1 text-xs font-bold" :class="esDefinitiva ? 'bg-blue-100 text-blue-900' : 'bg-amber-100 text-amber-900'">{{ esDefinitiva ? 'Resultado definitivo' : 'Resultados provisionales' }}</span>
+      <div v-if="authStore.isAdmin && !esCancelada" class="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <button type="button" @click="compartirResultados" :disabled="!bloqueada || generandoResultados" :title="bloqueada ? '' : 'Disponible cuando cierre el registro: antes los pronósticos no son públicos'" class="rounded-xl bg-white px-4 py-2 text-sm font-bold text-quiniela-verdeOscuro disabled:cursor-not-allowed disabled:opacity-50">{{ generandoResultados ? 'Generando…' : 'Compartir resultados' }}</button>
+        <button v-if="puedeCerrar" type="button" @click="cerrarJornadaDesdeTabla" :disabled="cerrandoJornada" class="rounded-xl bg-quiniela-dorado px-4 py-2 text-sm font-bold text-quiniela-grisTexto disabled:opacity-60">{{ cerrandoJornada ? 'Finalizando…' : 'Cerrar jornada y enviar resultados' }}</button>
+      </div>
     </header>
 
     <section class="space-y-3">
