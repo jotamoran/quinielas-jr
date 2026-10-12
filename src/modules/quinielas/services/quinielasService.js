@@ -69,16 +69,6 @@ export async function obtenerMisQuinielas() {
   return data;
 }
 
-export async function obtenerRanking(jornadaId) {
-  const { data, error } = await supabase
-    .from('vista_ranking_jornada')
-    .select('*')
-    .eq('jornada_id', jornadaId)
-    .order('posicion');
-  if (error) throw error;
-  return data;
-}
-
 export async function obtenerRankingPublico(jornadaId) {
   const { data, error } = await supabase
     .from('vista_ranking_publica')

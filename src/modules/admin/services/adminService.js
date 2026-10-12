@@ -58,7 +58,7 @@ export async function listarJornadasAdmin() {
 
 export async function obtenerResumenCierreJornada(jornadaId) {
   const [{ data: ranking, error: rankingError }, { data: cupon, error: cuponError }] = await Promise.all([
-    supabase.from('vista_ranking_jornada').select('quiniela_id, usuario_id, nombre_completo, alias, aciertos, posicion').eq('jornada_id', jornadaId).eq('posicion', 1).order('quiniela_id'),
+    supabase.from('vista_ranking_admin').select('quiniela_id, usuario_id, nombre_completo, alias, aciertos, posicion').eq('jornada_id', jornadaId).eq('posicion', 1).order('quiniela_id'),
     supabase.from('cupones').select('codigo, usuario_id, correo_contacto, estatus').eq('jornada_origen_id', jornadaId).maybeSingle(),
   ]);
   if (rankingError) throw rankingError;
