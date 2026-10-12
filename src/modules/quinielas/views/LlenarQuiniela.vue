@@ -69,7 +69,18 @@ async function actualizarEntradasPrevias() {
   if (!authStore.isLoggedIn || !jornada.value) return;
   entradasPrevias.value = await contarMisEntradasEnJornada(jornada.value.id).catch(() => 0);
 }
-watch(() => authStore.isLoggedIn, actualizarEntradasPrevias);
+async function cargarDatosBancarios() {
+  try {
+    datosBancarios.value = await obtenerDatosBancarios();
+  } catch {
+    datosBancarios.value = null;
+  }
+}
+watch(() => authStore.isLoggedIn, (sesion) => {
+  if (!sesion) return;
+  actualizarEntradasPrevias();
+  cargarDatosBancarios();
+});
 
 function aliasDeEntrada(indice, cantidad) {
   if (alias.value === aliasPorDefecto.value) return `${authStore.perfil?.username ?? 'Entrada'} ${entradasPrevias.value + 1 + indice}`;
@@ -103,11 +114,7 @@ async function cargar() {
     cargandoJornada.value = false;
     return;
   }
-  try {
-    datosBancarios.value = await obtenerDatosBancarios();
-  } catch {
-    datosBancarios.value = null;
-  }
+  await cargarDatosBancarios();
   cargandoJornada.value = false;
 }
 

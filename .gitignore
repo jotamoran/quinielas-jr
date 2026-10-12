@@ -140,7 +140,6 @@ juntar_codigo.py
 .env.*
 .env
 .env.production
-!.env.production
 !.env.example
 B:/
 

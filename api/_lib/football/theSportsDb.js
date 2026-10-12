@@ -29,12 +29,17 @@ export async function getNextRound(league) {
   return Number.isInteger(round) && round > 0 ? round : null;
 }
 
+function marcador(valor) {
+  const texto = String(valor ?? '').trim();
+  return /^\d+$/.test(texto) ? Number(texto) : null;
+}
+
 function resultFromEvent(event) {
   const status = String(event?.strStatus ?? '').trim().toLowerCase();
   if (!FINAL_STATUSES.has(status)) return null;
-  const home = Number(event.intHomeScore);
-  const away = Number(event.intAwayScore);
-  if (!Number.isFinite(home) || !Number.isFinite(away)) return null;
+  const home = marcador(event.intHomeScore);
+  const away = marcador(event.intAwayScore);
+  if (home === null || away === null) return null;
   if (home > away) return 'L';
   if (home < away) return 'V';
   return 'E';
