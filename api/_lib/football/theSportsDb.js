@@ -1,7 +1,7 @@
 import { ErrorHttp } from '../auth.js';
 
 const API_BASE_URL = 'https://www.thesportsdb.com/api/v1/json';
-const FINAL_STATUSES = new Set(['ft', 'aet', 'pen', 'match finished', 'finished', 'complete']);
+const FINAL_STATUSES = new Set(['ft', 'aet', 'pen', 'final', 'match finished', 'finished', 'complete']);
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_REINTENTOS = 2;
 const MAX_CONCURRENT_RESULTS = 4;

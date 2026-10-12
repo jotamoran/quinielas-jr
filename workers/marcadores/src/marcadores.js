@@ -105,14 +105,14 @@ async function sincronizarJornada(env, supabase, jornada, ahora) {
     params: {
       select: 'id,external_fixture_id,provider,fecha_partido,cancelado,resultado_oficial,estado,puntos_local,puntos_visitante,actualizado_el',
       jornada_id: `eq.${jornada.id}`,
-      provider: 'eq.thesportsdb',
       cancelado: 'eq.false',
-      external_fixture_id: 'not.is.null',
     },
   });
-  const pendientes = (partidos ?? []).filter((partido) => !partido.resultado_oficial && new Date(partido.fecha_partido) <= ahora);
+  const pendientes = (partidos ?? []).filter((partido) => partido.provider === 'thesportsdb' && partido.external_fixture_id
+    && !partido.resultado_oficial && new Date(partido.fecha_partido) <= ahora);
 
-  const resumen = { consultados: pendientes.length, actualizados: 0, finalizados: 0, errores: 0, limite: false };
+  const resumen = { consultados: pendientes.length, actualizados: 0, finalizados: 0, errores: 0, limite: false, todosFinalizados: false };
+  const finalizadosAhora = new Set();
   for (let inicio = 0; inicio < pendientes.length && !resumen.limite; inicio += CONCURRENCIA) {
     const lote = pendientes.slice(inicio, inicio + CONCURRENCIA);
     const respuestas = await Promise.allSettled(lote.map((partido) => prepararActualizacion(env, partido)));
@@ -134,13 +134,37 @@ async function sincronizarJornada(env, supabase, jornada, ahora) {
         const filas = await supabase('PATCH', 'partidos', { params: filtros, cuerpo: { ...cambios, actualizado_el: new Date().toISOString() } });
         if (!filas?.length) continue;
         resumen.actualizados += 1;
-        if (cambios.resultado_oficial) resumen.finalizados += 1;
+        if (cambios.resultado_oficial) {
+          resumen.finalizados += 1;
+          finalizadosAhora.add(partido.id);
+        }
       } catch {
         resumen.errores += 1;
       }
     }
   }
+  resumen.todosFinalizados = (partidos ?? []).length > 0 && partidos.every((partido) => partido.resultado_oficial || finalizadosAhora.has(partido.id));
   return resumen;
+}
+
+// Pide al sitio que evalúe el cierre de la jornada (la revisión final y el cierre viven en el servidor web).
+async function solicitarCierre(env, jornadaId) {
+  const controlador = new AbortController();
+  const temporizador = setTimeout(() => controlador.abort(), 110000);
+  try {
+    const respuesta = await fetch(`${env.SITIO_URL.replace(/\/$/, '')}/api/jornada?action=cierre-automatico`, {
+      method: 'POST',
+      signal: controlador.signal,
+      headers: { 'Content-Type': 'application/json', 'x-cron-secret': env.CRON_SECRET },
+      body: JSON.stringify({ jornada_id: jornadaId, modo: env.CIERRE_AUTOMATICO }),
+    });
+    const texto = await respuesta.text();
+    console.log(`cierre ${jornadaId}: HTTP ${respuesta.status} ${texto.slice(0, 300)}`);
+  } catch (error) {
+    console.error(`cierre ${jornadaId}: no se pudo consultar al sitio (${error.message})`);
+  } finally {
+    clearTimeout(temporizador);
+  }
 }
 
 export async function sincronizarMarcadores(env, ahora = new Date()) {
@@ -150,9 +174,11 @@ export async function sincronizarMarcadores(env, ahora = new Date()) {
   const supabase = clienteSupabase(env);
   const jornadas = await supabase('GET', 'jornadas', { params: { select: 'id,estatus', estatus: 'in.(activa,cerrada)' } });
   const total = { jornadas: jornadas.length, consultados: 0, actualizados: 0, finalizados: 0, errores: 0, limite: false };
+  const listasParaCerrar = [];
   for (const jornada of jornadas) {
     try {
       const resumen = await sincronizarJornada(env, supabase, jornada, ahora);
+      if (resumen.todosFinalizados) listasParaCerrar.push(jornada.id);
       total.consultados += resumen.consultados;
       total.actualizados += resumen.actualizados;
       total.finalizados += resumen.finalizados;
@@ -164,5 +190,8 @@ export async function sincronizarMarcadores(env, ahora = new Date()) {
     }
   }
   console.log(`marcadores: ${JSON.stringify(total)}`);
+
+  const cierreHabilitado = ['simulacro', 'activo'].includes(env.CIERRE_AUTOMATICO) && env.CRON_SECRET && env.SITIO_URL;
+  if (cierreHabilitado) for (const jornadaId of listasParaCerrar) await solicitarCierre(env, jornadaId);
   return total;
 }
