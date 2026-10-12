@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '../supabaseAdmin.js';
 import { calcularGanadoresYPeor } from '../premios.js';
 import { escaparHtml } from '../email.js';
 import { enviarAvisoUnico } from '../avisoUnico.js';
+import { etiquetaAciertos } from '../textos.js';
 
 // Núcleo del cierre: lo usan el botón del admin y el cierre automático.
 export async function ejecutarCierre(supabaseAdmin, jornada_id, { reenviar = false } = {}) {
@@ -109,7 +110,7 @@ export async function ejecutarCierre(supabaseAdmin, jornada_id, { reenviar = fal
         to: correo,
         subject: `Resultado final: ${jornada.nombre ?? 'tu jornada'}`,
         heading: `Resultado de ${nombreJornada}`,
-        bodyHtml: `<p>Hola ${escaparHtml(perfil?.nombre_completo ?? '')}, tu quiniela "${escaparHtml(participante.alias ?? 'Entrada')}" obtuvo <b>${participante.aciertos} aciertos</b> y quedó en la posición <b>${participante.posicion}</b>.</p>${extra}`,
+        bodyHtml: `<p>Hola ${escaparHtml(perfil?.nombre_completo ?? '')}, tu quiniela "${escaparHtml(participante.alias ?? 'Entrada')}" obtuvo <b>${etiquetaAciertos(participante.aciertos)}</b> y quedó en la posición <b>${participante.posicion}</b>.</p>${extra}`,
       };
     });
   }
