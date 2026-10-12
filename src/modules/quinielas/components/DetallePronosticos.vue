@@ -1,10 +1,27 @@
 <script setup>
+import { estadoEnVivo } from '../utils/resultadoEnVivo';
 defineProps({
   items: { type: Array, required: true },
 });
 
 function etiquetaPronostico(valor) {
   return { L: 'Local', E: 'Empate', V: 'Visita' }[valor] ?? valor;
+}
+
+function clasePronostico(detalle) {
+  if (esAcierto(detalle)) return 'border-transparent bg-green-100 text-green-700';
+  if (esFallo(detalle)) return 'border-transparent bg-red-100 text-red-700';
+  const enVivo = estadoEnVivo(detalle);
+  if (enVivo === 'acierta') return 'border-green-500 bg-white text-green-700';
+  if (enVivo === 'falla') return 'border-red-500 bg-white text-red-700';
+  return 'border-transparent bg-gray-100 text-gray-500';
+}
+
+function tituloPronostico(detalle) {
+  const enVivo = estadoEnVivo(detalle);
+  if (enVivo === 'acierta') return 'Con el marcador actual vas acertando';
+  if (enVivo === 'falla') return 'Con el marcador actual vas fallando';
+  return '';
 }
 
 function tieneMarcador(detalle) {
@@ -41,7 +58,7 @@ function fechaPartido(fecha) {
         </div>
         <p class="truncate pl-5 text-[11px] capitalize text-gray-400">{{ detalle.fecha_partido ? fechaPartido(detalle.fecha_partido) : '' }}<span v-if="detalle.estado === 'en_vivo' && !detalle.cancelado" class="font-bold normal-case text-red-600"> · En vivo</span></p>
       </div>
-      <span class="shrink-0 rounded-full px-2 py-1 text-xs font-bold" :class="esAcierto(detalle) ? 'bg-green-100 text-green-700' : esFallo(detalle) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'">{{ esAcierto(detalle) ? '✓ ' : esFallo(detalle) ? '✗ ' : '' }}{{ detalle.cancelado ? 'Cancelado' : etiquetaPronostico(detalle.pronostico) }}</span>
+      <span class="shrink-0 rounded-full border-2 px-2 py-1 text-xs font-bold" :class="clasePronostico(detalle)" :title="tituloPronostico(detalle)">{{ esAcierto(detalle) ? '✓ ' : esFallo(detalle) ? '✗ ' : '' }}{{ detalle.cancelado ? 'Cancelado' : etiquetaPronostico(detalle.pronostico) }}</span>
     </div>
   </div>
 </template>
