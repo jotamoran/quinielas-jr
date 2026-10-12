@@ -7,7 +7,7 @@ import { enviarAvisoUnico } from '../avisoUnico.js';
 import { findFinalResults, FOOTBALL_PROVIDER } from '../football/provider.js';
 import { ejecutarCierre } from './cerrar-jornada.js';
 
-const MINUTOS_GRACIA = 60;
+const MINUTOS_GRACIA = 5;
 const HORAS_MAXIMAS_SIN_CONFIRMAR = 3;
 
 function secretoValido(recibido) {

@@ -7,6 +7,6 @@
   "triggers": { "crons": ["*/2 * * * *"] },
   "vars": {
     "SITIO_URL": "https://quinielas-jr.pages.dev",
-    "CIERRE_AUTOMATICO": "simulacro"
+    "CIERRE_AUTOMATICO": "activo"
   }
 }
