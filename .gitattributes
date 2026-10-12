@@ -1,0 +1,15 @@
+# Manejo automático de texto
+* text=auto eol=lf
+
+# Archivos de código y configuración en LF
+*.py text eol=lf
+*.vue text eol=lf
+*.js text eol=lf
+*.sh text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.pdf binary
