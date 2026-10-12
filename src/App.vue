@@ -25,7 +25,7 @@ onUnmounted(() => {
 // basta con montar el layout correcto según el tipo de ruta actual.
 const layout = computed(() => {
   if (route.meta.guestOnly) return AuthLayout;
-  if (route.name === 'tabla-publica') return PublicoLayout;
+  if (route.name === 'tabla-publica' && !authStore.isLoggedIn) return PublicoLayout;
   return AppLayout;
 });
 </script>

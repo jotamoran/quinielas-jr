@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/auth';
 import { useLoginModalStore } from '@/store/loginModal';
 import { useRoute, useRouter } from 'vue-router';
 import { confirmarAccion } from '@/lib/alertas';
+import { obtenerJornadaParaTabla } from '@/modules/quinielas/services/quinielasService';
 
 const authStore = useAuthStore();
 const loginModalStore = useLoginModalStore();
@@ -12,6 +13,7 @@ const router = useRouter();
 const menuAbierto = ref(false);
 const adminAbierto = ref(false);
 const nav = ref(null);
+const jornadaTabla = ref(null);
 const esRutaAdmin = computed(() => String(route.name ?? '').startsWith('admin-'));
 
 function cerrarDesplegables() {
@@ -28,6 +30,13 @@ function alTeclado(evento) {
 }
 
 watch(() => route.fullPath, cerrarDesplegables);
+
+async function cargarJornadaTabla() {
+  if (!authStore.isLoggedIn) { jornadaTabla.value = null; return; }
+  try { jornadaTabla.value = await obtenerJornadaParaTabla(); } catch { jornadaTabla.value = null; }
+}
+watch(() => authStore.isLoggedIn, cargarJornadaTabla);
+onMounted(cargarJornadaTabla);
 onMounted(() => {
   document.addEventListener('pointerdown', alPuntero);
   window.addEventListener('keydown', alTeclado);
@@ -64,6 +73,7 @@ function cerrarMenu() {
         <template v-if="authStore.isLoggedIn">
           <router-link :to="{ name: 'inicio' }" class="nav-link">Inicio</router-link>
           <router-link :to="{ name: 'mis-quinielas' }" class="nav-link">Mis quinielas</router-link>
+          <router-link v-if="jornadaTabla" :to="{ name: 'tabla-publica', params: { jornadaId: jornadaTabla.id } }" class="nav-link">Tabla</router-link>
           <router-link :to="{ name: 'llenar-quiniela' }" class="nav-link">Jugar</router-link>
           <router-link :to="{ name: 'mi-cuenta' }" class="nav-link">Mi cuenta</router-link>
           <div v-if="authStore.isAdmin" class="relative"><button type="button" @click="adminAbierto = !adminAbierto" class="nav-link flex min-h-11 items-center gap-1" :class="esRutaAdmin ? 'bg-white/15 text-white' : ''" :aria-expanded="adminAbierto" aria-haspopup="menu">Administración <span class="text-xs" aria-hidden="true">▾</span></button><div v-if="adminAbierto" role="menu" class="absolute right-0 mt-2 w-60 rounded-xl border border-gray-100 bg-white p-2 text-gray-700 shadow-2xl"><router-link v-for="item in [{ name: 'admin-jornadas', label: 'Crear jornada' }, { name: 'admin-administrar-jornadas', label: 'Ver jornadas' }, { name: 'admin-edicion-manual', label: 'Administrar quinielas' }, { name: 'admin-pagos', label: 'Pagos pendientes' }, { name: 'admin-sincronizar', label: 'Resultados' }, { name: 'admin-cerrar-jornada', label: 'Cerrar jornada' }]" :key="item.name" :to="{ name: item.name }" role="menuitem" @click="adminAbierto = false" class="block min-h-11 rounded-lg px-3 py-2.5 hover:bg-green-50 hover:text-quiniela-verde">{{ item.label }}</router-link></div></div>
@@ -95,6 +105,7 @@ function cerrarMenu() {
         <p class="px-3 pb-1 text-xs font-bold uppercase tracking-widest text-white/60">Mi cuenta</p>
         <router-link :to="{ name: 'inicio' }" @click="cerrarMenu" class="mobile-nav-link">Inicio</router-link>
         <router-link :to="{ name: 'mis-quinielas' }" @click="cerrarMenu" class="mobile-nav-link">Mis quinielas</router-link>
+        <router-link v-if="jornadaTabla" :to="{ name: 'tabla-publica', params: { jornadaId: jornadaTabla.id } }" @click="cerrarMenu" class="mobile-nav-link">Tabla de posiciones</router-link>
         <router-link :to="{ name: 'llenar-quiniela' }" @click="cerrarMenu" class="mobile-nav-link">Llenar quiniela</router-link>
         <router-link :to="{ name: 'mi-cuenta' }" @click="cerrarMenu" class="mobile-nav-link">Mi cuenta</router-link>
         <template v-if="authStore.isAdmin">

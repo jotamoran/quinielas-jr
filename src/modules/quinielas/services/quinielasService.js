@@ -24,6 +24,20 @@ export async function obtenerJornadaActiva(jornadaId = null, { soloAbierta = fal
   return data;
 }
 
+// La tabla pública apunta a la jornada activa y, si no hay, a la última finalizada ('activa' ordena antes que 'finalizada').
+export async function obtenerJornadaParaTabla() {
+  const { data, error } = await supabase
+    .from('jornadas')
+    .select('id, nombre, estatus, fecha_cierre')
+    .in('estatus', ['activa', 'finalizada'])
+    .order('estatus', { ascending: true })
+    .order('fecha_cierre', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function obtenerPartidos(jornadaId) {
   const { data, error } = await supabase.from('partidos').select('*').eq('jornada_id', jornadaId).order('fecha_partido');
   if (error) throw error;
