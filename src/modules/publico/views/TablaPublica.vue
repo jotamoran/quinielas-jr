@@ -1,7 +1,7 @@
 <script setup>
 import { mensajeVisible } from '@/lib/errores';
 import { usarRefrescoPeriodico } from '@/lib/refrescoPeriodico';
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
@@ -26,6 +26,11 @@ const bloqueada = computed(() => jornada.value && (jornada.value.estatus !== 'ac
 const empezaronPartidos = computed(() => partidos.value.some((p) => new Date(p.fecha_partido) <= new Date()));
 const mostrarDestacados = computed(() => !esCancelada.value && (bloqueada.value || empezaronPartidos.value));
 const puedeVerPronosticos = computed(() => bloqueada.value || authStore.isAdmin);
+// Los dos avisos informativos se ocultan solos a los 10 segundos.
+const avisosTemporales = ref(true);
+let temporizadorAvisos;
+onMounted(() => { temporizadorAvisos = setTimeout(() => { avisosTemporales.value = false; }, 10000); });
+onUnmounted(() => clearTimeout(temporizadorAvisos));
 const generandoResultados = ref(false);
 const cerrandoJornada = ref(false);
 const puedeCerrar = computed(() => authStore.isAdmin && jornada.value && !['finalizada', 'cancelada'].includes(jornada.value.estatus));
@@ -169,9 +174,9 @@ watch([jornadaId, () => authStore.isAdmin], () => actualizar());
 
     <section class="space-y-3">
       <div><p class="eyebrow">Clasificación</p><h2 class="text-2xl font-bold text-quiniela-verdeOscuro">{{ esDefinitiva ? 'Tabla de posiciones' : 'Tabla de posiciones en vivo' }}</h2></div>
-      <p v-if="!esCancelada && !bloqueada && authStore.isAdmin" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">Como administrador puedes ver los pronósticos de cada participante antes del cierre; el público los verá hasta que cierre el registro.</p>
-      <p v-else-if="!esCancelada && !bloqueada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Los pronósticos de cada participante estarán disponibles cuando cierre el registro.</p>
-      <p v-if="!esCancelada && !esDefinitiva" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">Los aciertos y posiciones son provisionales: cambian con el marcador de los partidos en vivo. Los resultados oficiales solo se confirman al finalizar cada partido.</p>
+      <Transition leave-active-class="transition-opacity duration-700" leave-from-class="opacity-100" leave-to-class="opacity-0"><p v-if="!esCancelada && !bloqueada && authStore.isAdmin && avisosTemporales" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">Como administrador puedes ver los pronósticos de cada participante antes del cierre; el público los verá hasta que cierre el registro.</p></Transition>
+      <p v-if="!esCancelada && !bloqueada && !authStore.isAdmin" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Los pronósticos de cada participante estarán disponibles cuando cierre el registro.</p>
+      <Transition leave-active-class="transition-opacity duration-700" leave-from-class="opacity-100" leave-to-class="opacity-0"><p v-if="!esCancelada && !esDefinitiva && avisosTemporales" class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">Los aciertos y posiciones son provisionales: cambian con el marcador de los partidos en vivo. Los resultados oficiales solo se confirman al finalizar cada partido.</p></Transition>
       <p v-if="!esCancelada" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Solo aparecen aquí las quinielas con el pago confirmado. Si registraste una entrada y no aparece en la tabla, debes completar tu pago para participar.</p>
       <div v-if="!bloqueada && jornada?.estatus !== 'cancelada'" class="flex flex-col items-start gap-2 rounded-xl border border-quiniela-verde bg-green-50 p-3 sm:flex-row sm:items-center sm:justify-between">
         <p class="text-sm font-semibold text-quiniela-verdeOscuro">{{ authStore.isLoggedIn ? '¿Todavía no te registras?' : 'Crea tu cuenta o inicia sesión para registrar una entrada' }}</p>
@@ -187,7 +192,7 @@ watch([jornadaId, () => authStore.isAdmin], () => actualizar());
       <div class="grid gap-3 sm:grid-cols-2">
         <article v-for="(p, index) in partidos" :key="p.id" class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div class="mb-1 flex items-center justify-between gap-2 text-xs text-gray-500"><span>Partido {{ index + 1 }} · {{ p.liga_nombre }}</span><span class="rounded-full px-2 py-1 font-bold" :class="p.cancelado ? 'bg-red-50 text-red-700' : p.estado === 'en_vivo' ? 'bg-red-100 text-red-700' : p.estado === 'finalizado' || p.resultado_oficial ? 'bg-green-50 text-quiniela-verde' : 'bg-gray-100 text-gray-600'">{{ p.cancelado ? 'Cancelado' : p.estado === 'en_vivo' ? 'En vivo' : p.estado === 'finalizado' || p.resultado_oficial ? 'Finalizado' : 'Pendiente' }}</span></div>
-          <p class="mb-3 text-center text-xs capitalize text-gray-400">{{ formatoFechaPartido(p.fecha_partido) }} · hora CDMX</p>
+          <p class="mb-3 text-center text-xs capitalize text-gray-400">{{ formatoFechaPartido(p.fecha_partido) }}</p>
           <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
             <div class="min-w-0"><img v-if="p.logo_local" :src="p.logo_local" alt="" loading="lazy" decoding="async" class="mx-auto mb-2 h-10 w-10 object-contain" /><div v-else class="mx-auto mb-2 h-10 w-10 rounded-full bg-gray-100"></div><p class="flex min-h-10 items-start justify-center break-words text-sm font-bold leading-tight text-quiniela-verdeOscuro">{{ p.equipo_local }}</p></div>
             <span v-if="p.puntos_local != null || p.puntos_visitante != null" class="text-lg font-bold tabular-nums text-quiniela-verdeOscuro">{{ p.puntos_local ?? '—' }} - {{ p.puntos_visitante ?? '—' }}</span><span v-else class="text-xs font-bold text-gray-400">VS</span>
