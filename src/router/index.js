@@ -5,12 +5,14 @@ import authRoutes from "@/modules/auth/router.js";
 import quinielasRoutes from "@/modules/quinielas/router.js";
 import adminRoutes from "@/modules/admin/router.js";
 import publicoRoutes from "@/modules/publico/router.js";
+import legalRoutes from "@/modules/legal/router.js";
 
 const routes = [
   ...authRoutes,
   ...quinielasRoutes,
   ...adminRoutes,
   ...publicoRoutes,
+  ...legalRoutes,
   { path: '/:pathMatch(.*)*', name: 'no-encontrada', component: () => import('@/views/NoEncontrada.vue') },
 ];
 

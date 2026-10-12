@@ -4,12 +4,14 @@ import { useRouter } from 'vue-router';
 import { registrar, usernameDisponible, traducirErrorAuth } from '../services/authService';
 import { alertaError } from '@/lib/alertas';
 import CampoPassword from '@/components/CampoPassword.vue';
+import { LEGAL } from '@/config/legal';
 
 const nombreCompleto = ref('');
 const email = ref('');
 const username = ref('');
 const password = ref('');
 const confirmarPassword = ref('');
+const acepto = ref(false);
 const cargando = ref(false);
 const router = useRouter();
 
@@ -39,7 +41,7 @@ async function onSubmit() {
       await alertaError(new Error('Elige otro nombre para continuar.'), 'Ese usuario ya está en uso');
       return;
     }
-    await registrar({ email: email.value, password: password.value, nombreCompleto: nombreCompleto.value, username: usernameNormalizado });
+    await registrar({ email: email.value, password: password.value, nombreCompleto: nombreCompleto.value, username: usernameNormalizado, aceptoTerminos: true });
     router.push({ name: 'verificar-codigo', query: { email: email.value } });
   } catch (e) {
     const mensaje = /database error/i.test(e.message) ? 'Ese nombre de usuario ya está en uso. Elige otro.' : traducirErrorAuth(e.message);
@@ -61,7 +63,8 @@ async function onSubmit() {
       <CampoPassword v-model="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" :minlength="6" />
       <CampoPassword v-model="confirmarPassword" label="Confirmar contraseña" autocomplete="new-password" placeholder="Repite tu contraseña" :minlength="6" />
       <div v-if="password" class="-mt-2" aria-live="polite"><div class="h-1.5 overflow-hidden rounded-full bg-gray-200"><div class="h-full rounded-full transition-all" :class="fuerzaPassword < 2 ? 'bg-red-500' : fuerzaPassword < 4 ? 'bg-amber-500' : 'bg-green-600'" :style="{ width: `${Math.max(25, fuerzaPassword * 25)}%` }"></div></div><p class="mt-1 text-xs text-gray-500">{{ fuerzaPassword < 2 ? 'Contraseña débil' : fuerzaPassword < 4 ? 'Contraseña aceptable' : 'Contraseña segura' }}</p></div>
-      <button type="submit" :disabled="cargando" class="primary-action">
+      <label class="flex items-start gap-2 text-sm text-gray-700"><input v-model="acepto" type="checkbox" required class="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-quiniela-verde" /><span>Tengo {{ LEGAL.edadMinima }} años o más y acepto los <router-link :to="{ name: 'terminos' }" target="_blank" class="font-semibold text-quiniela-verde underline">Términos y condiciones</router-link>, el <router-link :to="{ name: 'reglamento' }" target="_blank" class="font-semibold text-quiniela-verde underline">Reglamento</router-link> y el <router-link :to="{ name: 'aviso-privacidad' }" target="_blank" class="font-semibold text-quiniela-verde underline">Aviso de privacidad</router-link>.</span></label>
+      <button type="submit" :disabled="cargando || !acepto" class="primary-action disabled:opacity-60">
         {{ cargando ? 'Creando...' : 'Registrarme' }}
       </button>
       <p class="text-center text-sm text-gray-600">¿Ya tienes cuenta? <router-link :to="{ name: 'login' }" class="auth-link">Inicia sesión</router-link></p>

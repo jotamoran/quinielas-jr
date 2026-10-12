@@ -66,6 +66,7 @@ function confirmar() { if (valido.value && !props.procesando) emit("confirmar", 
     </div>
     <p v-else-if="metodo === 'efectivo'" class="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Tu quiniela quedará pendiente hasta que el administrador confirme el pago.</p>
     <label v-else class="block text-sm font-semibold">Código de cupón<input v-model="codigoCupon" class="mt-1 w-full rounded-xl border-gray-300 uppercase" /></label>
+    <p class="text-center text-xs text-gray-500">Al confirmar aceptas el <router-link :to="{ name: 'reglamento' }" target="_blank" class="font-semibold text-quiniela-verde underline">Reglamento</router-link> y los <router-link :to="{ name: 'terminos' }" target="_blank" class="font-semibold text-quiniela-verde underline">Términos y condiciones</router-link>.</p>
     <button @click="confirmar" :disabled="!valido || procesando || (metodo === 'cupon' && !codigoCupon.trim())" class="w-full rounded-xl bg-quiniela-dorado py-3 font-bold text-quiniela-grisTexto disabled:opacity-50">{{ procesando ? 'Registrando…' : 'Confirmar quiniela' }}</button>
   </div>
 </template>

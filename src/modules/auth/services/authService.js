@@ -1,10 +1,17 @@
+import { LEGAL } from '@/config/legal';
 import { supabase } from '@/lib/supabase';
 
-export async function registrar({ email, password, nombreCompleto, username }) {
+export async function registrar({ email, password, nombreCompleto, username, aceptoTerminos = false }) {
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { nombre_completo: nombreCompleto, username } },
+    options: {
+      data: {
+        nombre_completo: nombreCompleto,
+        username,
+        ...(aceptoTerminos ? { acepto_terminos_el: new Date().toISOString(), version_documentos: LEGAL.version } : {}),
+      },
+    },
   });
   if (error) throw error;
 }
