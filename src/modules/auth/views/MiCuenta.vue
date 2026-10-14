@@ -152,7 +152,7 @@ onMounted(async () => {
 
     <form @submit.prevent="onGuardarTelefono" class="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
       <h2 class="font-bold text-quiniela-verdeOscuro">Teléfono de contacto (opcional)</h2>
-      <p id="ayuda-telefono" class="text-sm text-gray-600">Si resultas ganador, intentaremos contactarte por correo o por este número</p>
+      <p id="ayuda-telefono" class="text-sm text-gray-600">Si resultas ganador, intentaremos contactarte por correo o por este número.</p>
       <label class="form-label">Teléfono<input v-model="telefono" @input="telefonoEditado = true" type="tel" autocomplete="tel" inputmode="tel" :disabled="guardandoTelefono || authStore.errorPerfil" aria-describedby="ayuda-telefono formato-telefono" placeholder="55 1234 5678" class="form-control min-h-11 disabled:opacity-50" /><span id="formato-telefono" class="mt-1 block text-xs font-normal text-gray-500">De 10 a 15 dígitos, con + opcional al inicio. Déjalo vacío para eliminarlo.</span></label>
       <p v-if="authStore.errorPerfil" role="alert" class="text-sm text-red-700">No se pudo cargar tu perfil. Recarga la página antes de editar el teléfono.</p>
       <button type="submit" :disabled="guardandoTelefono || authStore.errorPerfil" class="min-h-11 w-full rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{{ guardandoTelefono ? 'Guardando…' : 'Guardar teléfono' }}</button>
