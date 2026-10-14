@@ -327,7 +327,7 @@ onMounted(async () => {
           <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div><span class="inline-flex rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold">{{ etiquetaEstatus(abierta.estatus) }}</span><h2 class="mt-2 text-2xl font-bold">{{ abierta.nombre }}</h2><p class="mt-1 text-sm text-green-100">Cierre: {{ formatoFecha(abierta.fecha_cierre) }}</p></div>
             <div class="grid gap-3 sm:max-w-sm sm:grid-cols-2">
-              <div class="rounded-xl bg-white/10 px-4 py-3"><p class="text-xs uppercase tracking-wider text-green-100">Premio</p><p class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(abierta.premio) }}</p></div>
+              <div class="rounded-xl bg-white/10 px-4 py-3"><p class="text-xs uppercase tracking-wider text-green-100">Premio</p><p class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(abierta.premio) }}</p><p v-if="!['finalizada', 'cancelada'].includes(abierta.estatus) && !(Number(abierta.premio) > 0)" class="mt-1 text-xs font-semibold text-amber-200">Falta definir el premio</p></div>
               <div class="rounded-xl bg-white/10 px-4 py-3" aria-live="polite" :aria-busy="cargandoRecaudacion">
                 <p class="text-xs uppercase tracking-wider text-green-100">Recaudación</p>
                 <p v-if="cargandoRecaudacion" class="mt-1 text-sm">Cargando…</p>
@@ -354,6 +354,7 @@ onMounted(async () => {
             <p v-else class="rounded-xl bg-white/10 px-4 py-3 text-center text-sm font-semibold text-green-100" :class="abierta.estatus === 'cancelada' ? 'sm:col-span-2 lg:col-span-4' : 'sm:col-span-1 lg:col-span-3'">{{ abierta.estatus === 'cancelada' ? 'Jornada cancelada: solo consulta' : 'Jornada finalizada: solo consulta' }}</p>
             <button v-if="abierta.estatus !== 'cancelada'" type="button" @click="compartirResultadosImagen(abierta)" :disabled="!registroCerrado || generandoResultados" :title="registroCerrado ? '' : 'Disponible cuando cierre el registro: antes los pronósticos no son públicos'" class="rounded-xl border border-white bg-white px-3 py-2.5 font-semibold text-quiniela-verdeOscuro disabled:cursor-not-allowed disabled:opacity-50">{{ generandoResultados ? 'Generando…' : 'Compartir resultados' }}</button>
           </div>
+          <p v-if="abierta.estatus !== 'cancelada' && !registroCerrado" class="mt-2 text-xs text-green-100">«Compartir resultados» estará disponible cuando cierre el registro: antes de eso los pronósticos no son públicos.</p>
         </article>
 
         <form v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)" @submit.prevent="guardarPremio" class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
