@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quinielas-jr-shell-v1';
+const CACHE_NAME = 'quinielas-jr-shell-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -6,6 +6,9 @@ const APP_SHELL = [
   '/favicon.ico',
   '/pwa-icon-192.png',
   '/pwa-icon-512.png',
+  '/pwa-icon-maskable-192.png',
+  '/pwa-icon-maskable-512.png',
+  '/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {

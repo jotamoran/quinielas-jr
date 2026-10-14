@@ -318,7 +318,7 @@ onMounted(async () => {
             <div><p class="font-bold text-quiniela-verdeOscuro">{{ jornada.nombre }}</p><p class="mt-1 text-sm text-gray-500">{{ formatoFecha(jornada.fecha_cierre) }}</p></div>
             <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="claseEstatus(jornada.estatus)">{{ etiquetaEstatus(jornada.estatus) }}</span>
           </div>
-          <p class="mt-3 text-sm font-semibold text-gray-700">{{ jornada.partidos?.length ?? 0 }} partidos · {{ formatoMoneda(jornada.premio) }}</p>
+          <p class="mt-3 text-sm font-semibold text-gray-700">{{ jornada.partidos?.length === 1 ? '1 partido' : `${jornada.partidos?.length ?? 0} partidos` }} · {{ formatoMoneda(jornada.premio) }}</p>
         </button>
       </section>
 
@@ -333,7 +333,7 @@ onMounted(async () => {
                 <p v-if="cargandoRecaudacion" class="mt-1 text-sm">Cargando…</p>
                 <p v-else-if="errorRecaudacion" role="alert" class="mt-1 text-sm text-red-100">No se pudo cargar la recaudación.</p>
                 <p v-else-if="recaudacion" class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(recaudacion.total) }}</p>
-                <button type="button" @click="cargarRecaudacion(abierta.id)" :disabled="cargandoRecaudacion" class="mt-2 min-h-11 rounded-lg border border-white/40 px-3 text-sm font-semibold disabled:opacity-50">{{ errorRecaudacion ? 'Reintentar' : 'Actualizar' }}</button>
+                <button v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)" type="button" @click="cargarRecaudacion(abierta.id)" :disabled="cargandoRecaudacion" class="mt-2 min-h-11 rounded-lg border border-white/40 px-3 text-sm font-semibold disabled:opacity-50">{{ errorRecaudacion ? 'Reintentar' : 'Actualizar' }}</button>
               </div>
               <p v-if="recaudacion && !cargandoRecaudacion" class="text-sm text-green-100 sm:col-span-2">Solo pagos aprobados en efectivo o transferencia. Los cupones no aportan dinero.</p>
               <p v-if="recaudacion?.cupones" class="text-sm text-green-100 sm:col-span-2">{{ recaudacion.cupones === 1 ? 'En esta jornada se usó un cupón como método de pago' : `En esta jornada se usaron ${recaudacion.cupones} cupones como método de pago` }}</p>

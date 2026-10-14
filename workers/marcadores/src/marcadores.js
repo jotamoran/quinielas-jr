@@ -167,6 +167,11 @@ async function solicitarAccion(env, accion, cuerpo, timeoutMs = 20000) {
   }
 }
 
+// Los avisos de cierre que fallaron se reintentan cada 10 minutos durante 7 días, no en cada ejecución.
+const MINUTOS_ENTRE_REINTENTOS = 10;
+const DIAS_REINTENTO_AVISOS = 7;
+const toca = (ahora) => ahora.getUTCMinutes() % MINUTOS_ENTRE_REINTENTOS < 2;
+
 async function solicitarCierre(env, jornadaId, modo = env.CIERRE_AUTOMATICO) {
   return solicitarAccion(env, 'cierre-automatico', { jornada_id: jornadaId, modo }, 110000);
 }
@@ -204,12 +209,14 @@ export async function sincronizarMarcadores(env, ahora = new Date()) {
     }
   }
 
-  if (env.CRON_SECRET && env.SITIO_URL) {
+  if (env.CRON_SECRET && env.SITIO_URL && toca(ahora)) {
+    const limite = ahora.getTime() - DIAS_REINTENTO_AVISOS * 24 * 60 * 60 * 1000;
     const cierresPendientes = await supabase('GET', 'cierres_jornada', {
-      params: { select: 'jornada_id', avisos_completados_el: 'is.null' },
+      params: { select: 'jornada_id,jornadas(fecha_cierre)', avisos_completados_el: 'is.null' },
     });
     for (const cierre of cierresPendientes ?? []) {
-      if (cierre.jornada_id) await solicitarCierre(env, cierre.jornada_id, 'activo');
+      const reciente = new Date(cierre.jornadas?.fecha_cierre).getTime() >= limite;
+      if (cierre.jornada_id && reciente && !listasParaCerrar.includes(cierre.jornada_id)) await solicitarCierre(env, cierre.jornada_id, 'activo');
     }
   }
   return total;

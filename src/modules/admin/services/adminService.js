@@ -194,30 +194,30 @@ export async function listarPagosPendientes() {
   return [...pagos.values()];
 }
 
-export async function aprobarPago(quinielaId, pagoTransferenciaId = null) {
-  let consulta = supabase.from('quinielas').update({ estatus_pago: 'aprobado', revisado_el: new Date().toISOString() });
-  consulta = pagoTransferenciaId ? consulta.eq('pago_transferencia_id', pagoTransferenciaId) : consulta.eq('id', quinielaId);
-  consulta = consulta.eq('estatus_pago', 'pendiente');
-  const { error } = await consulta;
+// Si la entrada ya no estaba pendiente (otro admin la revisó), no se actualiza nada y hay que avisarlo.
+async function actualizarSiPendiente(consulta) {
+  const { data, error } = await consulta.eq('estatus_pago', 'pendiente').select('id');
   if (error) throw error;
+  if (!data?.length) throw new Error('Esa entrada ya no estaba pendiente. Se actualizó la lista con su estatus actual.');
+}
+
+export async function aprobarPago(quinielaId, pagoTransferenciaId = null) {
+  const consulta = supabase.from('quinielas').update({ estatus_pago: 'aprobado', revisado_el: new Date().toISOString() });
+  await actualizarSiPendiente(pagoTransferenciaId ? consulta.eq('pago_transferencia_id', pagoTransferenciaId) : consulta.eq('id', quinielaId));
 }
 
 export async function rechazarPago(quinielaId, pagoTransferenciaId = null) {
-  let consulta = supabase.from('quinielas').update({ estatus_pago: 'rechazado', revisado_el: new Date().toISOString() });
-  consulta = pagoTransferenciaId ? consulta.eq('pago_transferencia_id', pagoTransferenciaId) : consulta.eq('id', quinielaId);
-  consulta = consulta.eq('estatus_pago', 'pendiente');
-  const { error } = await consulta;
-  if (error) throw error;
+  const consulta = supabase.from('quinielas').update({ estatus_pago: 'rechazado', revisado_el: new Date().toISOString() });
+  await actualizarSiPendiente(pagoTransferenciaId ? consulta.eq('pago_transferencia_id', pagoTransferenciaId) : consulta.eq('id', quinielaId));
 }
 
 export async function registrarPagoEfectivo(quinielaId, monto) {
-  const { error } = await supabase.from('quinielas').update({
+  await actualizarSiPendiente(supabase.from('quinielas').update({
     estatus_pago: 'aprobado',
     metodo_pago: 'efectivo',
     monto_pagado: monto,
     revisado_el: new Date().toISOString(),
-  }).eq('id', quinielaId).eq('estatus_pago', 'pendiente');
-  if (error) throw error;
+  }).eq('id', quinielaId));
 }
 
 export async function obtenerComprobanteUrl(path) {

@@ -33,6 +33,12 @@ async function verComprobante(path) {
   }
 }
 
+// Tras un fallo se recarga la lista: la entrada pudo haber cambiado de estatus por otra revisión.
+async function refrescarTrasError(error) {
+  await alertaError(error);
+  try { await cargar(); } catch { /* la lista anterior se queda visible */ }
+}
+
 function clavePago(pago) { return pago.pago_transferencia_id ?? pago.id; }
 
 async function reenviarAvisos(pago) {
@@ -51,7 +57,7 @@ async function aprobar(pago) {
   const plural = pago.cantidad > 1;
   if (!await confirmarAccion({ title: plural ? `Marcar ${pago.cantidad} quinielas como pagadas` : 'Marcar como pagada', confirmText: 'Confirmar pago' })) return;
   procesando.value = `${clavePago(pago)}:aprobar`;
-  try { await aprobarPago(pago.id, pago.pago_transferencia_id); await cargar(); await alertaExito(plural ? 'Pagos confirmados' : 'Pago confirmado'); } catch (error) { await alertaError(error); }
+  try { await aprobarPago(pago.id, pago.pago_transferencia_id); await cargar(); await alertaExito(plural ? 'Pagos confirmados' : 'Pago confirmado'); } catch (error) { await refrescarTrasError(error); }
   finally { procesando.value = ''; }
 }
 
@@ -59,14 +65,14 @@ async function rechazar(pago) {
   const plural = pago.cantidad > 1;
   if (!await confirmarAccion({ title: plural ? `Rechazar pago de ${pago.cantidad} quinielas` : 'Cancelar quiniela', text: plural ? 'Todas las entradas de este pago dejarán de participar.' : 'La entrada dejará de participar.', confirmText: plural ? 'Rechazar pagos' : 'Cancelar quiniela', danger: true })) return;
   procesando.value = `${clavePago(pago)}:rechazar`;
-  try { await rechazarPago(pago.id, pago.pago_transferencia_id); await cargar(); await alertaExito(plural ? 'Pagos rechazados' : 'Quiniela cancelada'); } catch (error) { await alertaError(error); }
+  try { await rechazarPago(pago.id, pago.pago_transferencia_id); await cargar(); await alertaExito(plural ? 'Pagos rechazados' : 'Quiniela cancelada'); } catch (error) { await refrescarTrasError(error); }
   finally { procesando.value = ''; }
 }
 
 async function marcarEfectivo(id, monto) {
   if (!await confirmarAccion({ title: 'Confirmar pago en efectivo', text: 'La entrada comenzará a participar.', confirmText: 'Confirmar pago' })) return;
   procesando.value = `${id}:efectivo`;
-  try { await registrarPagoEfectivo(id, monto); await cargar(); await alertaExito('Pago en efectivo confirmado'); } catch (error) { await alertaError(error); }
+  try { await registrarPagoEfectivo(id, monto); await cargar(); await alertaExito('Pago en efectivo confirmado'); } catch (error) { await refrescarTrasError(error); }
   finally { procesando.value = ''; }
 }
 
