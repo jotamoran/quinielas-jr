@@ -3,6 +3,7 @@ import { enviarAvisoUnico } from './avisoUnico.js';
 export async function avisarAdministradores(supabaseAdmin, claveBase, correo) {
   const { data: admins, error } = await supabaseAdmin.from('perfiles').select('id').eq('rol', 'admin');
   if (error) throw error;
+  if (!admins?.length) throw new Error('No hay administradores para notificar');
 
   const pendientes = [];
   for (const admin of admins ?? []) {
