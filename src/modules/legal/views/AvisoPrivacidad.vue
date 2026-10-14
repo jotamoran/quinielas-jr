@@ -14,6 +14,7 @@ import { LEGAL } from '@/config/legal';
     <h2>2. Qué datos personales recabamos</h2>
     <ul>
       <li><strong>Identificación y cuenta:</strong> nombre completo, nombre de usuario, correo electrónico y contraseña. La contraseña la guarda cifrada el proveedor de autenticación; el Organizador no puede verla.</li>
+      <li><strong>Teléfono de contacto opcional:</strong> puedes agregarlo, cambiarlo o eliminarlo desde Mi cuenta. Lo usamos para intentar contactarte si resultas ganador y coordinar la entrega de tu premio.</li>
       <li><strong>Participantes registrados de forma presencial:</strong> el nombre con el que se registra la entrada y, de forma opcional, un correo de contacto.</li>
       <li><strong>Participación:</strong> el nombre de tus entradas, tus pronósticos, aciertos, posiciones, las jornadas en que participas y los cupones que recibes.</li>
       <li><strong>Pago:</strong> método (transferencia, efectivo o cupón), monto, estatus de validación y, en las transferencias, el comprobante que subes (imagen o PDF). Un comprobante puede mostrar tu nombre, banco, fecha, monto y números de cuenta.</li>
@@ -41,7 +42,7 @@ import { LEGAL } from '@/config/legal';
       <li>La tabla de posiciones es pública y muestra el nombre de cada entrada (su alias; si no tiene, el nombre completo de la persona), sus aciertos y su posición.</li>
       <li>Cuando cierra el registro de una jornada, cualquier visitante puede ver los pronósticos de cada entrada.</li>
       <li>El nombre por defecto de una entrada es tu nombre de usuario seguido de un número. Puedes cambiarlo al registrarla si prefieres otro nombre.</li>
-      <li>Tu correo, tus comprobantes y tus datos de pago <strong>no son públicos</strong>: solo los ven el Organizador y los administradores.</li>
+      <li>Tu correo, tu teléfono, tus comprobantes y tus datos de pago <strong>no son públicos</strong>: solo los ven el Organizador y los administradores.</li>
     </ul>
 
     <h2>5. Con quién compartimos o a quién encargamos el tratamiento</h2>

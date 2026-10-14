@@ -121,7 +121,7 @@ function dibujar(ctx, { jornada, tabla, premio, finalizada, generadoEn }) {
   ctx.textAlign = 'left';
   ctx.fillText(`Quinielas JR · ${finalizada ? 'Resultado final' : 'Resultados al momento'} · ${generadoEn}`, xTabla, yFinTabla + 24);
 
-  return { ancho: xPanel + ANCHO_PANEL + MARGEN, alto: yFinTabla + 44 };
+  return { ancho: xPanel + ANCHO_PANEL + MARGEN, alto: Math.max(yFinTabla + 44, y + MARGEN) };
 }
 
 function dimensionar(jornada, tabla, premio) {

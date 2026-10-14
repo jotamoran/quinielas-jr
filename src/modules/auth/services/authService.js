@@ -74,6 +74,20 @@ export async function actualizarNombre(nombreCompleto) {
   if (error) throw error;
 }
 
+export async function actualizarTelefono(telefono) {
+  const entrada = String(telefono ?? '').trim();
+  const normalizado = entrada.replace(/[\s()-]/g, '');
+  if (entrada && (!/^[+\d\s()-]+$/.test(entrada) || !/^\+?\d{10,15}$/.test(normalizado))) {
+    throw new Error('El teléfono debe contener entre 10 y 15 dígitos. Puedes usar + al inicio, espacios, guiones y paréntesis.');
+  }
+  const { data: { user }, error: errorUsuario } = await supabase.auth.getUser();
+  if (errorUsuario) throw errorUsuario;
+  if (!user) throw new Error('Debes iniciar sesión de nuevo.');
+  const { error } = await supabase.from('perfiles').update({ telefono: normalizado || null }).eq('id', user.id);
+  if (error) throw error;
+  return normalizado || null;
+}
+
 export async function actualizarCorreo(nuevoCorreo) {
   const { error } = await supabase.auth.updateUser({ email: nuevoCorreo });
   if (error) throw error;

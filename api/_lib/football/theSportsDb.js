@@ -38,7 +38,8 @@ function marcador(valor) {
 
 function resultFromEvent(event) {
   const status = String(event?.strStatus ?? '').trim().toLowerCase();
-  if (!FINAL_STATUSES.has(status)) return null;
+  const progress = String(event?.strProgress ?? '').trim().toLowerCase();
+  if (!FINAL_STATUSES.has(status) && progress !== 'final') return null;
   const home = marcador(event.intHomeScore);
   const away = marcador(event.intAwayScore);
   if (home === null || away === null) return null;

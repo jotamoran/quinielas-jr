@@ -1,7 +1,7 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useAuthStore } from '@/store/auth';
-import { actualizarNombre, actualizarCorreo, actualizarPassword, traducirErrorAuth } from '../services/authService';
+import { actualizarNombre, actualizarTelefono, actualizarCorreo, actualizarPassword, traducirErrorAuth } from '../services/authService';
 import { obtenerDatosBancarios } from '../../quinielas/services/quinielasService';
 import { actualizarDatosBancarios } from '../../admin/services/adminService';
 import { alertaError, alertaExito } from '@/lib/alertas';
@@ -11,6 +11,32 @@ const authStore = useAuthStore();
 
 const nombreCompleto = ref(authStore.perfil?.nombre_completo ?? '');
 const guardandoNombre = ref(false);
+const telefono = ref(authStore.perfil?.telefono ?? '');
+const guardandoTelefono = ref(false);
+const telefonoEditado = ref(false);
+watch(() => authStore.perfil?.telefono, (valor) => {
+  if (!telefonoEditado.value) telefono.value = valor ?? '';
+});
+
+async function onGuardarTelefono() {
+  if (guardandoTelefono.value || authStore.errorPerfil) return;
+  guardandoTelefono.value = true;
+  try {
+    const guardado = await actualizarTelefono(telefono.value);
+    telefono.value = guardado ?? '';
+    telefonoEditado.value = false;
+    await authStore.cargarPerfil();
+    if (authStore.errorPerfil) {
+      await alertaError(new Error('El teléfono se guardó, pero no se pudo recargar tu perfil. Recarga la página para consultar tus datos.'), 'No se pudo recargar el perfil');
+      return;
+    }
+    await alertaExito(guardado ? 'Teléfono actualizado' : 'Teléfono eliminado');
+  } catch (e) {
+    await alertaError(e, 'No se pudo actualizar el teléfono');
+  } finally {
+    guardandoTelefono.value = false;
+  }
+}
 
 const banco = ref('');
 const clabe = ref('');
@@ -110,7 +136,7 @@ onMounted(async () => {
     <header>
       <p class="eyebrow">Mi cuenta</p>
       <h1 class="page-title">Configuración</h1>
-      <p class="page-description">Administra tu nombre, correo y contraseña.</p>
+      <p class="page-description">Administra tu nombre, teléfono, correo y contraseña.</p>
     </header>
 
     <section class="flex items-center gap-4 rounded-2xl bg-quiniela-verdeOscuro p-4 text-white shadow-sm sm:p-5">
@@ -122,6 +148,14 @@ onMounted(async () => {
       <h2 class="font-bold text-quiniela-verdeOscuro">Nombre completo</h2>
       <label class="form-label">Nombre<input v-model="nombreCompleto" type="text" autocomplete="name" required class="form-control min-h-11" /></label>
       <button type="submit" :disabled="guardandoNombre" class="min-h-11 w-full rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{{ guardandoNombre ? 'Guardando…' : 'Guardar nombre' }}</button>
+    </form>
+
+    <form @submit.prevent="onGuardarTelefono" class="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+      <h2 class="font-bold text-quiniela-verdeOscuro">Teléfono de contacto (opcional)</h2>
+      <p id="ayuda-telefono" class="text-sm text-gray-600">Si resultas ganador, intentaremos contactarte por correo o por este número</p>
+      <label class="form-label">Teléfono<input v-model="telefono" @input="telefonoEditado = true" type="tel" autocomplete="tel" inputmode="tel" :disabled="guardandoTelefono || authStore.errorPerfil" aria-describedby="ayuda-telefono formato-telefono" placeholder="55 1234 5678" class="form-control min-h-11 disabled:opacity-50" /><span id="formato-telefono" class="mt-1 block text-xs font-normal text-gray-500">De 10 a 15 dígitos, con + opcional al inicio. Déjalo vacío para eliminarlo.</span></label>
+      <p v-if="authStore.errorPerfil" role="alert" class="text-sm text-red-700">No se pudo cargar tu perfil. Recarga la página antes de editar el teléfono.</p>
+      <button type="submit" :disabled="guardandoTelefono || authStore.errorPerfil" class="min-h-11 w-full rounded-xl bg-quiniela-verde px-5 py-2.5 font-semibold text-white disabled:opacity-50 sm:w-auto">{{ guardandoTelefono ? 'Guardando…' : 'Guardar teléfono' }}</button>
     </form>
 
     <form @submit.prevent="onGuardarCorreo" class="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">

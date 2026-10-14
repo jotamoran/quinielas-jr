@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { calcularRecaudacion } from '../utils/recaudacion';
 
 async function llamarApi(ruta, opciones = {}) {
   const { data: { session } } = await supabase.auth.getSession();
@@ -57,6 +58,23 @@ export async function listarJornadasAdmin() {
   if (errorPremios) throw errorPremios;
   const premioPorJornada = new Map((premios ?? []).map((fila) => [fila.jornada_id, fila.premio]));
   return (data ?? []).map((jornada) => ({ ...jornada, premio: premioPorJornada.get(jornada.id) ?? null }));
+}
+
+export async function obtenerRecaudacionJornada(jornadaId) {
+  const resumen = { total: 0, cupones: 0 };
+  for (let inicio = 0; ; inicio += 1000) {
+    const { data, error } = await supabase.from('quinielas')
+      .select('estatus_pago, metodo_pago, monto_pagado')
+      .eq('jornada_id', jornadaId)
+      .eq('estatus_pago', 'aprobado')
+      .order('id')
+      .range(inicio, inicio + 999);
+    if (error) throw error;
+    const pagina = calcularRecaudacion(data ?? []);
+    resumen.total += pagina.total;
+    resumen.cupones += pagina.cupones;
+    if ((data ?? []).length < 1000) return resumen;
+  }
 }
 
 export async function obtenerDatosParaResultados(jornadaId) {
@@ -198,7 +216,7 @@ export async function registrarPagoEfectivo(quinielaId, monto) {
     metodo_pago: 'efectivo',
     monto_pagado: monto,
     revisado_el: new Date().toISOString(),
-  }).eq('id', quinielaId);
+  }).eq('id', quinielaId).eq('estatus_pago', 'pendiente');
   if (error) throw error;
 }
 

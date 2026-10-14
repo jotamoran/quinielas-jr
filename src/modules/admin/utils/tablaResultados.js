@@ -32,7 +32,7 @@ export function calcularTablaResultados({ partidos, entradas, estatus }) {
       local: nombreCorto(partido.equipo_local),
       visitante: nombreCorto(partido.equipo_visitante),
       cancelado: Boolean(partido.cancelado),
-      resultado: !partido.cancelado && partido.estado === 'finalizado' ? etiquetaPronostico(partido.resultado_oficial) || null : null,
+      resultado: !partido.cancelado ? etiquetaPronostico(partido.resultado_oficial) || null : null,
     }));
 
   const filas = entradas.map((entrada) => {

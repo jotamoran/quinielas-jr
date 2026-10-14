@@ -147,24 +147,28 @@ async function sincronizarJornada(env, supabase, jornada, ahora) {
   return resumen;
 }
 
-// Pide al sitio que evalúe el cierre de la jornada (la revisión final y el cierre viven en el servidor web).
-async function solicitarCierre(env, jornadaId) {
+// Pide al sitio que revise el cierre o el recordatorio sin enviar correo desde el worker.
+async function solicitarAccion(env, accion, cuerpo, timeoutMs = 20000) {
   const controlador = new AbortController();
-  const temporizador = setTimeout(() => controlador.abort(), 110000);
+  const temporizador = setTimeout(() => controlador.abort(), timeoutMs);
   try {
-    const respuesta = await fetch(`${env.SITIO_URL.replace(/\/$/, '')}/api/jornada?action=cierre-automatico`, {
+    const respuesta = await fetch(`${env.SITIO_URL.replace(/\/$/, '')}/api/jornada?action=${accion}`, {
       method: 'POST',
       signal: controlador.signal,
       headers: { 'Content-Type': 'application/json', 'x-cron-secret': env.CRON_SECRET },
-      body: JSON.stringify({ jornada_id: jornadaId, modo: env.CIERRE_AUTOMATICO }),
+      body: JSON.stringify(cuerpo),
     });
     const texto = await respuesta.text();
-    console.log(`cierre ${jornadaId}: HTTP ${respuesta.status} ${texto.slice(0, 300)}`);
+    console.log(`${accion}: HTTP ${respuesta.status} ${texto.slice(0, 300)}`);
   } catch (error) {
-    console.error(`cierre ${jornadaId}: no se pudo consultar al sitio (${error.message})`);
+    console.error(`${accion}: no se pudo consultar al sitio (${error.message})`);
   } finally {
     clearTimeout(temporizador);
   }
+}
+
+async function solicitarCierre(env, jornadaId, modo = env.CIERRE_AUTOMATICO) {
+  return solicitarAccion(env, 'cierre-automatico', { jornada_id: jornadaId, modo }, 110000);
 }
 
 export async function sincronizarMarcadores(env, ahora = new Date()) {
@@ -193,5 +197,20 @@ export async function sincronizarMarcadores(env, ahora = new Date()) {
 
   const cierreHabilitado = ['simulacro', 'activo'].includes(env.CIERRE_AUTOMATICO) && env.CRON_SECRET && env.SITIO_URL;
   if (cierreHabilitado) for (const jornadaId of listasParaCerrar) await solicitarCierre(env, jornadaId);
+
+  if (env.CRON_SECRET && env.SITIO_URL) {
+    for (const jornada of jornadas.filter((fila) => ['activa', 'cerrada'].includes(fila.estatus))) {
+      await solicitarAccion(env, 'recordatorio-premio', { jornada_id: jornada.id });
+    }
+  }
+
+  if (env.CRON_SECRET && env.SITIO_URL) {
+    const cierresPendientes = await supabase('GET', 'cierres_jornada', {
+      params: { select: 'jornada_id', avisos_completados_el: 'is.null' },
+    });
+    for (const cierre of cierresPendientes ?? []) {
+      if (cierre.jornada_id) await solicitarCierre(env, cierre.jornada_id, 'activo');
+    }
+  }
   return total;
 }

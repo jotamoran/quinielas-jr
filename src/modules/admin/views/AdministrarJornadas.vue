@@ -2,7 +2,7 @@
 import { mensajeVisible } from '@/lib/errores';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin, obtenerResumenCierreJornada } from '../services/adminService';
+import { actualizarCierreJornada, actualizarPremioJornada, cancelarJornada, cancelarPartido, listarJornadasAdmin, obtenerResumenCierreJornada, obtenerRecaudacionJornada } from '../services/adminService';
 import { generarImagenJornada } from '../utils/imagenJornada';
 import { compartirBlobImagen, compartirResultadosJornada, nombreArchivo } from '../utils/compartirResultados';
 import { alertaAdvertencia, alertaError, alertaExito, confirmarAccion } from '@/lib/alertas';
@@ -21,6 +21,10 @@ const ahora = ahoraParaDatetimeInput();
 const resumenCierre = ref(null);
 const cargandoResumen = ref(false);
 const errorResumen = ref('');
+const recaudacion = ref(null);
+const cargandoRecaudacion = ref(false);
+const errorRecaudacion = ref('');
+let solicitudRecaudacion = 0;
 const opcionesResultadosAbiertas = ref(false);
 const generandoResultados = ref(false);
 const registroCerrado = computed(() => Boolean(abierta.value) && (abierta.value.estatus === 'finalizada' || new Date(abierta.value.fecha_cierre) <= new Date()));
@@ -58,7 +62,23 @@ function abrir(jornada) {
   cierreEditado.value = fechaHoraParaInput(jornada.fecha_cierre);
   resumenCierre.value = null;
   errorResumen.value = '';
+  cargarRecaudacion(jornada.id);
   if (jornada.estatus === 'finalizada') cargarResumenCierre(jornada.id);
+}
+
+async function cargarRecaudacion(jornadaId) {
+  const solicitud = ++solicitudRecaudacion;
+  recaudacion.value = null;
+  errorRecaudacion.value = '';
+  cargandoRecaudacion.value = true;
+  try {
+    const resumen = await obtenerRecaudacionJornada(jornadaId);
+    if (abierta.value?.id === jornadaId && solicitud === solicitudRecaudacion) recaudacion.value = resumen;
+  } catch (error) {
+    if (abierta.value?.id === jornadaId && solicitud === solicitudRecaudacion) errorRecaudacion.value = mensajeVisible(error);
+  } finally {
+    if (abierta.value?.id === jornadaId && solicitud === solicitudRecaudacion) cargandoRecaudacion.value = false;
+  }
 }
 
 async function cargarResumenCierre(jornadaId) {
@@ -306,7 +326,18 @@ onMounted(async () => {
         <article class="rounded-2xl bg-quiniela-verdeOscuro p-5 text-white shadow-lg sm:p-6">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div><span class="inline-flex rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold">{{ etiquetaEstatus(abierta.estatus) }}</span><h2 class="mt-2 text-2xl font-bold">{{ abierta.nombre }}</h2><p class="mt-1 text-sm text-green-100">Cierre: {{ formatoFecha(abierta.fecha_cierre) }}</p></div>
-            <div class="rounded-xl bg-white/10 px-4 py-3"><p class="text-xs uppercase tracking-wider text-green-100">Premio</p><p class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(abierta.premio) }}</p></div>
+            <div class="grid gap-3 sm:max-w-sm sm:grid-cols-2">
+              <div class="rounded-xl bg-white/10 px-4 py-3"><p class="text-xs uppercase tracking-wider text-green-100">Premio</p><p class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(abierta.premio) }}</p></div>
+              <div class="rounded-xl bg-white/10 px-4 py-3" aria-live="polite" :aria-busy="cargandoRecaudacion">
+                <p class="text-xs uppercase tracking-wider text-green-100">Recaudación</p>
+                <p v-if="cargandoRecaudacion" class="mt-1 text-sm">Cargando…</p>
+                <p v-else-if="errorRecaudacion" role="alert" class="mt-1 text-sm text-red-100">No se pudo cargar la recaudación.</p>
+                <p v-else-if="recaudacion" class="text-2xl font-bold text-quiniela-dorado">{{ formatoMoneda(recaudacion.total) }}</p>
+                <button type="button" @click="cargarRecaudacion(abierta.id)" :disabled="cargandoRecaudacion" class="mt-2 min-h-11 rounded-lg border border-white/40 px-3 text-sm font-semibold disabled:opacity-50">{{ errorRecaudacion ? 'Reintentar' : 'Actualizar' }}</button>
+              </div>
+              <p v-if="recaudacion && !cargandoRecaudacion" class="text-sm text-green-100 sm:col-span-2">Solo pagos aprobados en efectivo o transferencia. Los cupones no aportan dinero.</p>
+              <p v-if="recaudacion?.cupones" class="text-sm text-green-100 sm:col-span-2">{{ recaudacion.cupones === 1 ? 'En esta jornada se usó un cupón como método de pago' : `En esta jornada se usaron ${recaudacion.cupones} cupones como método de pago` }}</p>
+            </div>
           </div>
           <div class="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <template v-if="!['finalizada', 'cancelada'].includes(abierta.estatus)">

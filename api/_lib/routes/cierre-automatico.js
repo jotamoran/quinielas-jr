@@ -3,7 +3,7 @@ import { ErrorHttp, responderError } from '../auth.js';
 import { getSupabaseAdmin } from '../supabaseAdmin.js';
 import { calcularGanadoresYPeor } from '../premios.js';
 import { escaparHtml } from '../email.js';
-import { enviarAvisoUnico } from '../avisoUnico.js';
+import { avisarAdministradores } from '../avisosAdministradores.js';
 import { findFinalResults, FOOTBALL_PROVIDER } from '../football/provider.js';
 import { ejecutarCierre } from './cerrar-jornada.js';
 
@@ -55,29 +55,8 @@ export function evaluarCierre({ partidos, ahora, resultadosProveedor, entradasAp
   return { estado: 'listo', codigo: 'listo', motivo: 'Todo en orden.' };
 }
 
-async function correosAdmin(supabaseAdmin) {
-  const { data: admins, error } = await supabaseAdmin.from('perfiles').select('id').eq('rol', 'admin');
-  if (error) throw error;
-  const correos = [];
-  for (const admin of admins ?? []) {
-    const { data: cuenta } = await supabaseAdmin.auth.admin.getUserById(admin.id);
-    if (cuenta?.user?.email) correos.push({ id: admin.id, correo: cuenta.user.email });
-  }
-  return correos;
-}
-
 async function avisarAdmins(supabaseAdmin, claveBase, { asunto, titulo, cuerpoHtml }) {
-  const pendientes = [];
-  for (const admin of await correosAdmin(supabaseAdmin)) {
-    try {
-      const enviado = await enviarAvisoUnico(supabaseAdmin, `${claveBase}:${admin.id}`, { to: admin.correo, subject: asunto, heading: titulo, bodyHtml: cuerpoHtml });
-      if (!enviado) pendientes.push(admin.id);
-    } catch (error) {
-      console.error(`cierre-automatico: falló el aviso al admin ${admin.id}`, error.message);
-      pendientes.push(admin.id);
-    }
-  }
-  return pendientes;
+  return avisarAdministradores(supabaseAdmin, claveBase, { subject: asunto, heading: titulo, bodyHtml: cuerpoHtml });
 }
 
 function nombreEntrada(fila) {
@@ -97,6 +76,14 @@ export async function procesarCierreAutomatico(supabaseAdmin, { jornadaId, modo,
   const { data: jornada, error: errorJornada } = await supabaseAdmin.from('jornadas').select('nombre, premio, estatus').eq('id', jornadaId).maybeSingle();
   if (errorJornada) throw errorJornada;
   if (!jornada) throw new ErrorHttp(404, 'La jornada no existe');
+  if (jornada.estatus === 'finalizada') {
+    const { data: cierre, error: errorCierre } = await supabaseAdmin.from('cierres_jornada')
+      .select('avisos_completados_el').eq('jornada_id', jornadaId).maybeSingle();
+    if (errorCierre) throw errorCierre;
+    if (cierre?.avisos_completados_el) return { estado: 'omitida', motivo: 'Los avisos del cierre ya se completaron.', modo };
+    const { cuerpo } = await ejecutarCierre(supabaseAdmin, jornadaId, { reenviar: true });
+    return { estado: 'avisos_reintentados', modo, avisos: cuerpo.avisos };
+  }
   if (!['activa', 'cerrada'].includes(jornada.estatus)) return { estado: 'omitida', motivo: `La jornada está ${jornada.estatus}.` };
 
   const { data: partidos, error: errorPartidos } = await supabaseAdmin
@@ -142,12 +129,7 @@ export async function procesarCierreAutomatico(supabaseAdmin, { jornadaId, modo,
     return { ...evaluacion, estado: 'simulacro', modo };
   }
 
-  const { cuerpo, ranking } = await ejecutarCierre(supabaseAdmin, jornadaId);
-  await avisarAdmins(supabaseAdmin, `cierre-auto:${jornadaId}:resumen`, {
-    asunto: `Jornada cerrada automáticamente: ${jornada.nombre}`,
-    titulo: '✅ Jornada cerrada automáticamente',
-    cuerpoHtml: `<p>La jornada <b>${nombre}</b> se cerró sola y ya se enviaron los resultados a los participantes.</p>${resumenHtml({ ranking, ganadores: cuerpo.ganadores, peor: cuerpo.peor, premio: jornada.premio, pagosPendientes: pagosPendientes ?? 0, avisos: cuerpo.avisos, cuponGenerado: cuerpo.cuponGenerado })}`,
-  });
+  const { cuerpo } = await ejecutarCierre(supabaseAdmin, jornadaId);
   return { estado: 'cerrada', motivo: evaluacion.motivo, modo, avisos: cuerpo.avisos };
 }
 
