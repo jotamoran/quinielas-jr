@@ -10,6 +10,7 @@ import EnlacesLegales from '@/components/EnlacesLegales.vue';
 const nombreCompleto = ref('');
 const email = ref('');
 const username = ref('');
+const telefono = ref('');
 const password = ref('');
 const confirmarPassword = ref('');
 const acepto = ref(false);
@@ -42,7 +43,7 @@ async function onSubmit() {
       await alertaError(new Error('Elige otro nombre para continuar.'), 'Ese usuario ya está en uso');
       return;
     }
-    await registrar({ email: email.value, password: password.value, nombreCompleto: nombreCompleto.value, username: usernameNormalizado, aceptoTerminos: true });
+    await registrar({ email: email.value, password: password.value, nombreCompleto: nombreCompleto.value, username: usernameNormalizado, telefono: telefono.value, aceptoTerminos: true });
     router.push({ name: 'verificar-codigo', query: { email: email.value } });
   } catch (e) {
     const mensaje = /database error/i.test(e.message) ? 'Ese nombre de usuario ya está en uso. Elige otro.' : traducirErrorAuth(e.message);
@@ -60,6 +61,7 @@ async function onSubmit() {
       <div class="space-y-1"><h1 class="auth-title">Crear cuenta</h1><p class="auth-description">Regístrate para guardar tus pronósticos y consultar resultados.</p></div>
       <label class="form-label">Nombre completo<input v-model="nombreCompleto" type="text" autocomplete="name" placeholder="Tu nombre" required class="form-control min-h-11" /></label>
       <label class="form-label">Correo<input v-model="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required class="form-control min-h-11" /></label>
+      <label class="form-label">Teléfono de contacto (opcional)<input v-model="telefono" type="tel" autocomplete="tel" inputmode="tel" aria-describedby="ayuda-telefono-registro" placeholder="55 1234 5678" class="form-control min-h-11" /><span id="ayuda-telefono-registro" class="mt-1 block text-xs font-normal text-gray-500">Si resultas ganador, podremos contactarte por correo o por este número. De 10 a 15 dígitos; puedes usar +, espacios, guiones y paréntesis.</span></label>
       <label class="form-label">Nombre de usuario<input v-model="username" type="text" autocomplete="username" placeholder="letras, números y _ (3-20)" required minlength="3" maxlength="20" pattern="[a-z0-9_]{3,20}" class="form-control min-h-11" @input="username = username.toLowerCase()" /></label>
       <CampoPassword v-model="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres" :minlength="6" />
       <CampoPassword v-model="confirmarPassword" label="Confirmar contraseña" autocomplete="new-password" placeholder="Repite tu contraseña" :minlength="6" />
