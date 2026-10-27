@@ -5,6 +5,8 @@ const FINAL_STATUSES = new Set(['ft', 'aet', 'pen', 'final', 'match finished', '
 const REQUEST_TIMEOUT_MS = 8000;
 const MAX_REINTENTOS = 2;
 const MAX_CONCURRENT_RESULTS = 4;
+const CACHE_CALENDARIO_MS = 60_000;
+const cacheCalendario = new Map();
 
 function apiKey() {
   const key = process.env.SPORTSDB_API_KEY?.trim();
@@ -26,7 +28,7 @@ function normalizeFixture(event) {
 }
 
 export async function getNextRound(league) {
-  const payload = await request(`eventsnextleague.php?id=${encodeURIComponent(league)}`);
+  const payload = await request(`eventsnextleague.php?id=${encodeURIComponent(league)}`, true);
   const round = Number(payload.events?.[0]?.intRound);
   return Number.isInteger(round) && round > 0 ? round : null;
 }
@@ -48,7 +50,7 @@ function resultFromEvent(event) {
   return 'E';
 }
 
-async function request(endpoint) {
+async function requestSinCache(endpoint) {
   const key = apiKey();
   let ultimoError;
   for (let intento = 0; intento <= MAX_REINTENTOS; intento += 1) {
@@ -58,8 +60,14 @@ async function request(endpoint) {
     try {
       const response = await fetch(`${API_BASE_URL}/${key}/${endpoint}`, { signal: controller.signal });
       if (response.ok) return await response.json();
-      ultimoError = new ErrorHttp(502, `El servicio de resultados respondió ${response.status}`);
-      noReintentar = response.status < 500 && response.status !== 429;
+      const limiteAlcanzado = response.status === 429;
+      ultimoError = new ErrorHttp(
+        limiteAlcanzado ? 429 : 502,
+        limiteAlcanzado
+          ? 'No pudimos cargar los partidos ahora. Espera un minuto y vuelve a intentarlo.'
+          : `El servicio de resultados respondió ${response.status}`,
+      );
+      noReintentar = response.status < 500;
     } catch (error) {
       ultimoError = new ErrorHttp(502, error.name === 'AbortError' ? 'El servicio de resultados tardó demasiado en responder' : 'No se pudo consultar el servicio de resultados');
     } finally { clearTimeout(timeout); }
@@ -67,6 +75,30 @@ async function request(endpoint) {
     if (intento < MAX_REINTENTOS) await new Promise((resolve) => setTimeout(resolve, 250 * (intento + 1)));
   }
   throw ultimoError ?? new ErrorHttp(502, 'No se pudo consultar el servicio de resultados');
+}
+
+async function request(endpoint, usarCacheCalendario = false) {
+  if (!usarCacheCalendario) return requestSinCache(endpoint);
+
+  const ahora = Date.now();
+  for (const [clave, entrada] of cacheCalendario) {
+    if (entrada.expira <= ahora) cacheCalendario.delete(clave);
+  }
+  const existente = cacheCalendario.get(endpoint);
+  if (existente) return existente.promesa;
+
+  const entrada = { expira: ahora + CACHE_CALENDARIO_MS, promesa: null };
+  entrada.promesa = requestSinCache(endpoint)
+    .then((datos) => {
+      entrada.expira = Date.now() + CACHE_CALENDARIO_MS;
+      return datos;
+    })
+    .catch((error) => {
+      if (cacheCalendario.get(endpoint) === entrada) cacheCalendario.delete(endpoint);
+      throw error;
+    });
+  cacheCalendario.set(endpoint, entrada);
+  return entrada.promesa;
 }
 
 export function seasonRangeForDate(date) {
@@ -78,7 +110,7 @@ export function seasonRangeForDate(date) {
 
 export async function getFixtures({ league, from, to, round, season }) {
   if (round) {
-    const payload = await request(`eventsround.php?id=${encodeURIComponent(league)}&r=${encodeURIComponent(round)}&s=${encodeURIComponent(season)}`);
+    const payload = await request(`eventsround.php?id=${encodeURIComponent(league)}&r=${encodeURIComponent(round)}&s=${encodeURIComponent(season)}`, true);
     const eventos = (payload.events ?? []).map(normalizeFixture);
     if (eventos.length <= 9) return eventos;
     // El servicio puede agrupar más de un torneo bajo el mismo string de temporada
@@ -92,7 +124,7 @@ export async function getFixtures({ league, from, to, round, season }) {
       .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
     return Object.assign(seleccion, { ambiguo: true, totalEncontrados: eventos.length });
   }
-  const payload = await request(`eventsnextleague.php?id=${encodeURIComponent(league)}`);
+  const payload = await request(`eventsnextleague.php?id=${encodeURIComponent(league)}`, true);
   return (payload.events ?? [])
     .filter((event) => (!from || event.dateEvent >= from) && (!to || event.dateEvent <= to))
     .map(normalizeFixture);

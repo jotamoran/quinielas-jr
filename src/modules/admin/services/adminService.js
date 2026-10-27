@@ -3,17 +3,36 @@ import { calcularRecaudacion } from '../utils/recaudacion';
 
 async function llamarApi(ruta, opciones = {}) {
   const { data: { session } } = await supabase.auth.getSession();
-  const respuesta = await fetch(`/api/${ruta}`, {
-    ...opciones,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session?.access_token}`,
-      ...opciones.headers,
-    },
-  });
-  const datos = await respuesta.json();
-  if (!respuesta.ok) throw new Error(datos.error ?? 'Error inesperado');
+  let respuesta;
+  try {
+    respuesta = await fetch(`/api/${ruta}`, {
+      ...opciones,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token}`,
+        ...opciones.headers,
+      },
+    });
+  } catch {
+    throw new Error('No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.');
+  }
+
+  let datos;
+  try {
+    datos = await respuesta.json();
+  } catch {
+    throw new Error('No pudimos completar esta acción. Inténtalo de nuevo más tarde.');
+  }
+  if (!respuesta.ok) throw new Error(mensajeErrorApi(respuesta.status, datos.error));
   return datos;
+}
+
+function mensajeErrorApi(status, error) {
+  if (status === 401) return 'Tu sesión terminó. Inicia sesión otra vez para continuar.';
+  if (status === 403) return 'Tu cuenta no tiene permiso para realizar esta acción.';
+  if (status === 429) return 'Hay muchas consultas en este momento. Espera un minuto y vuelve a intentarlo.';
+  if (status >= 500) return 'No pudimos completar esta acción ahora. Inténtalo de nuevo más tarde.';
+  return error ?? 'No pudimos completar esta acción. Revisa la información e inténtalo de nuevo.';
 }
 
 export async function buscarFixtures({ leagues, from, to, numeroJornada, proximaJornada = false }) {
