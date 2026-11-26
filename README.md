@@ -19,7 +19,7 @@ Para probar también las funciones del servidor (`functions/`), compila con `npm
 - `functions/`: las funciones de Cloudflare Pages. Llaman a la lógica de `api/_lib/`.
 - `workers/marcadores/`: el Worker que sincroniza marcadores cada 2 minutos (ver más abajo).
 - `public/`: manifiesto y service worker de la PWA, e íconos.
-- `supabase/`: configuración de Supabase. `vercel.json` y `api/retired.js` solo sirven para que la dirección vieja de Vercel responda 404.
+- `supabase/`: configuración de Supabase. `vercel.json` y `api/retired.js` solo sirven para que la dirección vieja de Vercel responda 410 (sitio retirado).
 
 ## Base de datos (Supabase)
 
@@ -47,7 +47,7 @@ En Cloudflare Pages deben mantenerse como secretos de Production las variables p
 
 El workflow requiere en GitHub Actions las variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_APP_TITLE` y `VITE_ADMIN_ALIAS_EMAIL`, además de los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`.
 
-`quinielasjr.vercel.app` está retirado y responde con HTTP 404. La única URL operativa es Cloudflare Pages.
+`quinielasjr.vercel.app` está retirado y responde con HTTP 410. La única URL operativa es Cloudflare Pages.
 
 ## PWA
 
